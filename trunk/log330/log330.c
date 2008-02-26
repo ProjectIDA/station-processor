@@ -1,0 +1,331 @@
+/*
+File:       log330
+Copyright:  (C) 2007 by Albuquerque Seismological Laboratory
+Purpose:    Server for log messages that go into common LOG seed file
+
+Algorithm:  
+Starts a message server in a backround thread.
+The message server thread accepts connection reqeusts and spawns threads
+Each client connection thread reads messages, and copies them to shared mem
+loop in main program checks for new messages in shared mem
+  When a new message arrives combine it with queued message if possible.
+    If combine would be too large, send queued message, make new message
+       the new queued message
+  Once queued message reaches BUFFER_TIME_SEC in age:
+    Send it out, empty queue
+end loop
+
+Update History:
+mmddyy who Changes
+==============================================================================
+032607 fcs Creation
+******************************************************************************/
+#define FILENAME "log330"
+#define VERSION_DATE  "10 April 2007"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/shm.h>
+#include "include/diskloop.h"
+#include "include/dcc_time_proto2.h"
+#include "include/log330.h"
+
+void daemonize();
+void StartServer(int port, int debug);
+
+// Make the server_pid global so it can be killed when program is shut down
+int   server_pid=0;
+
+//////////////////////////////////////////////////////////////////////////////
+void ShowUsage()
+{
+    printf(
+"Usage:\n");
+    printf(
+"  log330 <configfile>\n");
+    printf("    Starts log seed message server as a daemon\n");
+    printf(
+"  log330 <configfile> debug\n");
+    printf("    Starts log seed message server in debug mode\n");
+    printf(
+"  log330 <configfile> dump <loc> [<start> <end>]\n");
+    printf("    Dump alone requests times and text of all log messages\n");
+    printf("    Dump with time requests text within time frame\n");
+    printf("    <loc> is the location code to use");
+    printf("    The station, network, channel will be pulled from config\n");
+    printf("    Start and end dates are yyyy,ddd,hh:mm:ss.ssss\n");
+    printf(
+"  log330 <configfile> msg 'message'\n");
+    printf("    Sends the message string to the seed log server\n");
+} // ShowUsage()
+
+//////////////////////////////////////////////////////////////////////////////
+int main (int argc, char **argv)
+{
+  char  station[8];
+  char  loc[4];
+  char  chan[4];
+  char  network[4];
+  char  *retmsg;
+  int   iFirst;
+  int   iLast;
+  int   iCount;
+  int   iMaxRecord;
+  int   iSeedRecordSize;
+  int   iPort;
+  int   iClient;
+  int   iBuf;
+  int   i;
+  int   iDeltaTime;
+  int   year, doy, hour, min, sec;
+
+  STDTIME2  tStartTime;
+  STDTIME2  tEndTime;
+
+  struct s_mapshm *mapshm;
+
+  char   queuebuf[4096];
+  char   tempbuf[4096];
+  char   *queuemsg=NULL; 
+  time_t  queuetimetag=0;
+  int   iRecord;
+  int   iSeek;
+  char  loopDir[MAXCONFIGLINELEN+1];
+  char  buf_filename[2*MAXCONFIGLINELEN+2];
+  FILE  *fp_buf;
+  char  str_record[8192];
+  char  msg[8192];
+
+  // Check for right number off arguments
+  if (argc != 2 && argc != 3 && argc != 4 && argc != 6)
+  {
+    ShowUsage();
+    exit(1);
+  }
+
+  // Parse the configuration file
+  if ((retmsg=ParseDiskLoopConfig(argv[1])) != NULL)
+  {
+    fprintf(stderr, "%s: %s\n", FILENAME, retmsg);
+    exit(1);
+  }
+  LoopRecordSize(&iSeedRecordSize);
+
+  // Handle msg request
+  if (argc == 4)
+  {
+    if (strcmp(argv[2], "msg") == 0)
+    {
+      // Send arg 3 to the log server
+      LogSNCL(station, network, chan, loc);
+      sprintf(msg, "%s\r\n", argv[3]);
+      if ((retmsg=log330Msg(msg, station, network, chan, loc)) != NULL)
+      {
+        // error trying to log the message
+        fprintf(stderr, "log330: %s\n", retmsg);
+        exit(1);
+      } 
+      exit(0);
+    } // msg keyword parsed
+  } // test for msg command
+
+  // Handle command line dump request to look up records
+  if (argc == 6 || argc == 4)
+  {
+    // Make sure dump keyword is present
+    if (strcmp(argv[2], "dump") != 0)
+    {
+      fprintf(stderr, "Invalid keyword '%s'\n", argv[2]);
+      exit(1);
+    } // invalid keyword
+
+    // Parse start time argument
+    if (argc == 6)
+      tStartTime = ST_ParseTime2((unsigned char *)argv[4]);
+    else
+      tStartTime = ST_ParseTime2((unsigned char *)"1950,1");
+
+    // Parse end time argument
+    if (argc == 6)
+      tEndTime = ST_ParseTime2((unsigned char *)argv[5]);
+    else
+      tEndTime = ST_ParseTime2((unsigned char *)"3000,1");
+
+    // Get index of first and last data record in the requested time span
+    LogSNCL(station, network, chan, loc);
+    strncpy(loc, argv[3], 2);
+    retmsg = GetRecordRange(station, chan, loc, tStartTime, tEndTime,
+                  &iFirst, &iLast, &iCount, &iMaxRecord);
+    if (retmsg != NULL)
+    {
+      fprintf(stderr, "log330: %s\n", retmsg);
+      exit(1);
+    }
+
+    printf("Returned %d records for %s %s/%s from %d to %d, max %d\n",
+          iCount, station, loc, chan, iFirst, iLast, iMaxRecord);
+
+    // Get name of buffer file
+    // If blank location code, leave off leading location code in filename
+    LoopDirectory(loopDir);
+    if (loc[0] == ' ' || loc[0] == 0)
+    {
+      sprintf(buf_filename, "%s/%s/%s.buf",
+          loopDir, station, chan);
+    }
+    else
+    {
+      sprintf(buf_filename, "%s/%s/%s_%s.buf",
+          loopDir, station, loc, chan);
+    }
+
+    // Open the buffer file
+    if ((fp_buf=fopen(buf_filename, "r")) == NULL)
+    {
+      // Buffer file does not exist so no records to return
+      printf("Log file %s does not exist\n", buf_filename);
+      exit(1);
+    }
+
+    for (i=0; i < iCount; i++)
+    {
+      iRecord = (i + iFirst) % iMaxRecord;
+      iSeek = iRecord * iSeedRecordSize;
+
+      // Seek to the record position
+      fseek(fp_buf, iSeek, SEEK_SET);
+      if (iSeek != ftell(fp_buf))
+      {
+        // If seek failed, we hit end of file, set iHigh
+        fprintf(stderr, "log330: Unable to seek to %d in %s\n",
+                iSeek, buf_filename);
+        fclose(fp_buf);
+        exit(1);
+      } // Failed to seek to required file buffer position
+
+      // Read in the data
+      if (fread(str_record, iSeedRecordSize, 1, fp_buf) != 1)
+      {
+        fprintf(stderr, "log330: Unable to read record %d in %s",
+                iRecord, buf_filename);
+        fclose(fp_buf);
+        exit(1);
+      } // Failed to read record
+
+      // Output timetag and message text
+      SeedRecordMsg(msg, str_record, station, network, chan, loc,
+                    &year, &doy, &hour, &min, &sec);
+      
+      printf("%d,%03d,%02d:%02d:%02d\n", year, doy, hour, min, sec);
+      printf("%s\n", msg);
+
+    } // loop through all records returned
+
+    exit(0);
+  } // command line arguments request data lookup
+
+  // Handle command line debug request 
+  if (argc == 3)
+  {
+    if (strcmp(argv[2], "debug") != 0)
+    {
+      printf("Unknown keyword '%s'\n", argv[2]);
+      ShowUsage();
+      exit(1);
+    }
+  } // command line arguments request running server in debug mode
+
+  // Run this program as a daemon unless requested otherwise by user
+  if (argc == 2)
+    daemonize();
+
+  // Set up the shared memory segment
+  if ((retmsg = MapSharedMem((void **)&mapshm)) != NULL)
+  {
+    fprintf(stderr, "%s: %s\n", FILENAME, retmsg);
+    exit(1);
+  }
+  memset(mapshm, 0, sizeof(struct s_mapshm));
+
+  // Start the server listening for clients in the background
+  LogServerPort(&iPort);
+  if ((server_pid = fork()) == 0)
+  {
+    // Here if this is the child process
+    StartServer(iPort, argc == 3);
+
+    // Server has exited unexpectedly so exit thread
+    exit(1);
+  }
+
+  // Check for error creating server fork
+  if (server_pid == -1)
+  {
+    fprintf(stderr, "%s: Failed to start server process (%d: %s)\n",
+      FILENAME, errno, strerror(errno));
+    exit(1);
+  }
+
+  // Infinite loop waiting for buffers to get filled up
+  iClient = 0;
+  while (1)
+  {
+    sleep(1);
+
+    // Check for new messages
+    for (i=0; i < MAX_CLIENTS; i++)
+    {
+      iClient = (iClient+1) % MAX_CLIENTS;
+      iBuf = mapshm->read_index[iClient];
+      if (mapshm->read_index[iClient] != mapshm->write_index[iClient])
+      {
+        // See if there is a message waiting to be sent out
+        if (queuemsg != NULL)
+        {
+          // Try to combine the two records to save space
+          if (CombineSeed(queuemsg, mapshm->buffer[iClient][iBuf],
+                          iSeedRecordSize))
+          {
+            // Indicate that we have processed message and that's all
+            mapshm->write_index[iClient] = iBuf;
+            continue;
+          }
+          else
+          {
+            // Send queued message since we can't combine the two
+            SeedRecordMsg(tempbuf, queuebuf, station, network, chan, loc,
+                        &year, &doy, &hour, &min, &sec);
+            WriteChan(station, chan, loc, queuemsg);
+            queuemsg = NULL;
+          } // combine failed
+        } // we have a waiting message to possibly combine with
+
+        // Copy new message to free up shared memory buffer
+        memcpy(queuebuf, mapshm->buffer[iClient][iBuf], iSeedRecordSize);
+        queuemsg = queuebuf;
+        queuetimetag = mapshm->timetag[iClient];
+
+        // Indicate that we have processed message
+        mapshm->write_index[iClient] = iBuf;
+      } // new message from this client
+    } // check each possible client
+
+    // See if oldest message is more than BUFFER_TIME_SEC old
+    iDeltaTime = time(NULL) - queuetimetag;
+    if ((iDeltaTime < 0 || iDeltaTime >= BUFFER_TIME_SEC)
+         && (queuemsg != NULL))
+    {
+      SeedRecordMsg(tempbuf, queuebuf, station, network, chan, loc,
+                    &year, &doy, &hour, &min, &sec);
+      if ((retmsg=WriteChan(station, chan, loc, queuemsg)) != NULL)
+      {
+        fprintf(stderr, "log330: %s\n", retmsg);
+      }
+      queuemsg = NULL;
+    } // timeout elapsed
+
+  } // loop forever
+} // main()
+

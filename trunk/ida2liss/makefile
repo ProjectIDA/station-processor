@@ -2,7 +2,7 @@ MACHINE = $(shell uname -m)
 
 # Needed for IDA code
 OSUNAME=$(shell uname -s)
-LIBIDA=../../lib/$(PLATFORM)
+LIBIDA=$(HOME)/lib/$(PLATFORM)
 ifeq ($(OSUNAME),Linux)
   osname=linux
   OSNAME=LINUX
@@ -28,7 +28,7 @@ DEFS    = -D$(OSNAME) -D$(OSTYPE) -D_REENTRANT
 CC = gcc -g
 COPT = 
 LIBS = -L $(LIBIDA)
-CFLAGS = -I.. -I. -I../../ida_build/include $(DEFS)
+CFLAGS = -I.. -I. -I$(HOME)/ida_build/include $(DEFS)
 LIBS += -lm -lpthread
 
 SRCS = ida2liss.c netsend.c

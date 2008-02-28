@@ -4,11 +4,11 @@ ifeq ($(MACHINE), armv5tel)
 else
   LIB330_DIR = /usr/local/lib/lib330
 endif
-LIB330_DIR=../../lib330
+LIB330_DIR=$(HOME)/lib330
 
 # Needed for IDA code
 OSUNAME=$(shell uname -s)
-LIBIDA=../../lib/$(PLATFORM)
+LIBIDA=$(HOME)/lib/$(PLATFORM)
 ifeq ($(OSUNAME),Linux)
   osname=linux
   OSNAME=LINUX
@@ -34,7 +34,7 @@ DEFS    = -D$(OSNAME) -D$(OSTYPE) -D_REENTRANT
 CC = gcc -g
 COPT = 
 LIBS = -L$(LIB330_DIR) -L $(LIBIDA) -l330
-CFLAGS = -I.. -I. -I../../ida_build/include $(DEFS)
+CFLAGS = -I.. -I. -I$(HOME)/ida_build/include $(DEFS)
 LIBS += -lm -lpthread
 
 SRCS = ida2chan.c

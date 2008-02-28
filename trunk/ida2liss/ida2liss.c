@@ -15,7 +15,7 @@ Purpose: convert IDA isi sever feed to a LISS feed
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include "isi.h"
 #include "util.h"
-#include "include/netreq.h"
+#include "../include/netreq.h"
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
@@ -42,11 +42,14 @@ UINT32 flags   = 0;
 char *server   = DEFAULT_SERVER;
 static char *StandardOutput = "stdout";
 
+char *whitelist=NULL;
+char *filter=NULL;
+
 extern int open_socket(int portnum);
 
 // Shared memory structure for passing info between threads
 // iOldest and iNext are controlled by main program unless
-// depth == -1 in which case iOldest is controlled by single LissThread
+// depth == -1 in which case iOldest is controlled by ListenThread
 struct s_mapshm
 {
   int  bQuit;          // Tells threads to gracefully terminate
@@ -57,7 +60,6 @@ struct s_mapshm
   int  iOldest;        // Oldest valid seed record index
   int  iNext;          // Next usable seed index, if iOldest==iNext then empty
   pthread_t listen_tid;              // Thread id of ListenThread
-  pthread_t client_tid[MAXCLIENT];   // Thread id of LissThread
   char *seedrec;
 }; // struct s_mapshm
 
@@ -94,29 +96,22 @@ char          *loc          // return Location ID
 
 } // SeedHeaderSNLC()
 
-//////////////////////////////////////////////////////////////////////////////
-// LissThread()
-//   Sends data from circular buffer to the LISS client
-//   The circular buffer depth is set by depth=argument
-//   If depth = -1 then the main program will never overwrite old data
-//     In this case it is up to LissThread to update iOldest index
-//     If depth = -1 then only one client will be allowed to connect
-void *LissThread(void *params)
-{
-  fprintf(stderr, "DEBUG entering LissThread()\n");
-  while (1)
-    sleep(1);
-  return NULL;
-} // LissThread()
-
 
 //////////////////////////////////////////////////////////////////////////////
 // ListenThread()
-//   Accepts new client connections and spawns a LissThread for each one
-//   Connections are limited by #define MAXCLIENT
+//   Accepts new client connections
 //   whitelist if not null will limit who can connect
+//   Sends data from circular buffer to the LISS client
+//   The circular buffer depth is set by depth=argument
+//   If depth = -1 then the main program will never overwrite old data
+//     In this case it is up to thread to update iOldest index
 void *ListenThread(void *params)
 {
+  int iReturn;
+  int iSend;
+  char    station[8];
+  char    chan[8];
+  char    loc[8];
   struct s_mapshm *mapshm;
 
 
@@ -135,10 +130,61 @@ void *ListenThread(void *params)
     fprintf(stderr, "Failed to open socket on port %d\n", mapshm->iPort);
     exit(1);
   }
-  fprintf(stderr, "DEBUG opened socket on port %d\n", mapshm->iPort);
+  if (mapshm->iDebug)
+    fprintf(stderr, "Opened socket on port %d\n", mapshm->iPort);
 
-  while (1)
-    sleep(1);
+  // Infinite loop accepting new client requests
+  while (!mapshm->bQuit)
+  {
+    iReturn = accept_client(whitelist, mapshm->iDebug);
+    if (iReturn < 1)
+    {
+      // No longer able to accept connections, exit
+      fprintf(stderr, "No longer able to accept connections, exiting!\n");
+      mapshm->bQuit = 1;
+      exit(1);
+    }
+
+    // We now have somebody connected
+    if (VERBOSE) fprintf(stderr, "New connection accepted\n");
+
+    // Send data from buffer until there is a send error
+    while (iReturn > 0 && !mapshm->bQuit)
+    {
+      // Wait until there is data to send
+      while (mapshm->iNext == mapshm->iOldest)
+        usleep(100);
+
+      // send the oldest record
+      iSend = mapshm->iOldest;
+      iReturn = send_record(&mapshm->seedrec[iSend*SEED_RECLEN],
+                            SEED_RECLEN);
+
+      // Update pointers on success
+      if (iReturn > 0)
+      {
+        if (mapshm->iDebug)
+        {
+          SeedHeaderSNLC(&mapshm->seedrec[iSend*SEED_RECLEN], station,chan,loc);
+          fprintf(stdout, "Sent %d bytes %s %s/%s %6.6s\n",
+                SEED_RECLEN, station, chan, loc, 
+                &mapshm->seedrec[iSend*SEED_RECLEN]);
+/* DEBUG
+          if (mapshm->iDebug)
+          {
+            fprintf(stderr, "Send iOldest=%d, iNext=%d, records=%d\n",
+                mapshm->iOldest, mapshm->iNext, mapshm->iRecords);
+          }
+*/
+        } // user wants debug info
+
+        // Update to new oldest record in circular buffer
+        mapshm->iOldest = (mapshm->iOldest+1) % mapshm->iRecords;
+
+      } // No errors sending data
+    } // while no read errors and not done
+  } // while not done
+
   return NULL;
 } // ListenThread()
 
@@ -226,7 +272,7 @@ static BOOL ReadRawPacket(ISI *isi, ISI_RAW_PACKET *raw)
     return FALSE;
 } // ReadRawPacket()
 
-static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno, ISI_SEQNO *endseqno, char *SiteSpec)
+static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno, ISI_SEQNO *endseqno, char *SiteSpec, struct s_mapshm *mapshm)
 {
 ISI *isi;
 ISI_RAW_PACKET raw;
@@ -234,10 +280,8 @@ ISI_DATA_REQUEST *dreq;
 UINT8 buf[LOCALBUFLEN];
 UINT64 count = 0;
 
-char    station[8];
-char    chan[8];
-char    loc[8];
 int     iReturn;
+int	iOldest,iRecord;
 
     dreq = BuildRawRequest(compress, begseqno, endseqno, SiteSpec);
 
@@ -264,40 +308,51 @@ int     iReturn;
 
     while (ReadRawPacket(isi, &raw)) {
         ++count;
-        if (VERBOSE) fprintf(stderr, "%s\n", isiRawHeaderString(&raw.hdr, buf));
+//      if (VERBOSE) fprintf(stderr, "%s\n", isiRawHeaderString(&raw.hdr, buf));
         if (!isiDecompressRawPacket(&raw, buf, LOCALBUFLEN)) {
             fprintf(stderr, "isiDecompressRawPacket error\n");
-        } else if (VERBOSE) {
-            utilPrintHexDump(stderr, raw.payload, 64);
-        }
-        if (VERBOSE) fprintf(stderr, "New record %6.6s\n", raw.payload);
+        } // else if (VERBOSE) {
+//            utilPrintHexDump(stderr, raw.payload, 64);
+//      }
 
-        // Send the data
-        // Return 0 means no connection
-        // Return -1 means error, connection closed
-        // Return 1 means success
-        iReturn = send_record(raw.payload, raw.hdr.len.used);
-
-        // If no connection keep trying until there is one
-        while (iReturn < 1)
+/* DEBUG
+        if (mapshm->iDebug)
         {
-          iReturn = accept_client();
-          if (iReturn < 1)
+          fprintf(stderr, "Read iOldest=%d, iNext=%d, records=%d\n",
+             mapshm->iOldest, mapshm->iNext, mapshm->iRecords);
+        }
+*/
+        // See if we are going to be overwriting old data
+        if ( ((mapshm->iNext+1) % mapshm->iRecords) == mapshm->iOldest)
+        {
+          // See if we overwrite or pause
+          if (mapshm->depth < 0)
           {
-            // No longer able to accept connections, exit
-            fprintf(stderr, "No longer able to accept connections, exiting!\n");
-            exit(1);
+            // Pause until adding record won't cause overwrite
+            if (mapshm->iDebug && ( ((mapshm->iNext+1) % mapshm->iRecords) 
+                                    == mapshm->iOldest) )
+              fprintf(stderr, "Blocking on full circular buffer\n");
+            while ( ((mapshm->iNext+1) % mapshm->iRecords) == mapshm->iOldest)
+              sleep(1);
+          } // we pause
+          else // we are in overwrite mode
+          {
+            // Remove oldest record
+            // Worst case is a race condition could cause us to remove more
+            // than one old record so I don't worry about it
+            if (mapshm->iDebug)
+              fprintf(stderr, "Overwriting oldest record %d\n", mapshm->iOldest);
+            mapshm->iOldest = (mapshm->iOldest+1) % mapshm->iRecords;
           }
+        } // if a data overwrite was going to occur
 
-          // We now have somebody connected, retry send
-          if (VERBOSE) fprintf(stderr, "new connection accepted\n");
-          iReturn = send_record(raw.payload, raw.hdr.len.used);
-        } // while unable to send record
+        // Save this record to buffer
+        memcpy(&mapshm->seedrec[mapshm->iNext * SEED_RECLEN], raw.payload,
+               SEED_RECLEN);
+        mapshm->iNext = (mapshm->iNext+1) % mapshm->iRecords;
 
-        // ASL code to write data to LISS connection
-        SeedHeaderSNLC(raw.payload, station, chan, loc);
-        fprintf(stdout, "Sent %d bytes %s %s/%s %6.6s\n",
-                raw.hdr.len.used, station, chan, loc, &raw.payload[0]);
+        // Give send process a chance to start send operation
+        usleep(200);
 
     } // While no errors reading from ida disk loop
 
@@ -360,8 +415,6 @@ int debug = 1;
 int lissport=4001;
 int depth=-1;
 int iRecords;
-char *whitelist=NULL;
-char *filter=NULL;
 ISI_PARAM par;
 char *req = NULL;
 char *log;
@@ -431,6 +484,10 @@ struct s_mapshm *mapshm;
         } else if (strncmp(argv[i], "log=", strlen("log=")) == 0) {
             log = argv[i] + strlen("log=");
             isiStartLogging(&par, log, NULL, argv[0]);
+        } else if (strncmp(argv[i], "whitelist=", strlen("whitelist=")) == 0) {
+            whitelist = argv[i] + strlen("whitelist=");
+        } else if (strncmp(argv[i], "filter=", strlen("filter=")) == 0) {
+            filter = argv[i] + strlen("filter=");
         } else if (strncmp(argv[i], "dbgpath=", strlen("dbgpath=")) == 0) {
             isiSetDbgpath(&par, argv[i] + strlen("dbgpath="));
         } else if (strcmp(argv[i], "-v") == 0) {
@@ -464,7 +521,7 @@ struct s_mapshm *mapshm;
         if (VERBOSE) fprintf(stderr, "%s raw data request\n", server);
 
         // Create shared memory region
-        if (depth < 1) iRecords = 2;
+        if (depth < 4) iRecords = 4;
         else iRecords = depth+1;
         retstr = MapSharedMem(sizeof(struct s_mapshm) + iRecords*SEED_RECLEN,
                  &mapshm);
@@ -475,7 +532,7 @@ struct s_mapshm *mapshm;
         }
         memset(mapshm, 0, sizeof(struct s_mapshm));
         mapshm->depth = depth;
-        mapshm->iDebug = debug;
+        mapshm->iDebug = VERBOSE;
         mapshm->iPort = lissport;
         mapshm->iRecords = iRecords;
         mapshm->iOldest = 0;
@@ -499,7 +556,7 @@ struct s_mapshm *mapshm;
             fprintf(stderr, "illegal end seqno '%s'\n", endstr);
             exit(1);
         }
-        raw(server, &par, compress, &begseqno, &endseqno, SiteSpec);
+        raw(server, &par, compress, &begseqno, &endseqno, SiteSpec, mapshm);
         break;
       default:
         help(argv[0]);

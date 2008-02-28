@@ -1,4 +1,4 @@
-LIBIDA=../../lib/$(PLATFORM)
+LIBIDA=$(HOME)/lib/$(PLATFORM)
 CC = gcc
 COPT = 
 LIBS = -L$(LIBIDA)

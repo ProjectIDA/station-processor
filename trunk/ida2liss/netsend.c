@@ -15,8 +15,10 @@
      1 = success
     -1 = socket closed or timed out
 
-  int accept_client()
+  int accept_client(const char *whitelist)
     Accepts a new client connection, waits until one is made
+    whitelist is a comma separated string of IP addresses allowed to connect
+    iDebug says whether to put out debuging information
      1 = success, global sockpath set to file descriptor
     -1 = failure, see errno
 
@@ -34,6 +36,7 @@
 #include <netdb.h>
 #include "include/dcc_std.h"
 #include "include/dcc_time_proto2.h"
+#include "include/netreq.h"
 
 extern int errno;
 
@@ -43,7 +46,7 @@ static int fd, sockpath ;
 static long seqnum=1;
 static int lgcount ;
 static int cmdcnt, cmdlen ;
-static int client_connected=0;
+//static int client_connected=0;
 static struct sockaddr from ;
 static socklen_t fromlen = sizeof(struct sockaddr);
 
@@ -106,7 +109,7 @@ int send_record (void *record, int size)
   {
    iSent += i;
    if (iSent < size)
-     usleep(100000);
+     usleep(1000);
   } // send was good
  } // while send not timed out
 
@@ -131,7 +134,6 @@ int open_socket(int port_number)
  socklen_t j ;
  char *retmsg ;
 
- fprintf(stderr,"Listening on port number %d\n", port_number);
  client_connected = 0 ;
 
  /* Create the socket to listen on */
@@ -185,17 +187,18 @@ int open_socket(int port_number)
  }
 } // open_socket()
 
-int accept_client()
+int accept_client(const char *whitelist, int iDebug)
 {
   /*
    * Wait for connection requests ......
    */
+  if (iDebug && whitelist)
+    fprintf(stderr, "Limiting connections to hosts %s\n", whitelist);
   sockpath = accept(fd, &from, &fromlen);
   if(sockpath < 0) {
    perror("accept");
    return -1;
   }
-  fprintf(stderr,"Client connection accepted\n");
   client_connected = 1 ;
   return 1;
 } // netmain()

@@ -17,6 +17,7 @@ void daemonize();
 
 #define perror(ster) fprintf(stderr,"Error: %s (%x)\n",ster,errno)
 
+int client_connected=0;
 char incmdbuf[80];
 char prsbuf[80] ;
 char lgstation_id[5] ;

@@ -42,6 +42,7 @@ extern int errno;
 
 #define perror(ster) fprintf(stderr,"Error: %s (%x)\n",ster,errno)
 
+int client_connected=0;
 static int fd, sockpath ;
 static long seqnum=1;
 static int lgcount ;

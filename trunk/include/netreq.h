@@ -40,5 +40,3 @@ typedef struct
   char  reserved;
 } blockette_1000;
 
-int client_connected;
-

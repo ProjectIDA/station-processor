@@ -1,4 +1,3 @@
-#pragma ident "$Id: main.c,v 1.25 2007/06/28 19:45:51 dechavez Exp $"
 /*======================================================================
 Author:  Frank Shelly  USGS Albuquerque Seismological Laboratory
 Date:    2 January 2008
@@ -40,12 +39,14 @@ const char *WHOAMI="ida2liss";
 
 UINT32 flags   = 0;
 char *server   = DEFAULT_SERVER;
-static char *StandardOutput = "stdout";
 
 char *whitelist=NULL;
 char *filter=NULL;
 
 extern int open_socket(int portnum);
+extern int accept_client(const char *whitelist, int debug);
+extern int send_record(void *record, int size);
+extern int WildMatch(char *pattern, char *target);
 
 // Shared memory structure for passing info between threads
 // iOldest and iNext are controlled by main program unless
@@ -94,6 +95,7 @@ char          *loc          // return Location ID
     chan[i] = pheader->channel_id[i];
   chan[i] = 0;
 
+  return NULL;
 } // SeedHeaderSNLC()
 
 
@@ -119,12 +121,6 @@ void *ListenThread(void *params)
   mapshm = (struct s_mapshm *)params;
   
   // open LISS socket
-  if (mapshm->iDebug)
-  {
-    fprintf(stderr, "Entering ListenThread()\n");
-    fprintf(stderr, "About to open socket on port %d\n", mapshm->iPort);
-  }
-
   if (open_socket(mapshm->iPort) < 0)
   {
     fprintf(stderr, "Failed to open socket on port %d\n", mapshm->iPort);
@@ -136,17 +132,20 @@ void *ListenThread(void *params)
   // Infinite loop accepting new client requests
   while (!mapshm->bQuit)
   {
+    // Accept a new client connection
     iReturn = accept_client(whitelist, mapshm->iDebug);
-    if (iReturn < 1)
+
+    // If client was not on whitelist then try again
+    if (iReturn == 0)
+      continue;
+
+    if (iReturn < 0)
     {
       // No longer able to accept connections, exit
       fprintf(stderr, "No longer able to accept connections, exiting!\n");
       mapshm->bQuit = 1;
       exit(1);
     }
-
-    // We now have somebody connected
-    if (VERBOSE) fprintf(stderr, "New connection accepted\n");
 
     // Send data from buffer until there is a send error
     while (iReturn > 0 && !mapshm->bQuit)
@@ -166,15 +165,12 @@ void *ListenThread(void *params)
         if (mapshm->iDebug)
         {
           SeedHeaderSNLC(&mapshm->seedrec[iSend*SEED_RECLEN], station,chan,loc);
+/* DEBUG
           fprintf(stdout, "Sent %d bytes %s %s/%s %6.6s\n",
                 SEED_RECLEN, station, chan, loc, 
                 &mapshm->seedrec[iSend*SEED_RECLEN]);
-/* DEBUG
-          if (mapshm->iDebug)
-          {
-            fprintf(stderr, "Send iOldest=%d, iNext=%d, records=%d\n",
+          fprintf(stderr, "Send iOldest=%d, iNext=%d, records=%d\n",
                 mapshm->iOldest, mapshm->iNext, mapshm->iRecords);
-          }
 */
         } // user wants debug info
 
@@ -225,6 +221,90 @@ char *MapSharedMem(int iSize, struct s_mapshm **mapshm)
   return NULL;
 } // MapSharedMem()
 
+//////////////////////////////////////////////////////////////////////////////
+// Compare a location/channel string against the filter string
+// filter_str contains a comma separated list of location/channel pairs
+// chan_str contatins a single location/channel
+// Wildcards *,? are allowed in filter_str, not in chan_str
+// Returns 1 if filter_str is NULL
+// Returns 1 if chan_str matches one of the filters
+// Returns 0 if chan_str does not match one of the filters
+// Returns -1 if there is a syntax error in filter_str
+int check_filter(const char *filter_str, const char *chan_str)
+{
+  char *entry_ptr;
+  char entry_str[16];
+  char pattern_str[4];
+  char target_str[4];
+  int  i,j;
+
+  if (filter_str == NULL)
+    return 1;
+
+  // Loop through each entry in filter_str
+  for (entry_ptr = (char *)filter_str; *entry_ptr != 0;) 
+  {
+    // Copy entry
+    for (i=0; *entry_ptr != 0 && *entry_ptr != ','; i++, entry_ptr++)
+    {
+      entry_str[i] = *entry_ptr;
+      if (i > 5) return -1; // loc/channel is never more than 6 chars
+    }
+    if (*entry_ptr == ',') entry_ptr++;
+    entry_str[i] = 0;
+    if (i < 2) return -1;  // shortest legal filter is "/*"
+
+    // Compare locations
+    strncpy(target_str, chan_str, 2);
+    target_str[2] = 0;
+
+    for (i=0; i < 2; i++)
+    {
+      if (entry_str[0] == '/')
+      {
+        strcpy(pattern_str, "  ");
+        j = 2;
+        break;
+      }
+
+      if (entry_str[i] != '/')
+      {
+        pattern_str[i] = entry_str[i];
+      }
+
+      if (entry_str[i] == '/') break;
+    } // Copy pattern location
+    pattern_str[i] = 0;
+    if (entry_str[i] != '/') return -1;  // Syntax error in filter location
+
+    if (!WildMatch(pattern_str, target_str)) continue;
+
+    // Match channel strings
+    strncpy(target_str, &chan_str[3], 3);
+    target_str[3] = 0;
+
+    strncpy(pattern_str, &entry_str[i+1], 3);
+    pattern_str[3] = 0;
+    if (strlen(entry_str) - i > 4)
+    {
+      fprintf(stderr, "check_filter entry_str '%s' %d > %d+%d+1\n",
+              entry_str, strlen(entry_str), i,4);
+      return -1;  // channel name too long
+    }
+
+    if (WildMatch(pattern_str, target_str))
+    {
+     if (VERBOSE)
+       fprintf(stderr, "Matched filter '%s' against '%s'\n",
+              entry_str, chan_str);
+      return 1;
+    }
+  } // loop through all filter pairs
+
+  // If we get here then there was no match
+  return 0;
+} // check_filter()
+
 static ISI_DATA_REQUEST *BuildRawRequest(int compress, ISI_SEQNO *begseqno, ISI_SEQNO *endseqno, char *SiteSpec)
 {
 ISI_DATA_REQUEST *dreq;
@@ -246,7 +326,7 @@ static BOOL ReadRawPacket(ISI *isi, ISI_RAW_PACKET *raw)
     {
         if (isi->frame.payload.type != ISI_IACP_RAW_PKT)
         {
-            fprintf(stderr, "unexpected type %d packet ignored\n", isi->frame.payload.type);
+            fprintf(stderr, "unexpected type %lud packet ignored\n", isi->frame.payload.type);
         }
         else
         {
@@ -274,14 +354,15 @@ static BOOL ReadRawPacket(ISI *isi, ISI_RAW_PACKET *raw)
 
 static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno, ISI_SEQNO *endseqno, char *SiteSpec, struct s_mapshm *mapshm)
 {
-ISI *isi;
-ISI_RAW_PACKET raw;
-ISI_DATA_REQUEST *dreq;
-UINT8 buf[LOCALBUFLEN];
-UINT64 count = 0;
-
-int     iReturn;
-int	iOldest,iRecord;
+  ISI *isi;
+  ISI_RAW_PACKET raw;
+  ISI_DATA_REQUEST *dreq;
+  UINT8 buf[LOCALBUFLEN];
+  UINT64 count = 0;
+  char    station[8];
+  char    chan[8];
+  char    loc[8];
+  char    loc_station[16];
 
     dreq = BuildRawRequest(compress, begseqno, endseqno, SiteSpec);
 
@@ -306,7 +387,8 @@ int	iOldest,iRecord;
         isiPrintDatreq(stderr, &isi->datreq);
     }
 
-    while (ReadRawPacket(isi, &raw)) {
+    while (ReadRawPacket(isi, &raw))
+    {
         ++count;
 //      if (VERBOSE) fprintf(stderr, "%s\n", isiRawHeaderString(&raw.hdr, buf));
         if (!isiDecompressRawPacket(&raw, buf, LOCALBUFLEN)) {
@@ -315,7 +397,13 @@ int	iOldest,iRecord;
 //            utilPrintHexDump(stderr, raw.payload, 64);
 //      }
 
-/* DEBUG
+        // See if location/channel match our filter string
+        SeedHeaderSNLC(raw.payload, station,chan,loc);
+        sprintf(loc_station, "%2.2s/%3.3s", loc, chan);
+        if (check_filter(filter, loc_station) != 1)
+          continue;
+
+/*
         if (mapshm->iDebug)
         {
           fprintf(stderr, "Read iOldest=%d, iNext=%d, records=%d\n",
@@ -379,6 +467,7 @@ static char *VerboseHelp =
 "    filter=string - What location/channels to send, default is */*\n"
 "                    Format is one or more location/channel entries\n"
 "                    separated by commas, * and ? wildcards allowed\n"
+"                    For a blank location code start with a /\n"
 "    whitelist=string - hosts that are allowed to connect\n"
 "                       Empty (default) whitelist means all hosts\n"
 "                       A zero in last ip address means subnet access allowed\n"
@@ -418,20 +507,16 @@ int iRecords;
 ISI_PARAM par;
 char *req = NULL;
 char *log;
-char *StreamSpec = NULL;
 char *SiteSpec = NULL;
 char *begstr = NULL;
 char *endstr = NULL;
 char *retstr = NULL;
-REAL64 begtime = ISI_NEWEST;
-REAL64 endtime = ISI_KEEPUP;
 ISI_SEQNO begseqno = ISI_NEWEST_SEQNO;
 ISI_SEQNO endseqno = ISI_NEVER_SEQNO;
 char *tmpstr;
 int maxdur    = 0;
 int compress  = ISI_COMP_NONE;
 int format    = ISI_FORMAT_GENERIC;
-char *dbspec  = NULL;
 struct s_mapshm *mapshm;
 
     utilNetworkInit();
@@ -514,6 +599,13 @@ struct s_mapshm *mapshm;
         if (strlen(SiteSpec) == 0) SiteSpec = NULL;
     } else {
         help(argv[0]);
+    }
+
+    // Check filter string for easy to find syntax errors
+    if (check_filter(filter, "##/###") == -1)
+    {
+      fprintf(stderr, "Syntax error in filter string '%s'\n", filter);
+      exit(1);
     }
 
     switch (request) {

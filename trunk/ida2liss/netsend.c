@@ -15,7 +15,7 @@
      1 = success
     -1 = socket closed or timed out
 
-  int accept_client(const char *whitelist)
+  int accept_client(const char *whitelist, int iDebug)
     Accepts a new client connection, waits until one is made
     whitelist is a comma separated string of IP addresses allowed to connect
     iDebug says whether to put out debuging information
@@ -45,9 +45,6 @@ extern int errno;
 int client_connected=0;
 static int fd, sockpath ;
 static long seqnum=1;
-static int lgcount ;
-static int cmdcnt, cmdlen ;
-//static int client_connected=0;
 static struct sockaddr from ;
 static socklen_t fromlen = sizeof(struct sockaddr);
 
@@ -133,7 +130,6 @@ int open_socket(int port_number)
  int flag2 ;
  int itry;
  socklen_t j ;
- char *retmsg ;
 
  client_connected = 0 ;
 
@@ -186,21 +182,115 @@ int open_socket(int port_number)
   perror("listen");
   return -1;
  }
+
+ return fd;
 } // open_socket()
 
 int accept_client(const char *whitelist, int iDebug)
 {
+  char *checklist;
+  char peer_name[16];
+  char white_name[16];
+  static char *whitebuf=NULL;
+  int  found=0;
+  int  i;
+  struct sockaddr peer;
+  socklen_t peerlen;
+  struct hostent *whitehost;
+
+  // One time malloc of buffer space for whitelist
+  if (whitelist != NULL && whitebuf == NULL)
+  {
+   whitebuf = malloc(strlen(whitelist)+1);
+  }
+
   /*
    * Wait for connection requests ......
    */
   if (iDebug && whitelist)
     fprintf(stderr, "Limiting connections to hosts %s\n", whitelist);
   sockpath = accept(fd, &from, &fromlen);
-  if(sockpath < 0) {
+  if(sockpath < 0)
+  {
    perror("accept");
    return -1;
   }
+
+  // get ip name of client that connected to us
+  peerlen = sizeof(peer);
+  if (getpeername(sockpath, &peer, &peerlen) != 0)
+  {
+    perror("getpeername");
+    return -1;
+  }
+  sprintf(peer_name, "%u.%u.%u.%u",
+      (unsigned char)peer.sa_data[2],
+      (unsigned char)peer.sa_data[3],
+      (unsigned char)peer.sa_data[4],
+      (unsigned char)peer.sa_data[5]);
+
+  // Valid socket, see if user is on our whitelist
+  if (whitelist != NULL)
+  {
+   found=0;
+   checklist = (char *)whitelist;
+   while (*checklist != 0 && !found)
+   {
+     // get next comma separated host into whitebuf, advance checklist
+     for(i=0; *checklist != 0 && *checklist != ','; i++,checklist++)
+       whitebuf[i] = *checklist;
+     whitebuf[i] = 0;
+     if (*checklist == ',') checklist++;
+
+     // get ip address for whitebuf hostname
+     whitehost = gethostbyname(whitebuf);
+     if (whitehost == NULL)
+     {
+       // Failed to turn host into an IP address
+       if (iDebug)
+       {
+         fprintf(stderr, "Whitelist host '%s' not found\n", whitebuf);
+       }
+       continue;
+     }
+
+     // check whitehost against peer_name
+     for (i=0; whitehost->h_addr_list[i] != NULL && !found; i++)
+     {
+       sprintf(white_name, "%u.%u.%u.%u",
+           (unsigned char)whitehost->h_addr[0],
+           (unsigned char)whitehost->h_addr[1],
+           (unsigned char)whitehost->h_addr[2],
+           (unsigned char)whitehost->h_addr[3]
+        );
+
+       if (iDebug)
+         fprintf(stderr, "Comparing host ip[%d] %s and %s\n", i, white_name, peer_name);
+       if (strcmp(white_name, peer_name) == 0)
+       {
+         found = 1;
+       }
+     } // for each address listed for this host
+   } // while there are more hosts to check on whitelist
+
+   // If client not found on whitelist then close clonnection
+   if (!found)
+   {
+     if (iDebug)
+     {
+       fprintf(stderr, "Client %s was not on whitelist '%s', connection closed\n",
+         peer_name,
+         whitelist);
+     }
+     close_client_connection();
+     return 0;
+   }
+  }  // whitelist enabled
+
+  if (iDebug)
+    fprintf(stderr, "Client connection accepted from %s\n", peer_name);
+
   client_connected = 1 ;
   return 1;
-} // netmain()
+} // accept_client()
 

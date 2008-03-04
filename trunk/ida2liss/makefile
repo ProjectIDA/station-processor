@@ -26,12 +26,12 @@ DEFS    = -D$(OSNAME) -D$(OSTYPE) -D_REENTRANT
 # End IDA stuff
 
 CC = gcc -g
-COPT = 
+COPT =
 LIBS = -L $(LIBIDA)
-CFLAGS = -I.. -I. -I$(HOME)/ida_build/include $(DEFS)
+CFLAGS = -Wall -I.. -I. -I$(HOME)/ida_build/include $(DEFS)
 LIBS += -lm -lpthread
 
-SRCS = ida2liss.c netsend.c
+SRCS = ida2liss.c netsend.c wildmatch.c
 
 OBJS = $(SRCS:%.c=%.o)
 
@@ -55,6 +55,8 @@ ida2liss : $(OBJS) \
 ida2liss.o: ../include/diskloop.h
 
 netsend.o:
+
+wildmatch.o:
 
 clean : 
 		rm -f *.o ida2liss

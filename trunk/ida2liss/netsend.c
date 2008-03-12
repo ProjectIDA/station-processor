@@ -191,11 +191,11 @@ int accept_client(const char *whitelist, int iDebug)
   char *checklist;
   char peer_name[16];
   char white_name[16];
+  char peer_ip[4];
+  char white_ip[4];
   static char *whitebuf=NULL;
   int  found=0;
-  int  i;
-  struct sockaddr peer;
-  socklen_t peerlen;
+  int  i,j;
   struct hostent *whitehost;
 
   // One time malloc of buffer space for whitelist
@@ -215,19 +215,17 @@ int accept_client(const char *whitelist, int iDebug)
    perror("accept");
    return -1;
   }
+  peer_ip[0] = from.sa_data[2];
+  peer_ip[1] = from.sa_data[3];
+  peer_ip[2] = from.sa_data[4];
+  peer_ip[3] = from.sa_data[5];
 
   // get ip name of client that connected to us
-  peerlen = sizeof(peer);
-  if (getpeername(sockpath, &peer, &peerlen) != 0)
-  {
-    perror("getpeername");
-    return -1;
-  }
   sprintf(peer_name, "%u.%u.%u.%u",
-      (unsigned char)peer.sa_data[2],
-      (unsigned char)peer.sa_data[3],
-      (unsigned char)peer.sa_data[4],
-      (unsigned char)peer.sa_data[5]);
+      (unsigned char)from.sa_data[2],
+      (unsigned char)from.sa_data[3],
+      (unsigned char)from.sa_data[4],
+      (unsigned char)from.sa_data[5]);
 
   // Valid socket, see if user is on our whitelist
   if (whitelist != NULL)
@@ -257,16 +255,22 @@ int accept_client(const char *whitelist, int iDebug)
      // check whitehost against peer_name
      for (i=0; whitehost->h_addr_list[i] != NULL && !found; i++)
      {
+       white_ip[0] = whitehost->h_addr_list[i][0];
+       white_ip[1] = whitehost->h_addr_list[i][1];
+       white_ip[2] = whitehost->h_addr_list[i][2];
+       white_ip[3] = whitehost->h_addr_list[i][3];
        sprintf(white_name, "%u.%u.%u.%u",
-           (unsigned char)whitehost->h_addr[0],
-           (unsigned char)whitehost->h_addr[1],
-           (unsigned char)whitehost->h_addr[2],
-           (unsigned char)whitehost->h_addr[3]
+           (unsigned char)white_ip[0],
+           (unsigned char)white_ip[1],
+           (unsigned char)white_ip[2],
+           (unsigned char)white_ip[3]
         );
 
        if (iDebug)
          fprintf(stderr, "Comparing host ip[%d] %s and %s\n", i, white_name, peer_name);
-       if (strcmp(white_name, peer_name) == 0)
+       for (j=0; j < 3 && peer_ip[j] == white_ip[j]; j++)
+         ; // looking for first missmatch
+       if (j == 3 && (white_ip[3] == 0 || white_ip[3] == peer_ip[3]))
        {
          found = 1;
        }

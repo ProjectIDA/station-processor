@@ -30,6 +30,7 @@ int cmdcnt, cmdlen ;
 
 void close_client_connection()
 {
+ sleep(2); // Helps some clients who see RESET before last data
  shutdown(sockpath, SHUT_RDWR) ;
  close(sockpath) ;
  client_connected = 0 ;

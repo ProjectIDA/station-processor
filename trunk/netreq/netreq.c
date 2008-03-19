@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include "include/diskloop.h"
@@ -531,11 +532,13 @@ int argc;
 
  // Parse the q330driver configuration file
  if ((retmsg=ParseDiskLoopConfig(
-              "/etc/q330/diskloop.config")) != NULL)
+              "/etc/q330/DLG1/diskloop.config")) != NULL)
  {
   fprintf(stderr, "%s: %s\n", argv[0], retmsg);
   exit(1);
  }
+
+ signal(SIGPIPE, SIG_IGN);
 
  // Set up to run program as a daemon
  daemonize();

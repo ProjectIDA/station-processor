@@ -14,6 +14,7 @@ LIBS += -lm -lpthread
 
 SRCS = dispstatus.c
 SRCS+= daemonize.c
+SRCS+= mapstatusmem.c
 
 OBJS = $(SRCS:%.c=%.o)
 

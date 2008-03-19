@@ -78,7 +78,9 @@ int openraw(
 } // openraw()
 
 //////////////////////////////////////////////////////////////////////////////
-void acsWrite(int fd, const char *msg)
+void acsWrite(
+  int fd,                      // file descriptor for terminal device
+  const char *msg)             // String to send to device
 {
   write(fd, "\001", 1);
   write(fd, msg, strlen(msg));
@@ -86,14 +88,42 @@ void acsWrite(int fd, const char *msg)
 } // acsWrite()
 
 //////////////////////////////////////////////////////////////////////////////
-// Writes a line feed to the last line causing an scroll
-// Then outputs the message
-void acsScroll(int fd, const char *msg)
+// Send a print command to ACS display, followed by msg
+// line is between 1 and 8 and says which line msg will appear on
+// The line is cleared before the message is output
+void acsPrint(
+  int fd,                      // file descriptor for terminal device
+  const char *msg,             // Message string
+  int line)                    // line number (1-8) to display message on
 {
-  write(fd, "\001P8000010\n", 10);
+  int lineMask;
+  char lineStr[4];
+
+  // Figure out the correct mask for the line
+  if (line < 1) line = 1;
+  if (line > 8) line = 8;
+  lineMask = 0x01;
+  while (line > 1)
+  {
+    lineMask = lineMask << 1 ;
+    line--;
+  }
+  sprintf(lineStr, "%02X", lineMask);
+
+  // Clear the line
+  write(fd, "\001C", 2);
+  write(fd, lineStr, 2);
+  write(fd, "007F\003", 5);
+
+fprintf(stderr, "Send: P%s%s%s\n",
+lineStr, "00010", msg);
+  // Print message
+  write(fd, "\001P", 2);
+  write(fd, lineStr, 2);
+  write(fd, "00010 ", 6); // Column 0, Font 0, Type 1, left justification
   write(fd, msg, strlen(msg));
   write(fd, "\003", 1);
-} // acsScroll()
+} // acsPrint()
 
 //////////////////////////////////////////////////////////////////////////////
 int main (int argc, char **argv)
@@ -142,8 +172,10 @@ int main (int argc, char **argv)
 
   // Clear display
   acsWrite(fdTerm, "CFF007F");
-  acsScroll(fdTerm, "First message");
-  acsScroll(fdTerm, "Second message");
+  acsPrint(fdTerm, "Line 3", 3);
+  acsPrint(fdTerm, "Line 1", 1);
+  acsPrint(fdTerm, "Line 8", 8);
+  acsPrint(fdTerm, "Line 5", 5);
 
   return 0 ;
 } // main()

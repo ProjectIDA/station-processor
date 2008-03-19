@@ -26,4 +26,4 @@ cpio:
 	find q330serv ida2chan netreq dlutil log330 q330arch ida2liss lib include -name '*.[ch]' -print >/tmp/flist
 	find . -name '[mM]akefile' -print >>/tmp/flist
 	sort /tmp/flist >/tmp/slist	
-	cpio -ov </tmp/slist >q330ida.cpio
+	cpio -ov </tmp/slist >q330asp.cpio

@@ -522,8 +522,11 @@ struct s_mapshm *mapshm;
     utilNetworkInit();
     isiInitDefaultPar(&par);
 
-    // Ignore broken pipe signal from closed network connection
-    signal(SIGPIPE, SIG_IGN);
+// Attempt to fix iacpRecvFrame error which failed to help
+//    StartSignalHandler();
+//    InitExit(par);
+    signal(SIGPIPE, SIG_IGN); // client connection is closed
+    signal(SIGCHLD,SIG_DFL);  // A child process terminates
 
     for (i = 1; i < argc; i++) {
         if (strncmp(argv[i], "server=", strlen("server=")) == 0) {
@@ -629,7 +632,7 @@ struct s_mapshm *mapshm;
         mapshm->iRecords = iRecords;
         mapshm->iOldest = 0;
         mapshm->iNext = 0;
-        mapshm->seedrec = (char *)(mapshm + sizeof(struct s_mapshm));
+        mapshm->seedrec = (char *)((char *)mapshm + sizeof(struct s_mapshm));
 
         // Start Listen server thread
         if (pthread_create(&mapshm->listen_tid, NULL,

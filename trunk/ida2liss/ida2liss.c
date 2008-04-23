@@ -521,9 +521,6 @@ struct s_mapshm *mapshm;
     utilNetworkInit();
     isiInitDefaultPar(&par);
 
-// Attempt to fix iacpRecvFrame error which failed to help
-//    StartSignalHandler();
-//    InitExit(par);
     signal(SIGPIPE, SIG_IGN); // client connection is closed
 
     for (i = 1; i < argc; i++) {

@@ -32,7 +32,6 @@ CFLAGS = -Wall -I.. -I. -I$(HOME)/ida_build/include $(DEFS)
 LIBS += -lm -lpthread
 
 SRCS = ida2liss.c netsend.c wildmatch.c
-# SRCS +=signals.c log.c exit.c
 
 OBJS = $(SRCS:%.c=%.o)
 

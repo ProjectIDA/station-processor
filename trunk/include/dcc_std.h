@@ -21,6 +21,9 @@
 
 /*-----------------------Determine System Dependancies------------------*/
 
+#ifndef __DCC_STD_H_
+#define __DCC_STD_H_
+
 #ifdef VMS
 
 #include stdio
@@ -178,3 +181,4 @@ typedef _mag_type MAG_ID;
 #define NET_METRUM1 "NET_METRUM1"
 #define NET_METRUM2 "NET_METRUM2"
 
+#endif // __DCC_STD_H_

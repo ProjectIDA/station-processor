@@ -146,7 +146,7 @@ begin
     then
       sprintf(s, "%d", rate) ;
     else
-      sprintf(s, "%4.2f", fabs(rate)) ;
+      sprintf(s, "%5.3f", fabs(1.0 / rate)) ;
   strcpy((char *)result, s) ;
   return (char *)result ;
 end

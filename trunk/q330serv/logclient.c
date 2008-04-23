@@ -70,7 +70,7 @@ char *q330SeedSend(void *seed_record)
     {
       close(iSocket);
       iSocket = -1;
-      return "Unable to connect to logserver";
+      return "Unable to connect to q330arch";
     }
   } // socket needs to be opened
 

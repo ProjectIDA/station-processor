@@ -24,6 +24,7 @@ Edit History:
     1 2006-10-29 rdr Remove spurious "addr" functions when using address of
                      callback functions.
     2 2006-11-30 rdr Add handling of module versions command.
+    3 2007-03-07 rdr Add call to WSACleanup.
 */
 #ifndef globals_h
 #include "globals.h"
@@ -134,6 +135,9 @@ begin
             if (context)
               then
                 lib_destroy_context (addr(context)) ;
+#ifdef X86_WIN32
+            WSACleanup () ;
+#endif
             return ;
           case 'S' :
             if (context)
@@ -418,6 +422,9 @@ begin
                         printf ("POC Receiver Stopped\n") ;
                         lib_poc_stop (poc_context) ;
                       end
+#ifdef X86_WIN32
+                  WSACleanup () ;
+#endif
                   return ;
                 end
             break ;

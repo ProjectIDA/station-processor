@@ -27,7 +27,7 @@ static void sigterm_handler()
   exit(EXIT_SUCCESS);
 } // sigterm_handler()
 
-static void child_handler(int signum)
+void child_handler(int signum)
 {
     switch(signum) {
     case SIGALRM: exit(EXIT_FAILURE); break;

@@ -114,7 +114,6 @@ void daemonize()
     signal(SIGTTIN,SIG_IGN);
     signal(SIGHUP, SIG_IGN); /* Ignore hangup signal */
     signal(SIGTERM,sigterm_handler); /* Die on SIGTERM */
-//    signal(SIGTERM,SIG_DFL); /* Die on SIGTERM */
 
     /* Change the file mode mask */
     umask(0);

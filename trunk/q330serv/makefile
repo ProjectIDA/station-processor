@@ -13,20 +13,23 @@ CFLAGS = -I.. -I. -I$(LIB330_DIR)
 LIBS += -lm -lpthread
 
 SRCS = daemonize.c callbacks.c commands.c config.c dump.c globals.c q330serv.c
-SRCS+= logclient.c seedmsg.c
+SRCS+= logclient.c seedmsg.c ../dispstatus/statusutil.c
 
 OBJS = $(SRCS:%.c=%.o)
 
 q330serv : $(LIB330_DIR)/lib330.a $(OBJS) \
-		../lib/libapi.a  \
+		../lib/libapi.a \
 		../lib/dalib.a ../lib/dcctime2lib.a
 	$(CC) $(OBJS) $(LIBS) -o q330serv -lz -lm -lpthread \
 		../lib/libapi.a \
 		../lib/dalib.a ../lib/dcctime2lib.a
 
-q330serv.o: ../include/diskloop.h
+q330serv.o: ../include/diskloop.h ../include/shmstatus.h
 
 callbacks.o:	../include/diskloop.h ../include/q330arch.h
+
+../dispstatus/statusutil.o	: ../include/shmstatus.h
+	cd ../dispstatus; $(MAKE)
 
 $(LIB330_DIR)/lib330.a : 
 	@echo

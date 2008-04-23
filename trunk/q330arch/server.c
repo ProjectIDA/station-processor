@@ -51,6 +51,17 @@ struct s_readthread
 };
 
 //////////////////////////////////////////////////////////////////////////////
+// Local handler to orderly shut down server and child forks
+static void sigterm_server()
+{
+  if (mapshm == NULL) exit(1);
+  if (mapshm->bDebug)
+    fprintf(stderr, "sigterm_server entered, pid=%d\n", getpid());
+  mapshm->bQuit = 1;
+  return;
+} // sigterm_server
+
+//////////////////////////////////////////////////////////////////////////////
 // Creates the shared memory segment used for inter fork communications
 char *MapSharedMem(void **mapshm)
 {
@@ -112,7 +123,7 @@ void *ServerReadThread(void *params)
 
   if (mapshm->bDebug)
   {
-    printf("New read connection %d, thread id=%lud\n",
+    printf("New read connection %d, thread id=%lu\n",
         iClient, mapshm->client_tid[iClient]);
   }
 
@@ -132,12 +143,12 @@ void *ServerReadThread(void *params)
         // Setting client_tid to 0 lets server know this client done
         if (mapshm->bDebug)
         {
-          printf("Closing client read thread %d, thread id %lud\n",
+          printf("Closing client read thread %d, thread id %lu\n",
               iClient, mapshm->client_tid[iClient]);
         }
         mapshm->client_tid[iClient] = 0;
         close(iSocket);
-        exit(0);
+        return NULL;
       } // connection closed
 
 //      if (mapshm->bDebug)
@@ -175,7 +186,7 @@ void *ServerReadThread(void *params)
 } // ServerReadThread()
 
 //////////////////////////////////////////////////////////////////////////////
-// Entry point for main program to start server listening for log messagges
+// Entry point for main program to start server listening for log messages
 void *StartServer(void *params)
 {
   int   listen_socket;
@@ -186,12 +197,18 @@ void *StartServer(void *params)
   struct s_mapshm *mapshm;
   struct sockaddr_in listen_addr; /* Listen address setup */
 
+  // Set up a handler for when the server is terminated
+  signal(SIGTERM,sigterm_server);
+  signal(SIGCHLD,SIG_IGN);
+  signal(SIGPIPE,SIG_IGN);
+
   // Get thread arguments
   mapshm = (struct s_mapshm *) params;
 
   if ((errstr=LoopRecordSize(&iSeedRecordSize)) != NULL)
   {
     fprintf(stderr, "%s\n", errstr);
+    mapshm->bQuit = 1;
     return NULL;
   }
 
@@ -209,7 +226,8 @@ void *StartServer(void *params)
   {
     fprintf(stderr,"StartServer: Cannot open socket (err %d,%d)\n",
 	    errno,listen_socket);
-    exit(1);
+    mapshm->bQuit = 1;
+    return NULL;
   }
 
   /* Set up structure and bind to port number */
@@ -227,22 +245,24 @@ void *StartServer(void *params)
     {
       if (errno==EADDRINUSE)
       {
-        fprintf(stderr,"Port %d in use? Trying again in 60 sec\n",
+        fprintf(stderr,"Port %d in use? Trying again in 30 sec\n",
         mapshm->iPort);
-        sleep(60);
+        sleep(30);
         continue;
       }
       fprintf(stderr,"Cannot bind (err %d - %s)\n",errno,strerror(errno));
-      exit(10);
+      mapshm->bQuit = 1;
+      return NULL;
     }
     break;
   } // infinite loop
   
   // Set up listener
   if (listen(listen_socket, MAX_CLIENTS) < 0) {
-    fprintf(stderr,"dnetport: cannot set depth to %d (%d)\n",
+    fprintf(stderr,"dnetport: cannot set listen depth to %d (%d)\n",
 	    MAX_CLIENTS,errno);
-    exit(10);
+    mapshm->bQuit = 1;
+    return NULL;
   }
  
   /* Loop forever waiting for connection requests */
@@ -314,7 +334,7 @@ void *StartServer(void *params)
         WHOAMI, strerror(errno));
       mapshm->bQuit = 1;
       return NULL;
-    } // errot starting child thread
+    } // error starting child thread
 
     mapshm->client_tid[client] = child_tid;
     if (mapshm->bDebug)

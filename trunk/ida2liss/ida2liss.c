@@ -403,13 +403,12 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
         if (check_filter(filter, loc_station) != 1)
           continue;
 
-/*
         if (mapshm->iDebug)
         {
-          fprintf(stderr, "Read iOldest=%d, iNext=%d, records=%d\n",
-             mapshm->iOldest, mapshm->iNext, mapshm->iRecords);
+          fprintf(stderr, "Read iOldest=%d, iNext=%d, records=%d, %s %s/%s\n",
+             mapshm->iOldest, mapshm->iNext, mapshm->iRecords, station, loc, chan);
         }
-*/
+
         // See if we are going to be overwriting old data
         if ( ((mapshm->iNext+1) % mapshm->iRecords) == mapshm->iOldest)
         {
@@ -526,7 +525,6 @@ struct s_mapshm *mapshm;
 //    StartSignalHandler();
 //    InitExit(par);
     signal(SIGPIPE, SIG_IGN); // client connection is closed
-    signal(SIGCHLD,SIG_DFL);  // A child process terminates
 
     for (i = 1; i < argc; i++) {
         if (strncmp(argv[i], "server=", strlen("server=")) == 0) {

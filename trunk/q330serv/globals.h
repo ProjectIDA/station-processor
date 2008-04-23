@@ -22,10 +22,11 @@ Edit History:
    -- ---------- --- ---------------------------------------------------
     0 2006-09-09 rdr Created
     1 2006-11-30 rdr Add definitions for module versions.
+    2 2007-01-18 rdr Remove duplicate define for VER_GLOBALS.
 */
 #ifndef globals_h
 #define globals_h
-#define VER_GLOBALS 2
+#define VER_GLOBALS 3
 
 #ifndef libtypes_h
 #include "libtypes.h"
@@ -42,15 +43,13 @@ Edit History:
 #endif
 #endif
 
-#undef VER_GLOBALS
-#define VER_GLOBALS 1
-#define SEN_VER "0.80"
+#define SEN_VER "0.88"
 #define MSG_QUEUE_SIZE 256 /* must be a power of 2 */
 #define MSG_QUEUE_MASK (MSG_QUEUE_SIZE - 1)
 
 #ifndef OMIT_SEED
 #define NETBUFSIZE 100352
-//#define ARC_RECORD_SIZE 4096
+#define ARC_RECORD_SIZE 4096
 #define ARC_FRAMES_PER_RECORD 64
 #define ARC_RECORD_EXP 12
 #define CONFIG_VERSION 2

@@ -8,7 +8,7 @@ Algorithm:
             /etc/q330/DLG[1-9]
             For each DLG? directory the program assumes there is a Q330
 
-        2.  Infinite loop start
+        2.  Infinite loop of status display sequences
 
         3.    Wait for operator to press any display key to start status sequence
 
@@ -18,7 +18,8 @@ Algorithm:
 
         6.      Wait for timeout, or keyboard input
 
-        7.    Loop back to 4 for next display screen
+        7.      If keyboard up arrow input then go backward one display type, loop to 4
+                else Loop back to 4 for next display screen
 
         8.    Display "Press any key for Status"
 
@@ -52,7 +53,14 @@ mmddyy who Changes
 #include "include/shmstatus.h"
 #include "include/dcc_time_proto2.h"
 
-void daemonize();
+// Set this to how long you want each screen to last
+#define SCREEN_WAIT  30
+
+#define KEY_UPARROW  6
+
+
+extern void daemonize();
+extern void child_handler(int signum);
 
 // Structure for communicating with keypad thread
 struct s_mapkeypad
@@ -63,6 +71,7 @@ struct s_mapkeypad
   int       fdKeypad;        // File descriptor for keypad
 }; // s_mapkeypad
 static struct s_mapkeypad *mapkeypad=NULL;
+static int bMain = 0;
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -103,10 +112,8 @@ char *MapKeypadMem(void **mapshm)
 } // MapKeypadMem()
 
 //////////////////////////////////////////////////////////////////////////////
-static void sigterm_nodaemon()
+static void sigterm_nodaemon(int sig)
 {
-  fprintf(stderr, "dispstatus shutting down\n");
-  usleep(50000);
   fprintf(stderr, "Exiting dispstatus\n");
   exit(EXIT_SUCCESS);
 } // sigterm_nodaemon()
@@ -115,7 +122,7 @@ static void sigterm_nodaemon()
 void ShowUsage()
 {
   fprintf(stderr, "Usage: %s <serial port> [debug]\n", WHOAMI);
-  fprintf(stderr, "  <serial port> usually /dev/ttyS0\n");
+  fprintf(stderr, "  <serial port> usually /dev/ttyS3 or /dev/ttyS0\n");
   fprintf(stderr, "  debug for output to screen, no daemonizing\n");
 }
 
@@ -257,7 +264,7 @@ fprintf(stderr, "Keypad string did not end with EXT character\n");
 
     // save the time and character
     mapkeypad->timePress = ST_GetCurrentTime2();
-    mapkeypad->key = (retstr[1] & 0x07);
+    mapkeypad->key = (retstr[2] & 0x07);
 fprintf(stderr, "Detected keypress %d\n", mapkeypad->key);
   } // loop forever
 }
@@ -291,6 +298,13 @@ int WaitKeypad(
     if (mapkeypad->key > -1)
       break;
 
+    // Keep backlight on while waiting
+    if ( seconds > 0)
+      acsWrite(fd, "b2");
+
+    // Don't hog up the CPU
+    usleep(100000);
+
     // Get current time
     now = ST_GetCurrentTime2();
   }
@@ -307,12 +321,20 @@ fprintf(stderr, "Waitkeypad timed out after %d seconds\n", seconds);
 //////////////////////////////////////////////////////////////////////////////
 // Display the primary status screen
 void PrimaryScreen(
-  int fdTerm,                   // file descriptor for status display
-  int iNumDig)                  // How many digitizers we have
+  int fdTerm,                      // file descriptor for status display
+  struct s_dlgstatus dlg[MAX_DLG], // status for each data logger
+  STDTIME2           watchdogServ[MAX_DLG],  // watchdog timer for q330serv instances
+  STDTIME2           watchdogArch, // watchdog timer for q330arch program
+  int iDlg,                        // Even index 0,2,4,...
+  int iNumDig)                     // How many digitizers we have
 {
   char  msg[40];
-  int   iDig;
   STDTIME2  now;
+  STDTIME2  timetag;
+  int       iDig;
+  DELTA_T2  diffTime;
+  long      tmsDiff;
+
 
   // Clear display
   acsClear(fdTerm);
@@ -324,19 +346,49 @@ void PrimaryScreen(
   acsPrint(fdTerm, msg, 1);
 
   // loop through each digitizer
-  for (iDig=0; iDig < iNumDig; iDig++)
+  for (iDig=iDlg; iDig < iDlg+2 && iDig < iNumDig; iDig++)
   {
+    // First verify that watchdog timer is reasonably current
+    diffTime = ST_DiffTimes2(ST_GetCurentTime2(), watchdogServ[iDig);
+
+    timetag = dlg[iDig].timeLastData;
     sprintf(msg, "DLG%d %04d,%03d,%02d:%02d:%02d", iDig+1,
-            now.year, now.day, now.hour, now.minute, now.second);
-    acsPrint(fdTerm, msg, 2+iDig);
+            timetag.year, timetag.day, timetag.hour, timetag.minute, timetag.second);
+    acsPrint(fdTerm, msg, 2+(iDig%2));
   } // for each digitizer
+
+  // Display GPS status
+  sprintf(msg, "GPS sats %d/%d",
+          dlg[iDlg].stat_gps.sat_used, dlg[iDlg].stat_gps.sat_view);
+  acsPrint(fdTerm, msg, 5);
+  sprintf(msg, "Quality: %d%%", dlg[iDlg].clock_quality);
+  acsPrint(fdTerm, msg, 6);
+  switch(dlg[iDlg].pll_state)
+  {
+    case PLL_HOLD:
+     sprintf(msg, "PLL state: Hold");
+      break;
+    case PLL_TRACK:
+     sprintf(msg, "PLL state: Track");
+      break;
+    case PLL_LOCK:
+     sprintf(msg, "PLL state: Lock");
+      break;
+    default:
+     sprintf(msg, "PLL state: Unknown");
+  }
+  acsPrint(fdTerm, msg, 7);
+  sprintf(msg, "PLL Drift: %.6f", dlg[iDlg].pll_time_error);
+  acsPrint(fdTerm, msg, 8);
+
 } // PrimaryScreen
 
 //////////////////////////////////////////////////////////////////////////////
 // Display a digitizer screen
 void DigitizerScreen(
   int fdTerm,                   // file descriptor for status display
-  int iDig)                     // Which digitizer to display status for
+  int iDig,                     // Which digitizer to display status for
+  struct s_dlgstatus dlg[MAX_DLG])  // status information for the dataloggers
 {
   char  msg[40];
 
@@ -344,8 +396,22 @@ void DigitizerScreen(
   acsClear(fdTerm);
 
   // Identify digitizer
-  sprintf(msg, "DLG%d status screen", iDig+1);
+  sprintf(msg, "DLG%d # %d", iDig+1, dlg[iDig].property_tag);
   acsPrint(fdTerm, msg, 1);
+  sprintf(msg, "Temp: %dC", dlg[iDig].sys_temp);
+  acsPrint(fdTerm, msg, 2);
+  sprintf(msg, "Analog Supply: %.2fV", dlg[iDig].analog_voltage);
+  acsPrint(fdTerm, msg, 3);
+  sprintf(msg, "Input Voltage: %.2fV", dlg[iDig].input_voltage);
+  acsPrint(fdTerm, msg, 4);
+  sprintf(msg, "Main Current: %dma", dlg[iDig].main_cur);
+  acsPrint(fdTerm, msg, 5);
+  sprintf(msg, "Boom 1-3: %d %d %d",
+      dlg[iDig].boom_pos[0], dlg[iDig].boom_pos[1], dlg[iDig].boom_pos[2]);
+  acsPrint(fdTerm, msg, 6);
+  sprintf(msg, "Boom 4-6: %d %d %d",
+      dlg[iDig].boom_pos[3], dlg[iDig].boom_pos[4], dlg[iDig].boom_pos[5]);
+  acsPrint(fdTerm, msg, 7);
 
   // Display status information
 
@@ -370,7 +436,7 @@ void FindDLG(int *piNumDlg)
 
     close(fd);
   } // loop through all directory name matches
-
+fprintf(stderr, "DEBUG FindDLG got %d digitizers\n", iDir);
   // Close directory
   *piNumDlg = iDir;
 } // FindDLG()
@@ -383,6 +449,13 @@ int main (int argc, char **argv)
   pthread_t keypad_tid;
   int  iNumDig;
   int  iDig;
+  int  iScreen;
+  int  iKey;
+  int  index;
+  struct s_mapstatus *mapstatus;
+  struct s_dlgstatus dlg[MAX_DLG]={};
+  STDTIME2           watchdogServ[MAX_DLG]={};
+  STDTIME2           watchdogArch={};
 
   if (argc < 2 || argc > 3)
   {
@@ -402,18 +475,18 @@ int main (int argc, char **argv)
   }
 
   // Set up to run program as a daemon
-/* Disable daemonize option until testing is ready for it
   if (argc == 2)
   {
     daemonize();
   }
   else
-*/
   {
-    signal(SIGINT,sigterm_nodaemon); /* Die on SIGTERM */
-    signal(SIGKILL,sigterm_nodaemon); /* Die on SIGTERM */
-    signal(SIGHUP,sigterm_nodaemon); /* Die on SIGTERM */
-    signal(SIGTERM,sigterm_nodaemon); /* Die on SIGTERM */
+    signal(SIGINT,sigterm_nodaemon);  // Die on SIGINT
+    signal(SIGHUP,sigterm_nodaemon);  // Die on SIGHUP
+    signal(SIGTERM,sigterm_nodaemon); // Die on SIGTERM
+    signal(SIGCHLD,child_handler);    // Ignore SIGCHLD
+    signal(SIGUSR1,child_handler);    // Ignore SIGUSR1
+    signal(SIGALRM,child_handler);    // Ignore SIGALRM
   }
 
   // Open the terminal device
@@ -424,10 +497,17 @@ int main (int argc, char **argv)
     exit(1);
   }
 
+  // create the status shared memory segment
+  if ((retmsg = MapStatusMem((void **)&mapstatus)) != NULL)
+  {
+    fprintf(stderr, "%s:main:MapStatusMem %s\n", WHOAMI, retmsg);
+    exit(1);
+  }
+
   // create the keypad shared memory segment
   if ((retmsg = MapKeypadMem((void **)&mapkeypad)) != NULL)
   {
-    fprintf(stderr, "%s:main %s\n", WHOAMI, retmsg);
+    fprintf(stderr, "%s:main:MapKeypadMem %s\n", WHOAMI, retmsg);
     exit(1);
   }
   memset(mapkeypad, 0, sizeof(struct s_mapkeypad));
@@ -441,25 +521,77 @@ int main (int argc, char **argv)
     exit(1);
   }
 
+  // Remember that we are the main program for signal handler
+  bMain = 1;
+
   // Get information about the number of digitizers
   FindDLG(&iNumDig);
 
   // Infinite loop displaying status
   while (1)
   {
-    // Display primary status display
-    PrimaryScreen(fdTerm, iNumDig);
-    WaitKeypad(fdTerm, 10);
-
-    // Display each of the digitizer status screens
+    // Get latest status for all of the data loggers
     for (iDig=0; iDig < iNumDig; iDig++)
     {
-      DigitizerScreen(fdTerm, iDig);
-      WaitKeypad(fdTerm, 10);
-    } // for each digitizer detected
+      mapstatus->ixReadStatus[iDig] = mapstatus->ixWriteStatus[iDig];
+      dlg[iDig] = mapstatus->dlg[mapstatus->ixReadStatus[iDig]][iDig];
+
+      mapstatus->ixReadData[iDig] = mapstatus->ixWriteData[iDig];
+      dlg[iDig].timeLastData = 
+         mapstatus->dlg[mapstatus->ixReadData[iDig]][iDig].timeLastData;
+
+      mapstatus->ixReadServ[iDig] = mapstatus->ixWriteServ[iDig];
+      watchdogServ[iDig] = mapstatus->servWatchdog[mapstatus->ixReadServ[iDig]][iDig];
+
+      mapstatus->ixReadArch = mapstatus->ixWriteArch;
+      watchdogArch = mapstatus->archWatchdog[mapstatus->ixReadArch];
+
+fprintf(stderr, "Dig %d Read[%d][%d] Time: %s %s\n",
+iDig, mapstatus->ixReadStatus[iDig], mapstatus->ixReadData[iDig],
+dlg[iDig].stat_gps.date, dlg[iDig].stat_gps.time);
+    } // loop through all of the digitizers
+
+    // Loop through each display screen
+    for (iScreen=0; iScreen < (iNumDig+1)/2 + iNumDig; iScreen++)
+    {
+      // Going back from first screen gets new status if available
+      if (iScreen < 0) break;
+
+      // Display primary status display
+      if (iScreen < (iNumDig+1)/2)
+      {
+        PrimaryScreen(fdTerm, dlg, watchdogServ, watchdogArch, iScreen*2, iNumDig);
+        iKey = WaitKeypad(fdTerm, SCREEN_WAIT);
+        if (iKey == KEY_UPARROW)
+        {
+          iScreen -= 2;
+          continue;
+        }
+      } // Primary status display
+
+      // One of the individual digitizer screens
+      if (iScreen >= ((iNumDig+1)/2) && iScreen < iNumDig + (iNumDig+1)/2)
+      {
+        iDig = iScreen - (iNumDig+1)/2;
+        DigitizerScreen(fdTerm, iDig, dlg);
+        iKey = WaitKeypad(fdTerm, SCREEN_WAIT);
+        if (iKey == KEY_UPARROW)
+        {
+          iScreen-=2;
+          continue;
+        }
+      } // individual digitizer screen
+
+    } // for each screen
+
+    if (iScreen < 0)
+    {
+      // User went backwards from first screen, get new status
+      continue;
+    }
 
     if (mapkeypad->key < 0)
-      WaitKeypad(fdTerm, 15);
+      WaitKeypad(fdTerm, 5);
     acsClear(fdTerm);
     acsPrint(fdTerm, "Press any key", 2);
     acsPrint(fdTerm, "for status", 3);

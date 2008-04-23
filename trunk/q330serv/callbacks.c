@@ -60,6 +60,11 @@ Edit History:
 
 #include "include/diskloop.h"
 #include "include/q330arch.h"
+#include "include/shmstatus.h"
+
+extern int debug_arg;
+extern int iDlg;
+extern struct s_mapstatus *mapstatus;   // Communicates status to dispstatus program
 
 #ifndef OMIT_SEED
 static tctrlstat ctrlstat ; /* just for display purposes */
@@ -74,7 +79,8 @@ begin
     then
       return ;
   printf ("\b\b\b\b\b\b\b\b\b%s\n", s) ;
-  syslog(LOG_INFO, s);
+  if (!debug_arg)
+    syslog(LOG_INFO, s);
 end
 
 void poc_handler (enum tpocstate pocstate, tpoc_recvd *poc_recv)
@@ -522,7 +528,37 @@ void mini_callback (pointer p)
         // Save 512 records localy, and to IDA disk loop
         {
           char  *retstr;
-          // Send seed record to q330arch
+          char  station[8];
+          char  chan[4];
+          char  loc[4];
+          STDTIME2  recStartTime;
+          STDTIME2  recEndTime;
+          int       iSeqNum;
+          int       iSamples;
+          int       iWriteIndex;
+
+          // Let status program know we received a record
+          if (mapstatus != NULL)
+          {
+            // First parse record for time
+            retstr = ParseSeedHeader(pm->data_address,
+                       station, chan, loc, &recStartTime, &recEndTime, &iSeqNum, &iSamples);
+
+            // Calculate which mapstatus->ixWriteData[iDlg] value to use
+            if (mapstatus->ixWriteData[iDlg] != 0 && mapstatus->ixReadData[iDlg] != 0)
+              iWriteIndex = 0;
+            else if (mapstatus->ixWriteData[iDlg] != 1 && mapstatus->ixReadData[iDlg] != 1)
+              iWriteIndex = 1;
+            else
+              iWriteIndex = 2;
+
+            // Make arrival time be the record end time
+            mapstatus->dlg[iWriteIndex][iDlg].timeLastData = recEndTime;
+            mapstatus->ixWriteData[iDlg] = iWriteIndex;
+          } // If status shared memory segment has been setup
+
+          // Send seed record to q330arch for archival and data transmission
+          // q330arch will merge data from all data loggers into a single stream
           while ((retstr = q330SeedSend((void *)pm->data_address)) != NULL)
           {
             fprintf(stderr, "amini_callback q330SeedSend: %s\n", retstr);
@@ -571,7 +607,7 @@ void amini_callback (pointer p)
     case MSA_INC :
     case MSA_ARC :
     case MSA_FINAL : /* write or update data */
-/*
+/* This code was used for the 4096 record archive format which has gone away
       if ((retstr = WriteChan(pm->station_name, pm->channel, pm->location,
                               pm->data_address)) != NULL)
       {

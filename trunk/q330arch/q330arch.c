@@ -105,15 +105,6 @@ char *ArchiveSeed(char *record)
 } // ArchiveSeed()
 
 //////////////////////////////////////////////////////////////////////////////
-// Local handler to orderly shut down server and child forks
-static void sigterm_server()
-{
-  if (mapshm == NULL) exit(1);
-  mapshm->bQuit = 1;
-  return;
-} // sigterm_server
-
-//////////////////////////////////////////////////////////////////////////////
 int main (int argc, char **argv)
 {
   char  station[8];
@@ -166,9 +157,14 @@ int main (int argc, char **argv)
     g_bDebug = 1;
   } // command line arguments request running server in debug mode
 
+  // Ignore SIGPIPE when a connection is closed
+  signal (SIGPIPE, SIG_IGN);
+
   // Run this program as a daemon unless requested otherwise by user
-  if (argc == 3)
+  if (!g_bDebug)
+  {
     daemonize();
+  }
 
   // Set up the shared memory segment
   if ((retmsg = MapSharedMem((void **)&mapshm)) != NULL)
@@ -177,9 +173,6 @@ int main (int argc, char **argv)
     exit(1);
   }
   memset(mapshm, 0, sizeof(struct s_mapshm));
-
-  // Set up a handler for when this process is terminated
-  signal(SIGTERM,sigterm_server); /* Die on SIGTERM */
 
   // Start the server listening for clients in the background
   LogServerPort(&iPort);
@@ -200,6 +193,9 @@ int main (int argc, char **argv)
   {
     if (mapshm->bQuit)
     {
+      if (mapshm->bDebug)
+        fprintf(stderr, "Quit flag detected, exiting %s\n", WHOAMI);
+
       if (mapshm->listen_tid)
       {
         pthread_kill(mapshm->listen_tid, 15);
@@ -221,7 +217,10 @@ int main (int argc, char **argv)
     if (!touched)
     {
       if (mapshm->bQuit)
+      {
+        fprintf(stderr, "Exiting %s via quit flag\n", WHOAMI);
         exit(EXIT_SUCCESS);
+      }
       usleep(10000);
     }
     touched = 0;

@@ -12,8 +12,8 @@ LONG ST_DeltaToMS2(DELTA_T2 indelta) {
   LONG totalms;
   BOOL minf = FALSE;
 
-  if (indelta.nday > 20) return(TIM_LIM);
-  if (indelta.nday < -20) return(-TIM_LIM);
+  if (indelta.nday > 2) return(TIM_LIM);
+  if (indelta.nday < -2) return(-TIM_LIM);
 
   if (indelta.nday < 0) {
     minf = TRUE;

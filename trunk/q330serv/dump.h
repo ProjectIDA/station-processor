@@ -24,7 +24,7 @@ Edit History:
 */
 #ifndef dump_h
 #define dump_h
-#define VER_DUMP 3
+#define VER_DUMP 4
 
 #ifndef libtypes_h
 #include "libtypes.h"

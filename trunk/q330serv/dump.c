@@ -24,6 +24,7 @@ Edit History:
     1 2006-10-26 rdr Add display of last data time and current ip and port.
     2 2006-11-30 rdr Add show_modules.
     3 2006-12-04 rdr Fix dump when minutes value has invalid value.
+    4 2008-02-25 rdr Fix display of negative data latency.
 */
 #ifndef dump_h
 #include "dump.h"
@@ -113,7 +114,7 @@ begin
       end
   condtwo (sec, (s[0]), s1, "s") ;
   strcat(s, s1) ;
-  strcpy(result, s) ;
+  strcat(result, s) ;
   return result ;
 end
 

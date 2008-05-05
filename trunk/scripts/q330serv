@@ -1,0 +1,110 @@
+#! /bin/bash 
+#
+#  Bring up/down q330serv
+#
+#  description: 
+#  The q330serv daemon is the process
+#  which communicates with the q330 and
+#  stores the data in a disk loop.
+
+
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+RETVAL=0
+#PROG=`basename $0`
+PROG=q330serv
+numargs=$#
+command=$1
+
+# Make sure binary exists
+if [ ! -x /usr/local/sbin/q330serv ]
+then
+    echo "Error: Executable missing! Exiting..."
+    exit 0
+fi 
+
+# source the configuration file
+. /home/maint/config
+
+# If no path provided on command line, use default
+if [ $numargs -lt 2 ] 
+then
+    args=`ls -d /etc/q330/DLG*`
+else
+    shift
+    args="$@"
+fi
+
+# sends kill to the smallest pid in a list of pids
+killparent()
+{
+# Only do something if arguments were passed in
+if [[ $# > 0 ]] ; then
+
+  best=$1
+  shift
+  # Process each argument
+  while [[ $# > 0 ]]
+  do
+    # See if this pid is smaller
+    if [[ $best > $1 ]] ; then
+      #remember new smallest pid
+      best=$1
+    fi
+
+    # Done processing current argument, get next one
+    shift
+  done
+  kill -15 $best
+fi
+}
+
+start () {
+
+    echo "Starting $PROG..." 
+    for arg in $args 
+    do 
+        echo "$PROG $arg"
+        $PROG $arg
+     done 
+}
+
+
+stop ()
+{
+    for arg in $args 
+    do
+        echo "Killing $PROG $arg" 
+        pid=`ps axo pid,command | grep $PROG | grep $arg | grep -v grep | grep -v stop | awk '{print $1}'`
+        if test  -z $pid  
+        then
+            echo "No active process."
+        else
+            echo "Killing pid: $pid" 
+            kill -15 $pid
+        fi
+    done
+}
+
+case "$command" in
+
+    start)
+        start
+	;;
+
+    stop)
+	stop
+	;;
+
+    restart|reload|force-reload)
+        echo -n "Restarting $PROG: "
+	stop 
+        sleep 2
+        start
+        ;;
+
+    *)
+        echo "Usage: /etc/init.d/q330driver {start|stop|reload|force-reload|restart}"
+        exit 1
+esac
+
+exit 0

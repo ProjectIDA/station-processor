@@ -1,0 +1,75 @@
+#! /bin/bash
+#
+#  Bring up/down netreq 
+#
+#  description: 
+#  The netreq daemon controls 
+#
+#  config: /etc/q330/diskloop.config  
+#  logfile: /var/log/netreq.log
+
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+RETVAL=0
+OPTS=4003
+ 
+# Make sure binary exists
+test -x /usr/local/sbin/netreq || exit 0
+
+start () {
+    pids=`pidof netreq`
+    if [ -n "$pids" ] ; then
+        echo "netreq already running....killing"
+
+        for pid in `echo $pids`
+        do
+            kill -9 $pid > /dev/null
+        done
+    fi
+
+    echo "Starting netreq..."
+
+    /usr/local/sbin/netreq $OPTS
+}
+
+
+stop ()
+{
+    echo "Killing netreq ..." 
+    # program in a delay
+    sleep 2
+    pids=`pidof netreq`
+    if [ -n "$pids" ] ; then
+
+        killall netreq 
+
+        if [ $? != 0 ]; then
+            echo "Error stopping q330driver"
+        fi  
+
+    fi
+    echo
+}
+
+case "$1" in
+
+    start)
+        start
+	;;
+
+    stop)
+        stop
+	;;
+
+    restart|reload|force-reload)
+        echo -n "Restarting netreq: "
+	stop 
+	sleep 2
+        start
+	;;
+
+    *)
+        echo "Usage: /etc/init.d/netreq {start|stop|reload|force-reload|restart}"
+        exit 1
+esac
+
+exit 0

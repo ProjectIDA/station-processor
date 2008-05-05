@@ -1,0 +1,70 @@
+#! /bin/bash 
+#
+#  Bring up/down isid daemon
+#
+#  description: 
+# The isid program allows external users to collect data from 
+# an ida disk loop. It is intended to replace the LISS functionality 
+# and fulfill requests for near real-time data. 
+# This application is launched with command-line parameters 
+# that determine which ports it will listen on, for example:
+# isid port=39136 log=/opt/data/nrts/log/isid.log -bd
+# An isidl client on a remote machine provides the capability 
+# to connect and query an isid server. 
+
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+RETVAL=0
+PROG=`basename $0`
+numargs=$#
+
+# source configuration file 
+. /home/maint/config 
+
+# Make sure binary exists
+test -x /usr/local/sbin/isid || exit 0
+
+# Now start the data collection process
+start () {
+
+    echo "Starting isid..." 
+    isid port=39136 user=maint log=/opt/data/nrts/log/isid.log -bd
+}
+
+
+stop ()
+{
+    echo "Killing $PROG" 
+    pid=`pidof $PROG`
+#    pid=`ps -e | grep $PROG | awk '{print $1}'`
+    if test -z $pid  
+        then
+            echo "No active process."
+        else
+            echo "Killing pid: $pid" 
+            kill -15 $pid
+    fi
+}
+
+case "$1" in
+
+    start)
+        start
+	;;
+
+    stop)
+        stop
+	;;
+
+    restart|reload|force-reload)
+        echo -n "Restarting $PROG: "
+	stop 
+        sleep 2
+        start
+        ;;
+
+    *)
+        echo "Usage: /etc/init.d/isid {start|stop|reload|force-reload|restart}"
+        exit 1
+esac
+
+exit 0

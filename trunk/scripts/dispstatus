@@ -1,0 +1,90 @@
+#! /bin/bash 
+#
+#  Bring up/down dispstatus program
+#
+#  description: 
+# The dispstatus program sends error messages to an attached
+# console.
+
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+RETVAL=0
+PROG=`basename $0`
+numargs=$#
+
+# source configuration file 
+. /home/maint/config 
+
+# Make sure binary exists
+if [ ! -x /usr/local/sbin/dispstatus ] 
+then
+    echo "Error: Executable missing! Exiting..."
+    exit 0 
+fi
+chmod 666 /dev/ttyS3
+
+# Now start the program 
+start () {
+
+    echo "Starting $PROG..." 
+    dispstatus /dev/ttyS3
+}
+
+
+stop ()
+{
+    echo "Killing $PROG" 
+    while pidof $PROG >/dev/null 
+    do
+        pids=`pidof $PROG`
+        killparent $pids
+     done
+
+}
+
+# sends kill to the smallest pid in a list of pids
+killparent()
+{
+# Only do something if arguments were passed in
+if [[ $# > 0 ]] ; then
+
+  best=$1
+  shift
+  # Process each argument
+  while [[ $# > 0 ]]
+  do
+    # See if this pid is smaller
+    if [[ $best > $1 ]] ; then
+      #remember new smallest pid
+      best=$1
+    fi
+
+    # Done processing current argument, get next one
+    shift
+  done
+  kill -15 $best
+fi
+}
+
+case "$1" in
+
+    start)
+        start
+	;;
+
+    stop)
+        stop
+	;;
+
+    restart|reload|force-reload)
+        echo -n "Restarting $PROG: "
+	stop 
+        sleep 2
+        start
+        ;;
+
+    *)
+        echo "Usage: /etc/init.d/$PROG {start|stop|reload|force-reload|restart}"
+        exit 1
+esac
+
+exit 0

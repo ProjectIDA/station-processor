@@ -33,6 +33,7 @@ mmddyy who Changes
 #include <arpa/inet.h>
 #include <sys/uio.h>
 #include <signal.h>
+#include <syslog.h>
 
 #include "include/diskloop.h"
 #include "include/q330arch.h"
@@ -49,17 +50,6 @@ struct s_readthread
   int iSocket;
   struct s_mapshm *mapshm;
 };
-
-//////////////////////////////////////////////////////////////////////////////
-// Local handler to orderly shut down server and child forks
-static void sigterm_server()
-{
-  if (mapshm == NULL) exit(1);
-  if (mapshm->bDebug)
-    fprintf(stderr, "sigterm_server entered, pid=%d\n", getpid());
-  mapshm->bQuit = 1;
-  return;
-} // sigterm_server
 
 //////////////////////////////////////////////////////////////////////////////
 // Creates the shared memory segment used for inter fork communications
@@ -126,6 +116,11 @@ void *ServerReadThread(void *params)
     printf("New read connection %d, thread id=%lu\n",
         iClient, mapshm->client_tid[iClient]);
   }
+  else
+  {
+    syslog(LOG_INFO, "New read connection %d, thread id=%lu\n",
+        iClient, mapshm->client_tid[iClient]);
+  }
 
   // Infinite loop reading seed message records
   while (1)
@@ -144,6 +139,11 @@ void *ServerReadThread(void *params)
         if (mapshm->bDebug)
         {
           printf("Closing client read thread %d, thread id %lu\n",
+              iClient, mapshm->client_tid[iClient]);
+        }
+        else
+        {
+          syslog(LOG_INFO, "Closing client connection %d, thread id=%lu\n",
               iClient, mapshm->client_tid[iClient]);
         }
         mapshm->client_tid[iClient] = 0;
@@ -196,11 +196,6 @@ void *StartServer(void *params)
 
   struct s_mapshm *mapshm;
   struct sockaddr_in listen_addr; /* Listen address setup */
-
-  // Set up a handler for when the server is terminated
-  signal(SIGTERM,sigterm_server);
-  signal(SIGCHLD,SIG_IGN);
-  signal(SIGPIPE,SIG_IGN);
 
   // Get thread arguments
   mapshm = (struct s_mapshm *) params;

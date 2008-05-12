@@ -141,6 +141,7 @@ int main (int argc, char **argv)
   int             iWriteIndex;
   int             iWriteIndexServ;
   int             iBoom;
+  enum tlibstate  libstate;
 
 
   if (argc < 2 || argc > 3)
@@ -319,7 +320,9 @@ int main (int argc, char **argv)
     mapstatus->ixWriteServ[iDlg] = iWriteIndexServ;
 
     // Store the current library state
-    mapstatus->libstate[iDlg]=lib_get_state(context, &err, &opstat);
+    libstate = lib_get_state(context, &err, &opstat);
+    
+    mapstatus->libstate[iDlg]= libstate;
 
 fprintf(stderr, "DEBUG counter=%d, interval=%d have_status=%x stat_request=%x\n",
 q330->share.interval_counter, q330->share.status_interval, 
@@ -469,8 +472,6 @@ fprintf(stderr, "DEBUG Clock Quality: %d%%\n",
               sprintf(cmdstr, "date %02d%02d%02d%02d%04d.%02d",
                       month, day, hour, minute, year, second);
               system(cmdstr);
-              if (debug_arg)
-                fprintf(stderr, "Unix clock changed:\n%s\n", cmdstr);
               // log the time change so analyst knows why times jumped
               sprintf(s,
 "Changed Unix clock from %04d,%03d,%02d:%02d:%02d to %04d,%03d,%02d:%02d:%02d",
@@ -479,6 +480,8 @@ fprintf(stderr, "DEBUG Clock Quality: %d%%\n",
                       gpsTimetag.year, gpsTimetag.day,
                       gpsTimetag.hour, gpsTimetag.minute, gpsTimetag.second);
               libmsgadd(q330, LIBMSG_GPS, addr(s)) ;
+              if (debug_arg)
+                fprintf(stderr, "%s\n", s);
             } // time needs to be adjusted
           } // time parsed okay
         } // date parsed okay

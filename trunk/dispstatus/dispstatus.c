@@ -44,6 +44,7 @@ mmddyy who Changes
 #include <signal.h>
 #include <termio.h>
 #include <errno.h>
+#include <syslog.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ipc.h>
@@ -72,7 +73,7 @@ struct s_mapkeypad
 }; // s_mapkeypad
 static struct s_mapkeypad *mapkeypad=NULL;
 static int bMain = 0;
-
+int    bDebug=0;
 
 /////////////////////////////////////////////////////////////////////////////
 // Creates the shared memory segment used for inter fork communications
@@ -95,7 +96,10 @@ char *MapKeypadMem(void **mapshm)
    {
       sprintf(errbuf, "shmget PRIVATE failure, error %d: %s.",
             errno, strerror(errno));
-      fprintf(stderr, "%s\n", errbuf);
+      if (bDebug)
+        fprintf(stderr, "%s\n", errbuf);
+      else
+        syslog(LOG_ERR, "%s\n", errbuf);
       return errbuf;
    }
 
@@ -103,7 +107,10 @@ char *MapKeypadMem(void **mapshm)
    {
       sprintf(errbuf, "%s: shmat PRIVATE failure, error %d: %s.",
             WHOAMI, errno, strerror(errno));
-      fprintf(stderr, "%s\n", errbuf);
+      if (bDebug)
+        fprintf(stderr, "%s\n", errbuf);
+      else
+        syslog(LOG_ERR, "%s\n", errbuf);
       return errbuf;
    }
 
@@ -321,12 +328,13 @@ fprintf(stderr, "Waitkeypad timed out after %d seconds\n", seconds);
 //////////////////////////////////////////////////////////////////////////////
 // Display the primary status screen
 void PrimaryScreen(
-  int fdTerm,                      // file descriptor for status display
-  struct s_dlgstatus dlg[MAX_DLG], // status for each data logger
-  STDTIME2           watchdogServ[MAX_DLG],  // watchdog timer for q330serv instances
-  STDTIME2           watchdogArch, // watchdog timer for q330arch program
-  int iDlg,                        // Even index 0,2,4,...
-  int iNumDig)                     // How many digitizers we have
+  int fdTerm,                           // file descriptor for status display
+  struct s_dlgstatus dlg[MAX_DLG],      // status for each data logger
+  STDTIME2    watchdogServ[MAX_DLG],    // watchdog timer for q330serv
+  STDTIME2           watchdogArch,      // watchdog timer for q330arch program
+  enum tlibstate     libstate[MAX_DLG], // the run state that lib330 is in
+  int iDlg,                             // Even index 0,2,4,...
+  int iNumDig)                          // How many digitizers we have
 {
   char  msg[40];
   STDTIME2  now;
@@ -349,13 +357,87 @@ void PrimaryScreen(
   for (iDig=iDlg; iDig < iDlg+2 && iDig < iNumDig; iDig++)
   {
     // First verify that watchdog timer is reasonably current
-    diffTime = ST_DiffTimes2(ST_GetCurentTime2(), watchdogServ[iDig);
+    diffTime = ST_DiffTimes2(now, watchdogServ[iDig]);
+    tmsDiff = ST_DeltaToMS2(diffTime);
 
-    timetag = dlg[iDig].timeLastData;
-    sprintf(msg, "DLG%d %04d,%03d,%02d:%02d:%02d", iDig+1,
-            timetag.year, timetag.day, timetag.hour, timetag.minute, timetag.second);
+    if (tmsDiff > 60*10000)
+    {
+      sprintf(msg, "DLG%d q330serv down", iDig+1);
+    } // q330serv is not running
+    else
+    {
+      // Message is dependent upon run state
+      switch(libstate[iDig])
+      {
+        case LIBSTATE_IDLE:    // Not connected to Q330
+          sprintf(msg, "DLG%d LIBSTATE IDLE", iDig+1);
+          break;
+        case LIBSTATE_TERM:    // Terminated
+          sprintf(msg, "DLG%d LIBSTATE TERM", iDig+1);
+          break;
+        case LIBSTATE_PING:    // Un-registered Ping, returns to LIBSTATE_IDLE when done
+          sprintf(msg, "DLG%d LIBSTATE PING", iDig+1);
+          break;
+        case LIBSTATE_REG:     // Requesting Registration
+          sprintf(msg, "DLG%d Re Register", iDig+1);
+          break;
+        case LIBSTATE_READCFG: // Reading Configuration
+          sprintf(msg, "DLG%d LIBSTATE READCFG", iDig+1);
+          break;
+        case LIBSTATE_READTOK: // Reading Tokens
+          sprintf(msg, "DLG%d LIBSTATE READTOK", iDig+1);
+          break;
+        case LIBSTATE_DECTOK:  // Decoding Tokens and allocating structures
+          sprintf(msg, "DLG%d LIBSTATE DECTOK", iDig+1);
+          break;
+        case LIBSTATE_RUNWAIT: // Waiting for command to run
+          sprintf(msg, "DLG%d Wait RUN State", iDig+1);
+          break;
+        case LIBSTATE_DEALLOC: // De-allocating structures
+          sprintf(msg, "DLG%d De-allocating", iDig+1);
+          break;
+        case LIBSTATE_DEREG:   // De-registering
+          sprintf(msg, "DLG%d De-registering", iDig+1);
+          break;
+        case LIBSTATE_WAIT:    // Waiting for a new registration
+          sprintf(msg, "DLG%d Wait register", iDig+1);
+          break;
+        case LIBSTATE_RUN:
+          timetag = dlg[iDig].timeLastData;
+          sprintf(msg, "DLG%d %04d,%03d,%02d:%02d:%02d", iDig+1,
+                  timetag.year, timetag.day, timetag.hour, timetag.minute, timetag.second);
+          break;
+        default:
+          sprintf(msg, "DLG%d LIBSTATE %d", iDig+1, libstate[iDig]);
+      } // switch libstate
+    } // else q330serv is running
+
+    // Output whatever message we came up with
     acsPrint(fdTerm, msg, 2+(iDig%2));
   } // for each digitizer
+
+  // Display q330arch status
+  diffTime = ST_DiffTimes2(now, watchdogArch);
+  tmsDiff = ST_DeltaToMS2(diffTime);
+  if (tmsDiff > 60*10000)
+  {
+    sprintf(msg, "q330arch down");
+  } // q330arch is not running
+  else
+  {
+    sprintf(msg, "q330arch up");
+  } // q330arch running
+  acsPrint(fdTerm, msg, 4);
+
+  // If the first q330 is down we have no GPS status
+  diffTime = ST_DiffTimes2(now, watchdogServ[iDlg]);
+  tmsDiff = ST_DeltaToMS2(diffTime);
+  if (tmsDiff > 60*10000)
+  {
+    sprintf(msg, "GPS q330serv down");
+    acsPrint(fdTerm, msg, 5);
+    return;
+  } // if q330serv that we get GPS status from is down
 
   // Display GPS status
   sprintf(msg, "GPS sats %d/%d",
@@ -388,12 +470,41 @@ void PrimaryScreen(
 void DigitizerScreen(
   int fdTerm,                   // file descriptor for status display
   int iDig,                     // Which digitizer to display status for
-  struct s_dlgstatus dlg[MAX_DLG])  // status information for the dataloggers
+  STDTIME2    watchdogServ[MAX_DLG],    // watchdog timer for q330serv
+  enum tlibstate     libstate[MAX_DLG], // the run state that lib330 is in
+  struct s_dlgstatus dlg[MAX_DLG])      // datalogger status information
 {
   char  msg[40];
+  STDTIME2  now;
+  DELTA_T2  diffTime;
+  long      tmsDiff;
+  static int bValidStatus=0;  // Set to 1 once we have good status data
 
   // Clear display
   acsClear(fdTerm);
+
+  // If the q330serv is down and we've never had full status show nothing
+  now = ST_GetCurrentTime2();
+  diffTime = ST_DiffTimes2(now, watchdogServ[iDig]);
+  tmsDiff = ST_DeltaToMS2(diffTime);
+  if (tmsDiff > 60*10000 && !bValidStatus)
+  {
+    sprintf(msg, "DLG%d q330serv down", iDig+1);
+    acsPrint(fdTerm, msg, 1);
+    return;
+  } // the q330serv for this digitizer is down
+
+  // Remember if we've had at least one valid status come through
+  if (dlg[iDig].property_tag > 0)
+    bValidStatus = 1;
+
+  // Stop at showing digitizer state if we've never had full status before
+  if (!bValidStatus)
+  {
+    sprintf(msg, "DLG%d status wait", iDig+1);
+    acsPrint(fdTerm, msg, 1);
+    return;
+  } // Don't have any valid status to display yet
 
   // Identify digitizer
   sprintf(msg, "DLG%d # %d", iDig+1, dlg[iDig].property_tag);
@@ -412,8 +523,6 @@ void DigitizerScreen(
   sprintf(msg, "Boom 4-6: %d %d %d",
       dlg[iDig].boom_pos[3], dlg[iDig].boom_pos[4], dlg[iDig].boom_pos[5]);
   acsPrint(fdTerm, msg, 7);
-
-  // Display status information
 
 } // DigitizerScreen()
 
@@ -472,6 +581,7 @@ int main (int argc, char **argv)
       ShowUsage();
       exit(1);
     }
+    bDebug = 1;
   }
 
   // Set up to run program as a daemon
@@ -492,22 +602,36 @@ int main (int argc, char **argv)
   // Open the terminal device
   if ((fdTerm = openraw(argv[1])) < 0)
   {
-    fprintf(stderr, "%s: line %d: %s: %s\n",
+    if (bDebug)
+    {
+      fprintf(stderr, "%s: line %d: %s: %s\n",
         __FILE__, __LINE__, __DATE__, strerror(errno));
+    }
+    else
+    {
+      syslog(LOG_ERR, "%s: line %d: %s: %s\n",
+        __FILE__, __LINE__, __DATE__, strerror(errno));
+    }
     exit(1);
   }
 
   // create the status shared memory segment
   if ((retmsg = MapStatusMem((void **)&mapstatus)) != NULL)
   {
-    fprintf(stderr, "%s:main:MapStatusMem %s\n", WHOAMI, retmsg);
+    if (bDebug)
+      fprintf(stderr, "%s:main:MapStatusMem %s\n", WHOAMI, retmsg);
+    else
+      syslog(LOG_ERR, "%s:main:MapStatusMem %s\n", WHOAMI, retmsg);
     exit(1);
   }
 
   // create the keypad shared memory segment
   if ((retmsg = MapKeypadMem((void **)&mapkeypad)) != NULL)
   {
-    fprintf(stderr, "%s:main:MapKeypadMem %s\n", WHOAMI, retmsg);
+    if (bDebug)
+      fprintf(stderr, "%s:main:MapKeypadMem %s\n", WHOAMI, retmsg);
+    else
+      syslog(LOG_ERR, "%s:main:MapKeypadMem %s\n", WHOAMI, retmsg);
     exit(1);
   }
   memset(mapkeypad, 0, sizeof(struct s_mapkeypad));
@@ -516,8 +640,12 @@ int main (int argc, char **argv)
   // Start the keypad read thread
   if (pthread_create(&keypad_tid, NULL, KeypadThread, (void *)mapkeypad))
   {
-    fprintf(stderr, "%s:main pthread_create KeypadThread: %s\n",
-      WHOAMI, strerror(errno));
+    if (bDebug)
+      fprintf(stderr, "%s:main pthread_create KeypadThread: %s\n",
+        WHOAMI, strerror(errno));
+    else
+      syslog(LOG_ERR, "%s:main pthread_create KeypadThread: %s\n",
+        WHOAMI, strerror(errno));
     exit(1);
   }
 
@@ -560,7 +688,8 @@ dlg[iDig].stat_gps.date, dlg[iDig].stat_gps.time);
       // Display primary status display
       if (iScreen < (iNumDig+1)/2)
       {
-        PrimaryScreen(fdTerm, dlg, watchdogServ, watchdogArch, iScreen*2, iNumDig);
+        PrimaryScreen(fdTerm, dlg, watchdogServ, watchdogArch, 
+                      mapstatus->libstate, iScreen*2, iNumDig);
         iKey = WaitKeypad(fdTerm, SCREEN_WAIT);
         if (iKey == KEY_UPARROW)
         {
@@ -573,7 +702,7 @@ dlg[iDig].stat_gps.date, dlg[iDig].stat_gps.time);
       if (iScreen >= ((iNumDig+1)/2) && iScreen < iNumDig + (iNumDig+1)/2)
       {
         iDig = iScreen - (iNumDig+1)/2;
-        DigitizerScreen(fdTerm, iDig, dlg);
+        DigitizerScreen(fdTerm, iDig, watchdogServ, mapstatus->libstate, dlg);
         iKey = WaitKeypad(fdTerm, SCREEN_WAIT);
         if (iKey == KEY_UPARROW)
         {

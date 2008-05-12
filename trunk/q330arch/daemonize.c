@@ -24,14 +24,14 @@ extern int server_pid;
 
 static void sigterm_handler()
 {
-  syslog(LOG_INFO, "Exiting daemon");
-  closelog();
   if (server_pid > 0)
   {
     // Send kill signal to server child process
     kill(server_pid, 15);
     server_pid = 0;
   }
+  syslog(LOG_INFO, "Exiting daemon");
+  closelog();
   exit(EXIT_SUCCESS);
 } // sigterm_handler()
 
@@ -53,7 +53,6 @@ void daemonize()
     lockfile = "/var/lock/subsys/" DAEMON_NAME;
 
     openlog(DAEMON_NAME, LOG_PID, LOG_LOCAL5);
-    syslog(LOG_INFO, "Starting daemon" DAEMON_NAME);
 
     /* already a daemon */
     if ( getppid() == 1 ) return;
@@ -106,6 +105,8 @@ void daemonize()
     /* At this point we are executing as the child process */
     parent = getppid();
 
+    syslog(LOG_INFO, "Starting daemon " DAEMON_NAME);
+
     /* Cancel certain signals */
     signal(SIGCHLD,SIG_DFL); /* A child process dies */
     signal(SIGTSTP,SIG_IGN); /* Various TTY signals */
@@ -113,7 +114,6 @@ void daemonize()
     signal(SIGTTIN,SIG_IGN);
     signal(SIGHUP, SIG_IGN); /* Ignore hangup signal */
     signal(SIGTERM,sigterm_handler); /* Die on SIGTERM */
-//    signal(SIGTERM,SIG_DFL); /* Die on SIGTERM */
 
     /* Change the file mode mask */
     umask(0);

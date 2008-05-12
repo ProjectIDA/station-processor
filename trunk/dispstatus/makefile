@@ -27,7 +27,7 @@ dispstatus : $(LIB330_DIR)/lib330.a $(OBJS) \
 
 dispstatus.o: ../include/diskloop.h ../include/shmstatus.h
 
-callbacks.o:	../include/diskloop.h ../include/q330arch.h
+statusutil.o: ../include/shmstatus.h
 
 $(LIB330_DIR)/lib330.a : 
 	@echo

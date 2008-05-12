@@ -1,11 +1,13 @@
 LIBIDA=$(HOME)/lib/$(PLATFORM)
 CC = gcc
 COPT = 
+LIB330_DIR = $(HOME)/lib330
 LIBS = -L$(LIBIDA)
-CFLAGS = -Wall -I.. -I.
+CFLAGS = -Wall -I.. -I. -I$(LIB330_DIR)
 LIBS += -lm -lpthread
 
 SRCS = q330arch.c daemonize.c server.c logclient.c seedmsg.c
+SRCS+= ../dispstatus/statusutil.c
 
 OBJS = $(SRCS:%.c=%.o)
 
@@ -25,9 +27,12 @@ q330arch : ../lib/dalib.a ../lib/dcctime2lib.a \
 	-lz -lm -lpthread
 		
 
-q330arch.o: ../include/diskloop.h ../include/q330arch.h
+q330arch.o: ../include/diskloop.h ../include/q330arch.h ../include/shmstatus.h
 
 logclient.o: ../include/diskloop.h ../include/q330arch.h
+
+../dispstatus/statusutil.o:	../include/shmstatus.h
+	cd ../dispstatus; $(MAKE)
 
 msgtest:  msgtest.o logclient.o seedmsg.o ../lib/dalib.a
 	$(CC) msgtest.o logclient.o seedmsg.o \

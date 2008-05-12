@@ -31,10 +31,13 @@ mmddyy who Changes
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <signal.h>
 #include <sys/shm.h>
+#include <syslog.h>
 #include "include/diskloop.h"
 #include "include/dcc_time_proto2.h"
+#include "include/shmstatus.h"
 #include "include/q330arch.h"
 #include "include/netreq.h"
 #include "include/idaapi.h"
@@ -45,8 +48,9 @@ void *StartServer(void *params);
 // Make the server_pid global so it can be killed when program is shut down
 int   server_pid=0;
 int   g_bDebug=0;
-char  *g_sIDAname;
+char  g_sIDAname[6];
 static struct s_mapshm *mapshm=NULL;
+static struct s_mapstatus *mapstatus=NULL;
 
 //////////////////////////////////////////////////////////////////////////////
 void ShowUsage()
@@ -54,14 +58,11 @@ void ShowUsage()
     printf(
 "Usage:\n");
     printf(
-"  q330arch <configfile> <IDA diskloop name> [debug]\n");
+"  q330arch <configfile> [debug]\n");
     printf("    Starts log seed message server as a daemon\n");
     printf(
 "      <configfile>\n");
-    printf("    Name of ASL diskloop configuration file\n");
-    printf(
-"      <IDA diskloop name>\n");
-    printf("    Name of IDA diskloop\n");
+    printf("    Usually /etc/q330/DLG1/diskloop.config\n");
     printf(
 "      [debug]\n");
     printf("    Optionaly start server in debug mode\n");
@@ -120,6 +121,7 @@ int main (int argc, char **argv)
   int   iDeltaTime;
   int   year, doy, hour, min, sec;
   int   touched;
+  int   iWriteIndexArch;
 
   pthread_t server_tid;
 
@@ -129,12 +131,11 @@ int main (int argc, char **argv)
   time_t  queuetimetag=0;
 
   // Check for right number off arguments
-  if (argc != 3 && argc != 4)
+  if (argc != 2 && argc != 3)
   {
     ShowUsage();
     exit(1);
   }
-  g_sIDAname = argv[2];
 
   // Parse the configuration file
   if ((retmsg=ParseDiskLoopConfig(argv[1])) != NULL)
@@ -143,28 +144,37 @@ int main (int argc, char **argv)
     exit(1);
   }
   LoopRecordSize(&iSeedRecordSize);
+  LogSNCL(station, network, chan, loc);
+  strncpy(g_sIDAname, station, 5);
+  g_sIDAname[5] = 0;
 
   // Handle command line debug request 
   g_bDebug = 0;
-  if (argc == 4)
+  if (argc == 3)
   {
-    if (strcmp(argv[3], "debug") != 0)
+    if (strcmp(argv[2], "debug") != 0)
     {
-      printf("Unknown keyword '%s'\n", argv[3]);
+      printf("Unknown keyword '%s'\n", argv[2]);
       ShowUsage();
       exit(1);
     }
     g_bDebug = 1;
   } // command line arguments request running server in debug mode
 
-  // Ignore SIGPIPE when a connection is closed
-  signal (SIGPIPE, SIG_IGN);
-
   // Run this program as a daemon unless requested otherwise by user
   if (!g_bDebug)
   {
     daemonize();
   }
+
+  // Let user know what station we are archiving for
+  if (g_bDebug)
+    fprintf (stderr, "%s archive name %s\n", WHOAMI, g_sIDAname);
+  else
+    syslog (LOG_INFO, "%s archive name %s", WHOAMI, g_sIDAname);
+
+  // Ignore SIGPIPE when a connection is closed
+  signal (SIGPIPE, SIG_IGN);
 
   // Set up the shared memory segment
   if ((retmsg = MapSharedMem((void **)&mapshm)) != NULL)
@@ -174,14 +184,31 @@ int main (int argc, char **argv)
   }
   memset(mapshm, 0, sizeof(struct s_mapshm));
 
+  // Open the dispstatus shared memory region
+  retmsg = MapStatusMem((void **)&mapstatus);
+  if (retmsg != NULL)
+  {
+    if (g_bDebug)
+      fprintf (stderr, "Error loading dispstatus shared memory: %s\n",
+            retmsg);
+    else
+      syslog (LOG_ERR, "Error loading dispstatus shared memory: %s",
+            retmsg);
+    exit(1);
+  }
+
   // Start the server listening for clients in the background
   LogServerPort(&iPort);
   mapshm->iPort = iPort;
   mapshm->bDebug = g_bDebug;
   if (pthread_create(&server_tid, NULL, StartServer, (void *)mapshm))
   {
-    fprintf(stderr, "%s:main pthread_create StartServer: %s\n",
-      WHOAMI, strerror(errno));
+    if (g_bDebug)
+      fprintf(stderr, "%s:main pthread_create StartServer: %s\n",
+        WHOAMI, strerror(errno));
+    else
+      syslog(LOG_ERR, "%s:main pthread_create StartServer: %s",
+        WHOAMI, strerror(errno));
     exit(1);
   }
   mapshm->listen_tid = server_tid;
@@ -191,6 +218,7 @@ int main (int argc, char **argv)
   touched = 0;
   while (1)
   {
+    // Handle case where quit flag has been set
     if (mapshm->bQuit)
     {
       if (mapshm->bDebug)
@@ -224,6 +252,18 @@ int main (int argc, char **argv)
       usleep(10000);
     }
     touched = 0;
+
+    // Update watchdog timer so dispstatus knows we are alive
+    // First determine which ixWriteArch index to use
+    if (mapstatus->ixWriteArch != 0 && mapstatus->ixReadArch != 0)
+      iWriteIndexArch = 0;
+    if (mapstatus->ixWriteArch != 1 && mapstatus->ixReadArch != 1)
+      iWriteIndexArch = 1;
+    else
+      iWriteIndexArch = 2;
+    // Save the current time, let others know where updated time is stored
+    mapstatus->archWatchdog[iWriteIndexArch] = ST_GetCurrentTime2();
+    mapstatus->ixWriteArch = iWriteIndexArch;
 
     // Check for new messages
     for (i=0; i < MAX_CLIENTS; i++)

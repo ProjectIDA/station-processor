@@ -19,6 +19,7 @@ Update History:
 mmddyy who Changes
 ==============================================================================
 032607 fcs Creation
+053008 fcs Remove daemon run options, q330arch serves this funcition now
 ******************************************************************************/
 #define FILENAME "log330"
 #define VERSION_DATE  "10 April 2007"
@@ -32,23 +33,11 @@ mmddyy who Changes
 #include "include/dcc_time_proto2.h"
 #include "include/log330.h"
 
-void daemonize();
-void StartServer(int port, int debug);
-
-// Make the server_pid global so it can be killed when program is shut down
-int   server_pid=0;
-
 //////////////////////////////////////////////////////////////////////////////
 void ShowUsage()
 {
     printf(
 "Usage:\n");
-    printf(
-"  log330 <configfile>\n");
-    printf("    Starts log seed message server as a daemon\n");
-    printf(
-"  log330 <configfile> debug\n");
-    printf("    Starts log seed message server in debug mode\n");
     printf(
 "  log330 <configfile> dump <loc> [<start> <end>]\n");
     printf("    Dump alone requests times and text of all log messages\n");
@@ -74,22 +63,12 @@ int main (int argc, char **argv)
   int   iCount;
   int   iMaxRecord;
   int   iSeedRecordSize;
-  int   iPort;
-  int   iClient;
-  int   iBuf;
   int   i;
-  int   iDeltaTime;
   int   year, doy, hour, min, sec;
 
   STDTIME2  tStartTime;
   STDTIME2  tEndTime;
 
-  struct s_mapshm *mapshm;
-
-  char   queuebuf[4096];
-  char   tempbuf[4096];
-  char   *queuemsg=NULL; 
-  time_t  queuetimetag=0;
   int   iRecord;
   int   iSeek;
   char  loopDir[MAXCONFIGLINELEN+1];
@@ -99,7 +78,7 @@ int main (int argc, char **argv)
   char  msg[8192];
 
   // Check for right number off arguments
-  if (argc != 2 && argc != 3 && argc != 4 && argc != 6)
+  if (argc != 4 && argc != 6)
   {
     ShowUsage();
     exit(1);
@@ -225,107 +204,6 @@ int main (int argc, char **argv)
 
     exit(0);
   } // command line arguments request data lookup
-
-  // Handle command line debug request 
-  if (argc == 3)
-  {
-    if (strcmp(argv[2], "debug") != 0)
-    {
-      printf("Unknown keyword '%s'\n", argv[2]);
-      ShowUsage();
-      exit(1);
-    }
-  } // command line arguments request running server in debug mode
-
-  // Run this program as a daemon unless requested otherwise by user
-  if (argc == 2)
-    daemonize();
-
-  // Set up the shared memory segment
-  if ((retmsg = MapSharedMem((void **)&mapshm)) != NULL)
-  {
-    fprintf(stderr, "%s: %s\n", FILENAME, retmsg);
-    exit(1);
-  }
-  memset(mapshm, 0, sizeof(struct s_mapshm));
-
-  // Start the server listening for clients in the background
-  LogServerPort(&iPort);
-  if ((server_pid = fork()) == 0)
-  {
-    // Here if this is the child process
-    StartServer(iPort, argc == 3);
-
-    // Server has exited unexpectedly so exit thread
-    exit(1);
-  }
-
-  // Check for error creating server fork
-  if (server_pid == -1)
-  {
-    fprintf(stderr, "%s: Failed to start server process (%d: %s)\n",
-      FILENAME, errno, strerror(errno));
-    exit(1);
-  }
-
-  // Infinite loop waiting for buffers to get filled up
-  iClient = 0;
-  while (1)
-  {
-    sleep(1);
-
-    // Check for new messages
-    for (i=0; i < MAX_CLIENTS; i++)
-    {
-      iClient = (iClient+1) % MAX_CLIENTS;
-      iBuf = mapshm->read_index[iClient];
-      if (mapshm->read_index[iClient] != mapshm->write_index[iClient])
-      {
-        // See if there is a message waiting to be sent out
-        if (queuemsg != NULL)
-        {
-          // Try to combine the two records to save space
-          if (CombineSeed(queuemsg, mapshm->buffer[iClient][iBuf],
-                          iSeedRecordSize))
-          {
-            // Indicate that we have processed message and that's all
-            mapshm->write_index[iClient] = iBuf;
-            continue;
-          }
-          else
-          {
-            // Send queued message since we can't combine the two
-            SeedRecordMsg(tempbuf, queuebuf, station, network, chan, loc,
-                        &year, &doy, &hour, &min, &sec);
-            WriteChan(station, chan, loc, queuemsg);
-            queuemsg = NULL;
-          } // combine failed
-        } // we have a waiting message to possibly combine with
-
-        // Copy new message to free up shared memory buffer
-        memcpy(queuebuf, mapshm->buffer[iClient][iBuf], iSeedRecordSize);
-        queuemsg = queuebuf;
-        queuetimetag = mapshm->timetag[iClient];
-
-        // Indicate that we have processed message
-        mapshm->write_index[iClient] = iBuf;
-      } // new message from this client
-    } // check each possible client
-
-    // See if oldest message is more than BUFFER_TIME_SEC old
-    iDeltaTime = time(NULL) - queuetimetag;
-    if ((iDeltaTime < 0 || iDeltaTime >= BUFFER_TIME_SEC)
-         && (queuemsg != NULL))
-    {
-      SeedRecordMsg(tempbuf, queuebuf, station, network, chan, loc,
-                    &year, &doy, &hour, &min, &sec);
-      if ((retmsg=WriteChan(station, chan, loc, queuemsg)) != NULL)
-      {
-        fprintf(stderr, "log330: %s\n", retmsg);
-      }
-      queuemsg = NULL;
-    } // timeout elapsed
-
-  } // loop forever
+  return 0;
 } // main()
 

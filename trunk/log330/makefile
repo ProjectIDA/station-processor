@@ -11,7 +11,7 @@ LIBS =
 CFLAGS = -Wall -I.. -I. -I$(LIB330_DIR)
 LIBS += -lm -lpthread
 
-SRCS = log330.c daemonize.c server.c logclient.c seedmsg.c
+SRCS = log330.c logclient.c seedmsg.c
 
 OBJS = $(SRCS:%.c=%.o)
 

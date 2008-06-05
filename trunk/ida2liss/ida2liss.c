@@ -14,7 +14,10 @@ Purpose: convert IDA isi sever feed to a LISS feed
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include "isi.h"
 #include "util.h"
-#include "../include/netreq.h"
+#include "include/netreq.h"
+#include "include/dcc_std.h"
+#include "include/dcc_time.h"
+#include "include/dcc_time_proto2.h"
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
@@ -42,6 +45,7 @@ char *server   = DEFAULT_SERVER;
 
 char *whitelist=NULL;
 char *filter=NULL;
+int  keepalive=0;
 
 extern int open_socket(int portnum);
 extern int accept_client(const char *whitelist, int debug);
@@ -107,6 +111,8 @@ char          *loc          // return Location ID
 //   The circular buffer depth is set by depth=argument
 //   If depth = -1 then the main program will never overwrite old data
 //     In this case it is up to thread to update iOldest index
+//   If keepalive > 0 then it will insert dummy keepalive seed records to make
+//     sure a packet gets sent every keepalive seconds
 void *ListenThread(void *params)
 {
   int iReturn;
@@ -114,12 +120,17 @@ void *ListenThread(void *params)
   char    station[8];
   char    chan[8];
   char    loc[8];
+  char    aliverec[4096];
   struct s_mapshm *mapshm;
+  STDTIME2 lastsend;
+  STDTIME2 now;
+  DELTA_T2 diffTime;
+  long     tmsDiff;
 
 
   // Get pointer to shared memory area
   mapshm = (struct s_mapshm *)params;
-  
+
   // open LISS socket
   if (open_socket(mapshm->iPort) < 0)
   {
@@ -147,12 +158,37 @@ void *ListenThread(void *params)
       exit(1);
     }
 
+    // remember when connection made for keepalive purposes
+    lastsend = ST_GetCurrentTime2();
+  
     // Send data from buffer until there is a send error
+    iReturn = 1;
     while (iReturn > 0 && !mapshm->bQuit)
     {
-      // Wait until there is data to send
-      while (mapshm->iNext == mapshm->iOldest)
+      // Wait until there is data to send, or keepalive time passes
+      while (mapshm->iNext == mapshm->iOldest && iReturn > 0)
+      {
+        // See if we need to send keepalive packet
+        if (keepalive > 0)
+        {
+          now = ST_GetCurrentTime2();
+          diffTime = ST_DiffTimes2(now, lastsend);
+          tmsDiff = ST_DeltaToMS2(diffTime);
+
+          if (tmsDiff > keepalive * 10000)
+          {
+            // We need to send a keepalive packet
+            memset(aliverec, ' ', SEED_RECLEN);
+            memset(aliverec, '0', 6);
+            iReturn = send_record(aliverec, SEED_RECLEN);
+
+            // remember when data sent for keepalive purposes
+            lastsend = ST_GetCurrentTime2();
+
+          } // send keepalive packet
+        }
         usleep(100);
+      }
 
       // send the oldest record
       iSend = mapshm->iOldest;
@@ -176,6 +212,9 @@ void *ListenThread(void *params)
 
         // Update to new oldest record in circular buffer
         mapshm->iOldest = (mapshm->iOldest+1) % mapshm->iRecords;
+
+        // remember when data sent for keepalive purposes
+        lastsend = ST_GetCurrentTime2();
 
       } // No errors sending data
     } // while no read errors and not done
@@ -471,6 +510,8 @@ static char *VerboseHelp =
 "                       Empty (default) whitelist means all hosts\n"
 "                       A zero in last ip address means subnet access allowed\n"
 "                       Use comma to separate multiple hosts/addresses\n"
+"    keepalive=int - Send a keepalive seed packet every int seconds\n"
+"                    If argument is not present, none get sent\n"
 "\n"
 "Data feeds are done using 'raw' ISI (sequence number based) disk loops.\n"
 "A 'raw' feed defaults to all packets from all data sources, starting with the\n"
@@ -487,7 +528,7 @@ static char *VerboseHelp =
 
     fprintf(stderr,"usage: %s ", myname);
     fprintf(stderr, "[ -v server=string isiport=int log=string debug=int ] ");
-    fprintf(stderr, "[ depth=int filter=string whitelist=string ] ");
+    fprintf(stderr, "[ depth=int filter=string whitelist=string keepalive=int]");
     fprintf(stderr, "raw[=spec] [beg=str end=str]\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "%s", VerboseHelp);
@@ -499,7 +540,7 @@ static char *VerboseHelp =
 int main(int argc, char **argv)
 {
 int i, request, isiport;
-int debug = 1;
+int debug = 0;
 int lissport=4001;
 int depth=-1;
 int iRecords;
@@ -513,10 +554,9 @@ char *retstr = NULL;
 ISI_SEQNO begseqno = ISI_NEWEST_SEQNO;
 ISI_SEQNO endseqno = ISI_NEVER_SEQNO;
 char *tmpstr;
-int maxdur    = 0;
 int compress  = ISI_COMP_NONE;
 int format    = ISI_FORMAT_GENERIC;
-struct s_mapshm *mapshm;
+struct s_mapshm *mapshm=NULL;
 
     utilNetworkInit();
     isiInitDefaultPar(&par);
@@ -562,8 +602,6 @@ struct s_mapshm *mapshm;
         } else if (strncmp(argv[i], "debug=", strlen("debug=")) == 0) {
             debug = atoi(argv[i] + strlen("debug="));
             isiSetDebugFlag(&par, debug);
-        } else if (strncmp(argv[i], "maxdur=", strlen("maxdur=")) == 0) {
-            maxdur = atoi(argv[i] + strlen("maxdur="));
         } else if (strncmp(argv[i], "log=", strlen("log=")) == 0) {
             log = argv[i] + strlen("log=");
             isiStartLogging(&par, log, NULL, argv[0]);
@@ -573,6 +611,8 @@ struct s_mapshm *mapshm;
             filter = argv[i] + strlen("filter=");
         } else if (strncmp(argv[i], "dbgpath=", strlen("dbgpath=")) == 0) {
             isiSetDbgpath(&par, argv[i] + strlen("dbgpath="));
+        } else if (strncmp(argv[i], "keepalive=", strlen("keepalive=")) == 0) {
+            keepalive = atoi(argv[i] + strlen("keepalive="));
         } else if (strcmp(argv[i], "-v") == 0) {
             flags |= VERBOSE_REPORT;
         } else if (req == NULL) {
@@ -582,6 +622,10 @@ struct s_mapshm *mapshm;
             help(argv[0]);
         }
     }
+
+    // If we are not in debug mode, run program as a daemon
+    if (debug == 0)
+      daemonize();
 
     if (req == NULL) help(argv[0]);
 

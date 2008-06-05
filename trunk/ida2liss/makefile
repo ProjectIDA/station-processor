@@ -31,7 +31,7 @@ LIBS = -L $(LIBIDA)
 CFLAGS = -Wall -I.. -I. -I$(HOME)/ida_build/include $(DEFS)
 LIBS += -lm -lpthread
 
-SRCS = ida2liss.c netsend.c wildmatch.c
+SRCS = ida2liss.c netsend.c wildmatch.c daemonize.c
 
 OBJS = $(SRCS:%.c=%.o)
 

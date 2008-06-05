@@ -42,7 +42,7 @@ void ShowUsage()
 "  log330 <configfile> dump <loc> [<start> <end>]\n");
     printf("    Dump alone requests times and text of all log messages\n");
     printf("    Dump with time requests text within time frame\n");
-    printf("    <loc> is the location code to use");
+    printf("    <loc> is the location code to use\n");
     printf("    The station, network, channel will be pulled from config\n");
     printf("    Start and end dates are yyyy,ddd,hh:mm:ss.ssss\n");
     printf(

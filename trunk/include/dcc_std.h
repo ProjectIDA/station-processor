@@ -100,8 +100,6 @@
 
 #define STDFLT double		/* Standard floating */
 
-typedef _VOIDER VOID;     	/* For functions which return nothing */
-typedef _UNSGND char BOOL;	/* Flag quantities */
 typedef _UNSGND char TEXT;	/* For character strings */
 
 	/*----------------------------------------------*
@@ -145,12 +143,20 @@ typedef _mag_type MAG_ID;
 #ifndef NULL
 #define NULL	(0)		/* Impossible pointer	*/
 #endif
+#ifndef TRUE
 #define TRUE	1		/* if (TRUE)		*/
 #define FALSE	0		/* if (!TRUE)		*/
+typedef _UNSGND char BOOL;	/* Flag quantities */
+typedef _VOIDER VOID;     	/* For functions which return nothing */
+#endif
 #define EOS	'\0'		/* End of string	*/
 
+#ifndef min
 #define min(a,b) ((a)<(b)?(a):(b))
+#endif
+#ifndef max
 #define max(a,b) ((a)>(b)?(a):(b))
+#endif
 #define streq(a,b) (strcmp(a,b)==0)
 
 #define streq(a,b) (strcmp(a,b)==0)

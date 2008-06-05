@@ -91,8 +91,9 @@ char *ArchiveSeed(char *record)
   memcpy(location, seedrec->location_id, 2);
   location[2] = 0;
 
-  retmsg1 = idaWriteChan(station, channel, location, record, g_sIDAname);
+  // We write to archive first to give archive max chance of being complete
   retmsg2 = WriteChan(station, channel, location, record);
+  retmsg1 = idaWriteChan(station, channel, location, record, g_sIDAname);
 
   if (g_bDebug)
   {

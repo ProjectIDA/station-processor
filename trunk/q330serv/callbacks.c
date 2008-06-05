@@ -561,7 +561,10 @@ void mini_callback (pointer p)
           // q330arch will merge data from all data loggers into a single stream
           while ((retstr = q330SeedSend((void *)pm->data_address)) != NULL)
           {
-            fprintf(stderr, "amini_callback q330SeedSend: %s\n", retstr);
+            if (debug_arg)
+              fprintf(stderr, "amini_callback q330SeedSend: %s\n", retstr);
+            else
+              syslog(LOG_ERR, "amini_callback q330SeedSend: %s\n", retstr);
 	    sleep(1);
           }
         } // End addition to save 512 records to files

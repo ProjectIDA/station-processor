@@ -181,6 +181,8 @@ void *ListenThread(void *params)
             memset(aliverec, ' ', SEED_RECLEN);
             memset(aliverec, '0', 6);
             iReturn = send_record(aliverec, SEED_RECLEN);
+            if (mapshm->iDebug)
+              fprintf(stdout, "Sent keepalive packet\n");
 
             // remember when data sent for keepalive purposes
             lastsend = ST_GetCurrentTime2();
@@ -623,11 +625,11 @@ struct s_mapshm *mapshm=NULL;
         }
     }
 
+    if (req == NULL) help(argv[0]);
+
     // If we are not in debug mode, run program as a daemon
     if (debug == 0)
       daemonize();
-
-    if (req == NULL) help(argv[0]);
 
     if (VERBOSE) fprintf(stderr, "%s %s\n", argv[0], VersionIdentString);
 
@@ -666,7 +668,7 @@ struct s_mapshm *mapshm=NULL;
         }
         memset(mapshm, 0, sizeof(struct s_mapshm));
         mapshm->depth = depth;
-        mapshm->iDebug = VERBOSE;
+        mapshm->iDebug = VERBOSE || debug;
         mapshm->iPort = lissport;
         mapshm->iRecords = iRecords;
         mapshm->iOldest = 0;

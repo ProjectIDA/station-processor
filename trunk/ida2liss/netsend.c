@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <syslog.h>
 #include "include/dcc_std.h"
 #include "include/dcc_time_proto2.h"
 #include "include/netreq.h"
@@ -44,7 +45,6 @@ extern int errno;
 
 int client_connected=0;
 static int fd, sockpath ;
-static long seqnum=1;
 static struct sockaddr from ;
 static socklen_t fromlen = sizeof(struct sockaddr);
 
@@ -59,16 +59,10 @@ int send_record (void *record, int size)
 {
  int i, flag, send_attempts ;
  int iSent;
- char seqbuf[7];
  char *bufptr;
 
  // Check for closed connection
  if (client_connected == 0) return 0;
-
- /* Overwrite SEED sequence number */
- sprintf(seqbuf,"%06ld",seqnum);
- if (seqnum>999999) seqnum = 1;
- memcpy(record, seqbuf, 6) ;
 
  /* Set up non-blocking write to the socket */
  send_attempts = 0 ;
@@ -87,7 +81,7 @@ int send_record (void *record, int size)
 //fprintf(stderr, "DEBUG Would block error\n") ;
     if (send_attempts>=120)
     {
-      fprintf(stderr,"Write timed out - closing connection") ;
+      syslog(LOG_ERR,"Write timed out - closing connection") ;
       close_client_connection() ;
       return -1;
     }
@@ -96,9 +90,9 @@ int send_record (void *record, int size)
    else
    {
      if ((errno==ENOTCONN) || (errno==EPIPE))
-      fprintf(stderr,"Client Disconnected\n");
+      syslog(LOG_ERR,"Client Disconnected\n");
      else
-      fprintf(stderr,"error on send (%x)\n", errno) ;
+      syslog(LOG_ERR,"error on send (%x)\n", errno) ;
      close_client_connection() ;
      return -1;
    }
@@ -114,12 +108,11 @@ int send_record (void *record, int size)
  // Make sure record was sent
  if (iSent < size)
  {
-  fprintf(stderr,"Write too many attempts- closing connection") ;
+  syslog(LOG_ERR,"Write too many attempts- closing connection") ;
   close_client_connection() ;
   return -1;
  }
 
- seqnum++;
  return 1;
 } // send_record()
 
@@ -165,7 +158,7 @@ int open_socket(int port_number)
  {
   if(bind(fd, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) < 0)
   {
-   fprintf(stderr, "Bind error, retry in 6 seconds.\n");
+   syslog(LOG_ERR, "Bind error, retry in 6 seconds.\n");
    sleep(6);
   }
   else break;
@@ -209,6 +202,9 @@ int accept_client(const char *whitelist, int iDebug)
    */
   if (iDebug && whitelist)
     fprintf(stderr, "Limiting connections to hosts %s\n", whitelist);
+  else
+    syslog(LOG_INFO, "Limiting connections to hosts %s\n", whitelist);
+
   sockpath = accept(fd, &from, &fromlen);
   if(sockpath < 0)
   {
@@ -246,9 +242,9 @@ int accept_client(const char *whitelist, int iDebug)
      {
        // Failed to turn host into an IP address
        if (iDebug)
-       {
          fprintf(stderr, "Whitelist host '%s' not found\n", whitebuf);
-       }
+       else
+         syslog(LOG_ERR, "Whitelist host '%s' not found\n", whitebuf);
        continue;
      }
 
@@ -267,7 +263,8 @@ int accept_client(const char *whitelist, int iDebug)
         );
 
        if (iDebug)
-         fprintf(stderr, "Comparing host ip[%d] %s and %s\n", i, white_name, peer_name);
+         fprintf(stderr, "Comparing host ip[%d] %s and %s\n",
+                 i, white_name, peer_name);
        for (j=0; j < 3 && peer_ip[j] == white_ip[j]; j++)
          ; // looking for first missmatch
        if (j == 3 && (white_ip[3] == 0 || white_ip[3] == peer_ip[3]))
@@ -281,11 +278,13 @@ int accept_client(const char *whitelist, int iDebug)
    if (!found)
    {
      if (iDebug)
-     {
-       fprintf(stderr, "Client %s was not on whitelist '%s', connection closed\n",
-         peer_name,
-         whitelist);
-     }
+       fprintf(stderr,
+               "Client %s was not on whitelist '%s', connection closed\n",
+               peer_name, whitelist);
+     else
+       syslog(LOG_INFO,
+               "Client %s was not on whitelist '%s', connection closed\n",
+               peer_name, whitelist);
      close_client_connection();
      return 0;
    }
@@ -293,6 +292,8 @@ int accept_client(const char *whitelist, int iDebug)
 
   if (iDebug)
     fprintf(stderr, "Client connection accepted from %s\n", peer_name);
+  else
+    syslog(LOG_INFO, "Client connection accepted from %s\n", peer_name);
 
   client_connected = 1 ;
   return 1;

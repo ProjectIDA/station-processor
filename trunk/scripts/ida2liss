@@ -1,0 +1,61 @@
+#! /bin/bash 
+#
+#  Bring up/down ida2liss daemon
+#  ida2liss creates a liss server connection on the slate, which allows access from the liss server
+#
+
+
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+RETVAL=0
+PROG=`basename $0`
+numargs=$#
+
+
+# Make sure binary exists
+test -x /usr/local/sbin/ida2liss || exit 0
+
+# Now start the data collection process
+start () 
+{
+    echo "Starting $PROG..." 
+    ida2liss raw server=localhost isiport=39132 lissport=4002 log=/opt/data/nrts/log/ida2liss.log depth=100 filter='*/LOG' keepalive=300
+}
+
+
+
+stop ()
+{
+    echo "Killing $PROG ..." 
+    pids=`pidof $PROG`
+    if [ -n "$pids" ] ; then
+        killall $PROG 
+        if [ $? != 0 ]; then
+            echo "Error stopping $PROG.."
+        fi  
+    fi
+    echo
+}
+
+case "$1" in
+
+    start)
+        start
+        ;;
+
+    stop)
+        stop
+        ;;
+
+    restart|reload|force-reload)
+        echo -n "Restarting $PROG: "
+        stop 
+        sleep 2
+        start
+        ;;
+
+    *)
+        echo "Usage: /etc/init.d/isid {start|stop|reload|force-reload|restart}"
+        exit 1
+esac
+
+exit 0

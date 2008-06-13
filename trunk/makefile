@@ -9,6 +9,7 @@ all:
 	cd log330; $(MAKE)
 	cd q330arch; $(MAKE)
 	cd ida2liss; $(MAKE)
+	cd dispstatus; $(MAKE)
 
 clean:
 	cd lib; $(MAKE) clean

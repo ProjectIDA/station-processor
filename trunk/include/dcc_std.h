@@ -146,6 +146,10 @@ typedef _mag_type MAG_ID;
 #ifndef TRUE
 #define TRUE	1		/* if (TRUE)		*/
 #define FALSE	0		/* if (!TRUE)		*/
+#endif
+
+// If IDA platform.h doesn't define these, we need to
+#ifndef platform_h_included
 typedef _UNSGND char BOOL;	/* Flag quantities */
 typedef _VOIDER VOID;     	/* For functions which return nothing */
 #endif

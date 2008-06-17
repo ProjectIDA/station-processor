@@ -343,7 +343,7 @@ char *ParseDiskLoopConfig(
   fclose (fp);
 
   // Make sure that none of the diskloop depths will exceed 2 GByte
-  iMaxLoopSize = 0x3fffffff / iLoopRecordSize;
+  iMaxLoopSize = 0x7fffffff / iLoopRecordSize;
   for (newbuf = pChanSizeList; newbuf != NULL; newbuf = newbuf->next)
   {
     if (newbuf->records > iMaxLoopSize)

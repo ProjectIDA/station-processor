@@ -18,7 +18,7 @@ test -x /usr/local/sbin/ida2liss || exit 0
 start () 
 {
     echo "Starting $PROG..." 
-    ida2liss raw server=localhost isiport=39132 lissport=4002 log=/opt/data/nrts/log/ida2liss.log depth=100 filter='*/LOG' keepalive=300
+    ida2liss raw server=localhost isiport=39132 lissport=4002 log=/opt/data/nrts/log/ida2liss.log depth=100 filter='*/LOG' keepalive=100
 }
 
 

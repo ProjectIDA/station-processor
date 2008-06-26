@@ -531,7 +531,7 @@ static char *VerboseHelp =
     fprintf(stderr,"usage: %s ", myname);
     fprintf(stderr, "[ -v server=string isiport=int log=string debug=int ] ");
     fprintf(stderr, "[ depth=int filter=string whitelist=string keepalive=int]");
-    fprintf(stderr, "raw[=spec] [beg=str end=str]\n");
+    fprintf(stderr, "lissport=int raw[=spec] [beg=str end=str]\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "%s", VerboseHelp);
     fprintf(stderr, "default server is `%s'\n", DEFAULT_SERVER);

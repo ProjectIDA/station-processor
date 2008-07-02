@@ -9,7 +9,7 @@ LIB330_DIR=$(HOME)/lib330
 CC = gcc
 COPT =
 LIBS = -L$(LIB330_DIR) -l330
-CFLAGS = -Wall -I.. -I. -I$(LIB330_DIR)
+CFLAGS = -Wall -I.. -I. -Iseedlib -I$(LIB330_DIR)
 
 
 LIBS += -lm -lpthread
@@ -18,10 +18,13 @@ SRCS = aslreq.c daemonize.c
 
 OBJS = $(SRCS:%.c=%.o)
 
-aslreq : $(LIB330_DIR)/lib330.a ../lib/dalib.a ../lib/dcctime2lib.a $(OBJS)
-	$(CC) $(OBJS) ../lib/dalib.a ../lib/dcctime2lib.a $(LIBS) -o aslreq
+aslreq : $(LIB330_DIR)/lib330.a ../lib/dalib.a ../lib/dcctime2lib.a seedlib/seedlib.a $(OBJS)
+	$(CC) $(OBJS) ../lib/dalib.a ../lib/dcctime2lib.a seedlib/seedlib.a $(LIBS) -o aslreq
 
 aslreq.o: ../include/diskloop.h ../include/netreq.h
+
+seedlib/seedlib.a:
+	cd seedlib; $(MAKE)
 
 $(LIB330_DIR)/lib330.a : 
 	@echo

@@ -12,6 +12,9 @@
 #include "include/diskloop.h"
 #include "include/dcc_time_proto2.h"
 #include "include/netreq.h"
+#include "steim.h"
+#include "steimlib.h"
+#include "miniseed.h"
 
 #define MAXSAMPLES 5000000
 extern int errno;
@@ -19,6 +22,7 @@ void daemonize();
 
 #define perror(ster) fprintf(stderr,"Error: %s (%x)\n",ster,errno)
 
+LONG decode_SEED_micro_header (SEED_data_record *sdr, SHORT *firstframe, SHORT *level, SHORT *flip, SHORT *dframes);
 int client_connected=0;
 char incmdbuf[80];
 char prsbuf[80] ;
@@ -38,27 +42,23 @@ void close_client_connection()
  client_connected = 0 ;
 }
 
-void send_record (void *seedrec)
+void send_data (void *data)
 {
+ int len;
  int i, flag, send_attempts ;
  int iSent;
- char seqbuf[7];
  char *bufptr;
-
- /* Update SEED sequence number */
- sprintf(seqbuf,"%06ld",seqnum++);
- if (seqnum>999999) seqnum = 1;
- memcpy(seedrec, seqbuf, 6) ;
 
  /* Set up non-blocking write to the socket */
  send_attempts = 0 ;
  iSent = 0;
- bufptr = seedrec;
- while (send_attempts < 200 && iSent < SEEDRECSIZE)
+ bufptr = data;
+ len = strlen(data);
+ while (send_attempts < 200 && iSent < len)
  {
   ++send_attempts;
   flag = MSG_DONTWAIT ;
-  i = send(sockpath, &bufptr[iSent], SEEDRECSIZE-iSent, flag);
+  i = send(sockpath, &bufptr[iSent], len-iSent, flag);
 //fprintf (stderr, "DEBUG Bytes sent = %i\n", i) ;
   if (i < 0)
   {
@@ -86,18 +86,18 @@ void send_record (void *seedrec)
   else
   {
    iSent += i;
-   if (iSent < SEEDRECSIZE)
+   if (iSent < len)
      sleep(1);
   } // send was good
  } // while send not timed out
 
  // Make sure record was sent
- if (iSent < SEEDRECSIZE)
+ if (iSent < len)
  {
   fprintf(stderr,"Write too many attempts- closing connection") ;
   close_client_connection() ;
  }
-} // send_record()
+} // send_data()
 
 void add_log_message (char *lgmsg)
 {
@@ -112,41 +112,8 @@ void add_log_message (char *lgmsg)
 
 void write_log_record()
 {
- seed_header lghead ;
-
  /* Copy final (legacy) message to the log record */
- add_log_message ("I00000End") ;
-
- /* Set up the SEED header for the log record */
- lghead.seed_record_type = 'D' ;
- lghead.continuation_record = ' ' ;
- memcpy (lghead.station_id_call_letters, lgstation_id, 5) ;
- memcpy (lghead.location_id, "RQ", 2) ;
- memcpy (lghead.channel_id, "LOG", 3) ;
- memcpy (lghead.seednet, "  ", 2) ;
- lghead.yr = 0 ;
- lghead.jday = 0 ;
- lghead.hr = 0 ;
- lghead.minute = 0 ;
- lghead.seconds = 0 ;
- lghead.unused = 0 ;
- lghead.tenth_millisec = 0 ;
- lghead.samples_in_record = 0 ;
- lghead.sample_rate_factor = 0 ;
- lghead.sample_rate_multiplier = 0 ;
- lghead.activity_flags = 0 ;
- lghead.io_flags = 0 ;
- lghead.tenth_msec_correction = 0 ;
- lghead.data_quality_flags = 0 ;
- lghead.number_of_following_blockettes = lgframes ;
- lghead.tenth_msec_correction = 0 ;
- lghead.first_data_byte = 0 ;
- lghead.first_blockette_byte = 64 ;
- lghead.first_blockette_byte = htons(lghead.first_blockette_byte) ;
- memcpy(lgrec, &lghead, 48) ;
-
- /* Write the log record and close the connection */
- if (client_connected == 1) send_record(lgrec) ;
+ send_data ("Finished\n") ;
  if (client_connected == 1) close_client_connection() ;
 }
 
@@ -216,18 +183,42 @@ int TransferSamples(
   const char  *rq_chan,      // Channel ID
   const char  *rq_loc,       // Location ID
   STDTIME2    rq_tBeginTime, // Start time
-  int         rq_iSamples    // Number of data points to transfer
+  long        rq_iSamples    // Number of data points to transfer
   )                          // Returns the number of samples actually sent
 {
   int   indexFirst;
   int   indexLast;
   int   iCount;
   int   iSample;
+  int   iSkip;
   int   iLoopSize;
-  int   i,j;
+  int   iLine;
+  int   i,j,k;
   int   iSeek;
   int   iRecord;
   int   iLoopRecordSize;
+
+  long  myData[8192];  // A seed record can never store more than this many values
+  long  rectotal;
+  static dcptype dcp=NULL;
+  short  dframes;
+  short  dstat;
+  short  firstframe, flip, level;
+  long   headertotal;
+
+  STDTIME2    tRecStart;
+  DELTA_T2    diffTime;
+  double      delta;
+  double      dSampleRate;
+  int         iRateMult;
+  int         iRateFactor;
+  int         iTimeCorrection;
+  seed_header *pheader;
+  char        outline[256];
+  short       iYear, iMonth, iDom, iDoy;
+  LONG        iJulian;
+
+
   STDTIME2    rq_tEndTime;
   char  str_record[8192];
   char  buf_filename[2*MAXCONFIGLINELEN+2];
@@ -236,19 +227,25 @@ int TransferSamples(
   char  *errmsg;
   FILE  *fp_buf;
   
-  // Ask for 1 second of data just to get a starting record index
-  rq_tEndTime = ST_AddToTime2(rq_tBeginTime, 0, 0, 0, 1, 0);
-/*  
+  // Initialize decompression code
+  if (dcp == NULL)
+  {
+    if ((dcp = init_generic_decompression()) == NULL)
+    {
+      fprintf(stderr, "TransferSamples: failed call to init_generic_decompression()\n");
+      return 0;
+    }
+  } // first time initialization
+
 fprintf(stderr,
-"TransferSamples(%s %s/%s %d,%03d,%02d:%02d:%02d-%d,%03d,%02d:%02d:%02d\n",
+"TransferSamples(%s %s/%s %d,%03d,%02d:%02d:%02d %ld)\n",
 rq_station,rq_loc,rq_chan,
 rq_tBeginTime.year, rq_tBeginTime.day,
 rq_tBeginTime.hour, rq_tBeginTime.minute, rq_tBeginTime.second,
-rq_tEndTime.year, rq_tEndTime.day,
-rq_tEndTime.hour, rq_tEndTime.minute, rq_tEndTime.second
-);
-*/
+rq_iSamples);
+
   // Get index of first record for this data request
+  rq_tEndTime = ST_AddToTime2(rq_tBeginTime, 0, 0, 0, 1, 0);
   LoopRecordSize(&iLoopRecordSize);
   errmsg = GetRecordRange(rq_station, rq_chan, rq_loc,
              rq_tBeginTime, rq_tEndTime,
@@ -279,7 +276,6 @@ rq_tEndTime.hour, rq_tEndTime.minute, rq_tEndTime.second
         loopDir, rq_station, rq_loc, rq_chan);
   }
 
-
   // Open the buffer file
   if ((fp_buf=fopen(buf_filename, "r")) == NULL)
   {
@@ -290,6 +286,7 @@ rq_tEndTime.hour, rq_tEndTime.minute, rq_tEndTime.second
   // Loop until we've sent rq_iSamples data points
   iSample = 0;
   i=0;
+  iLine = 0;
   while (iSample < rq_iSamples)
   {
     iRecord = (i + indexFirst) % iLoopSize;
@@ -315,12 +312,111 @@ rq_tEndTime.hour, rq_tEndTime.minute, rq_tEndTime.second
       return i;
     } // Failed to read record
 
+fprintf(stderr, "decode_SEED_micro_header\n");
     // Decompress the record
-
+    headertotal = decode_SEED_micro_header ( (SEED_data_record *)str_record, 
+                                              &firstframe, &level, &flip, &dframes);
+    if ((dframes < 1) || (dframes >= MAXSEEDFRAMES))
+    {
+      fprintf(stderr, "illegal number of data frames specified!\n");
+      exit(0);
+    }
+    if ((firstframe < 0) || (firstframe > dframes))
+    {
+      fprintf(stderr, "illegal first data frame! (firstframe=%d, dframes=%d)\n",
+              firstframe,dframes);
+      exit(0);
+    }
+    if ((level < 1) || (level > 3))
+    {
+      fprintf(stderr, "illegal compression level!\n");
+      exit(0);
+    }
+fprintf(stderr, "decompress_generic_record\n");
+    rectotal = decompress_generic_record ((generic_data_record *)str_record, myData, &dstat, dcp,
+                                           firstframe, headertotal, level, flip, dframes);
+fprintf(stderr, "Decompressed %ld records from seed record %d\n", rectotal, i+1);
     // Skip any data points that are prior to start time
+    j = 0;  // normaly start at first value in record
+    if (i == 0)
+    {
+      // Get sample rate
+      pheader = (seed_header *)str_record;
+      iRateFactor = (short)ntohs(pheader->sample_rate_factor);
+      iRateMult = (short)ntohs(pheader->sample_rate_multiplier);
+
+      // Get sample rate, See SEED Reference Manual Chp 8
+      // Fixed Section of Data Header for formulas
+      dSampleRate = 0;
+      if (iRateFactor > 0 && iRateMult > 0)
+        dSampleRate = (double)(iRateFactor * iRateMult);
+
+      if (iRateFactor > 0 && iRateMult < 0)
+        dSampleRate = -((double)iRateFactor / (double)iRateMult);
+
+      if (iRateFactor < 0 && iRateMult > 0)
+        dSampleRate = -((double)iRateMult / (double)iRateFactor);
+
+      if (iRateFactor < 0 && iRateMult < 0)
+        dSampleRate = 1.0 / (double)(iRateFactor * iRateMult);
+
+      // Parse Record Start time
+      tRecStart.year = ntohs(pheader->yr);
+      tRecStart.day = ntohs(pheader->jday);
+      tRecStart.hour = (int)pheader->hr;
+      tRecStart.minute = (int)pheader->minute;
+      tRecStart.second = (int)pheader->seconds;
+      tRecStart.tenth_msec = ntohs(pheader->tenth_millisec);
+
+      // Get time difference
+      diffTime = ST_DiffTimes2(rq_tBeginTime , tRecStart);
+      delta = (double)ST_DeltaToMS2(diffTime) / 10000.0;
+      iSkip = (int)(delta * dSampleRate);
+fprintf(stderr, "Skip %d samples to reach start time, delta=%.4lf rate=%.4lf\n", iSkip, delta, dSampleRate);
+
+      j = iSkip;  // skip this many samples to find first one after start time
+
+      // Create header line
+      iJulian = ST_GetJulian2(rq_tBeginTime);
+      ST_CnvJulToCal2(iJulian, &iYear, &iMonth, &iDom, &iDoy);
+      if (rq_loc[0] == ' ' || rq_loc[0] == 0)
+      {
+        sprintf(outline, "%s.%s %4d/%02d/%02d %02d:%02d:%02d %c%-10.6lf SEC %5.2lf  SPS  UNFILTERED %ld\n",
+            rq_station, rq_chan,
+            iYear, iMonth, iDom,
+            rq_tBeginTime.hour, rq_tBeginTime.minute, rq_tBeginTime.second,
+            '+', 0.0,
+            dSampleRate, rq_iSamples);
+      }
+      else
+      {
+        sprintf(outline, "%s.%s-%s %4d/%02d/%02d %02d:%02d:%02d %c%-10.6lf SEC %5.2lf  SPS  UNFILTERED %ld\n",
+            rq_station, rq_loc, rq_chan,
+            iYear, iMonth, iDom,
+            rq_tBeginTime.hour, rq_tBeginTime.minute, rq_tBeginTime.second,
+            '+', 0.0,
+            dSampleRate, rq_iSamples);
+      }
+      send_data(outline);
+
+      // Get time correction value
+      iTimeCorrection = ntohl(pheader->tenth_msec_correction) * 100;
+
+      // See if time correction has allready been applied
+      if (pheader->activity_flags & 0x40)
+        iTimeCorrection = 0;
+    } // If first record in
 
     // Send data points until record is consumed, or we have sent enough
+    for (; j < rectotal && iSample < rq_iSamples;j++,iSample++,k++)
+    {
+      sprintf(outline, "%5d %ld\n", iLine, myData[j]);
+      send_data(outline);
+      iLine++;
+    } // for each sample to send from this record
 
+fprintf(stderr, "finished with record\n");
+    i++;
   } // while more samples need to be sent
 
   // Close buffer file
@@ -541,7 +637,7 @@ int argc;
  signal(SIGPIPE, SIG_IGN);
 
  // Set up to run program as a daemon
- daemonize();
+// daemonize();
 
  /* Create the socket to listen on */
  fd = socket(AF_INET, SOCK_STREAM, 0);

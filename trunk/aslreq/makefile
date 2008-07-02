@@ -35,4 +35,5 @@ $(LIB330_DIR)/lib330.a :
 
 clean : 
 		rm -f *.o aslreq
+		cd seedlib; $(MAKE) clean
 

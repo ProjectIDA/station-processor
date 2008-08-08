@@ -4,7 +4,7 @@ ifeq ($(MACHINE), armv5tel)
 else
   LIB330_DIR = /usr/local/lib/lib330
 endif
-  LIB330_DIR = $(HOME)/lib330
+  LIB330_DIR = ../../../lib330
 
 CC = gcc
 COPT = 

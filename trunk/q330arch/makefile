@@ -1,7 +1,7 @@
 LIBIDA=$(HOME)/lib/$(PLATFORM)
 CC = gcc
 COPT = 
-LIB330_DIR = $(HOME)/lib330
+LIB330_DIR = ../../../lib330
 LIBS = -L$(LIBIDA)
 CFLAGS = -Wall -I.. -I. -I$(LIB330_DIR)
 LIBS += -lm -lpthread

@@ -40,6 +40,7 @@ void close_client_connection()
  shutdown(sockpath, SHUT_RDWR) ;
  close(sockpath) ;
  client_connected = 0 ;
+ fprintf(stderr, "Closing client connection\n");
 }
 
 void send_data (void *data)
@@ -64,7 +65,7 @@ void send_data (void *data)
   {
    if (errno==EAGAIN)
    {
-//fprintf(stderr, "DEBUG Would block error\n") ;
+  fprintf(stderr, "DEBUG Would block error\n") ;
     if (send_attempts>=120)
     {
       fprintf(stderr,"Write timed out - closing connection") ;
@@ -114,6 +115,8 @@ void write_log_record()
 {
  /* Copy final (legacy) message to the log record */
  send_data ("Finished\n") ;
+ sleep(3);
+ fprintf(stderr, "Done processing request\n");
  if (client_connected == 1) close_client_connection() ;
 }
 
@@ -256,8 +259,8 @@ rq_iSamples);
     fprintf(stderr, "%s\n", errmsg);
     return 0;
   }
-//fprintf(stderr, "Returning %d records, index %d..%d, buf length %d, rec %d\n",
-//iCount, indexFirst,indexLast,iLoopSize, iLoopRecordSize);
+  fprintf(stderr, "Returning %d records, index %d..%d, buf length %d, rec %d\n",
+  iCount, indexFirst,indexLast,iLoopSize, iLoopRecordSize);
 
   // Make sure there are data records to return
   if (iCount < 1)
@@ -290,6 +293,7 @@ rq_iSamples);
   iLine = 0;
   while (iSample < rq_iSamples)
   {
+fprintf(stderr, "DEBUG loop on sample %d of %ld\n", iSample, rq_iSamples);
     iRecord = (i + indexFirst) % iLoopSize;
     iSeek = iRecord * iLoopRecordSize;
 
@@ -301,7 +305,7 @@ rq_iSamples);
       sprintf(looperrstr, "TransferSamples: Unable to seek to %d in %s",
               iSeek, buf_filename);
       fclose(fp_buf);
-      return i;
+      return iSample;
     } // Failed to seek to required file buffer position
 
     // Read in the data
@@ -310,10 +314,10 @@ rq_iSamples);
       sprintf(looperrstr, "TransferSamples: Unable to read record %d in %s",
               iRecord, buf_filename);
       fclose(fp_buf);
-      return i;
+      return iSample;
     } // Failed to read record
 
-fprintf(stderr, "decode_SEED_micro_header\n");
+//fprintf(stderr, "decode_SEED_micro_header\n");
     // Decompress the record
     headertotal = decode_SEED_micro_header ( (SEED_data_record *)str_record, 
                                               &firstframe, &level, &flip, &dframes);
@@ -333,7 +337,7 @@ fprintf(stderr, "decode_SEED_micro_header\n");
       fprintf(stderr, "illegal compression level!\n");
       exit(0);
     }
-fprintf(stderr, "decompress_generic_record\n");
+//fprintf(stderr, "decompress_generic_record\n");
     rectotal = decompress_generic_record ((generic_data_record *)str_record, myData, &dstat, dcp,
                                            firstframe, headertotal, level, flip, dframes);
 fprintf(stderr, "Decompressed %ld records from seed record %d\n", rectotal, i+1);
@@ -419,8 +423,16 @@ fprintf(stderr, "Initial time correction of %.6lf\n", dTimeCorrection);
             dSampleRate, rq_iSamples);
       }
       send_data(outline);
-
+      fprintf(stderr, "Final time correction %c%-10.6lf\n",
+              cSign, dTimeCorrection);
     } // If first record in
+
+    // If error caused connection to close we are done
+    if (!client_connected)
+    {
+      fclose(fp_buf);
+      return iSample;
+    }
 
     // Send data points until record is consumed, or we have sent enough
     for (; j < rectotal && iSample < rq_iSamples;j++,iSample++,k++)
@@ -428,6 +440,13 @@ fprintf(stderr, "Initial time correction of %.6lf\n", dTimeCorrection);
       sprintf(outline, "%5d %ld\n", iLine, myData[j]);
       send_data(outline);
       iLine++;
+
+      // If error caused connection to close we are done
+      if (!client_connected)
+      {
+        fclose(fp_buf);
+        return iSample;
+      }
     } // for each sample to send from this record
 
 fprintf(stderr, "finished with record\n");
@@ -631,6 +650,7 @@ int argc;
  socklen_t j ;
  long port_number ;
  char *retmsg ;
+ char peer_name[16];
 
  if (argc!=2) {
   fprintf(stderr, "Usage:  %s <portnumber>\n", argv[0]);
@@ -652,7 +672,7 @@ int argc;
  signal(SIGPIPE, SIG_IGN);
 
  // Set up to run program as a daemon
- daemonize();
+// daemonize();
 
  /* Create the socket to listen on */
  fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -696,7 +716,14 @@ int argc;
    perror("accept");
    exit(1);
   }
-  /* fprintf(stderr,"Client connection accepted\n"); */
+  // get ip name of client that connected to us
+  sprintf(peer_name, "%u.%u.%u.%u",
+      (unsigned char)from.sa_data[2],
+      (unsigned char)from.sa_data[3],
+      (unsigned char)from.sa_data[4],
+      (unsigned char)from.sa_data[5]);
+
+  fprintf(stderr,"Client connection accepted from %s\n", peer_name);
   client_connected = 1 ;
   read_socket();
   if (client_connected == 1) process__request();

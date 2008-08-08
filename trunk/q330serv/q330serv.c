@@ -324,9 +324,9 @@ int main (int argc, char **argv)
     
     mapstatus->libstate[iDlg]= libstate;
 
-fprintf(stderr, "DEBUG counter=%d, interval=%d have_status=%x stat_request=%x\n",
-q330->share.interval_counter, q330->share.status_interval, 
-q330->share.have_status, q330->stat_request);
+//fprintf(stderr, "DEBUG counter=%d, interval=%d have_status=%x stat_request=%x\n",
+//q330->share.interval_counter, q330->share.status_interval, 
+//q330->share.have_status, q330->stat_request);
 
     // Make sure the status values we want are available
     if ((q330->share.have_status &
@@ -410,6 +410,7 @@ q330->share.have_status, q330->stat_request);
         translate_clock(&q330->qclock, 
                         stat_global.clock_qual, stat_global.clock_loss);
 
+/* Debug status calls
 fprintf(stderr, "DEBUG serial number %08X%08X\n",
  q330->share.fixed.sys_num[1], q330->share.fixed.sys_num[0]);
 fprintf(stderr, "DEBUG KMI number %d\n", q330->share.fixed.property_tag);
@@ -418,7 +419,7 @@ fprintf(stderr, "DEBUG %s %s  sats %d/%d\n", stat_gps.date, stat_gps.time,
 fprintf(stderr, "DEBUG GPS Fix Type: %s\n", stat_gps.fix) ;
 fprintf(stderr, "DEBUG Clock Quality: %d%%\n",
  mapstatus->dlg[iWriteIndex][iDlg].clock_quality);
-
+*/
     // Update new write index so status display knows it is ready
     mapstatus->ixWriteStatus[iDlg] = iWriteIndex;
 

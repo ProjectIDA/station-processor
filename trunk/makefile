@@ -16,7 +16,7 @@ clean:
 	cd q330serv; $(MAKE) clean
 	cd ida2chan; $(MAKE) clean
 	cd netreq; $(MAKE) clean
-	cd aslreQ; $(MAKE) clean
+	cd aslreq; $(MAKE) clean
 	cd dlutil; $(MAKE) clean
 	cd log330; $(MAKE) clean
 	cd q330arch; $(MAKE) clean

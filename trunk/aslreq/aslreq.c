@@ -212,11 +212,12 @@ int TransferSamples(
   double      dSampleRate;
   int         iRateMult;
   int         iRateFactor;
-  int         iTimeCorrection;
+  double      dTimeCorrection;
   seed_header *pheader;
   char        outline[256];
   short       iYear, iMonth, iDom, iDoy;
   LONG        iJulian;
+  char        cSign;
 
 
   STDTIME2    rq_tEndTime;
@@ -376,6 +377,26 @@ fprintf(stderr, "Skip %d samples to reach start time, delta=%.4lf rate=%.4lf\n",
 
       j = iSkip;  // skip this many samples to find first one after start time
 
+      // Get time correction value from seed header
+      dTimeCorrection = ntohl(pheader->tenth_msec_correction) /10000.0;
+
+      // See if time correction has allready been applied
+      if (pheader->activity_flags & 0x40)
+        dTimeCorrection = 0;
+fprintf(stderr, "Initial time correction of %.6lf\n", dTimeCorrection);
+
+      // Add to any offset from where we started taking samples
+      dTimeCorrection = delta - ((double)iSkip/dSampleRate);
+      if (dTimeCorrection < 0)
+      {
+        cSign = '-';
+        dTimeCorrection = -dTimeCorrection;
+      }
+      else
+      {
+        cSign = '+';
+      }
+
       // Create header line
       iJulian = ST_GetJulian2(rq_tBeginTime);
       ST_CnvJulToCal2(iJulian, &iYear, &iMonth, &iDom, &iDoy);
@@ -385,7 +406,7 @@ fprintf(stderr, "Skip %d samples to reach start time, delta=%.4lf rate=%.4lf\n",
             rq_station, rq_chan,
             iYear, iMonth, iDom,
             rq_tBeginTime.hour, rq_tBeginTime.minute, rq_tBeginTime.second,
-            '+', 0.0,
+            cSign, dTimeCorrection,
             dSampleRate, rq_iSamples);
       }
       else
@@ -394,17 +415,11 @@ fprintf(stderr, "Skip %d samples to reach start time, delta=%.4lf rate=%.4lf\n",
             rq_station, rq_loc, rq_chan,
             iYear, iMonth, iDom,
             rq_tBeginTime.hour, rq_tBeginTime.minute, rq_tBeginTime.second,
-            '+', 0.0,
+            cSign, dTimeCorrection,
             dSampleRate, rq_iSamples);
       }
       send_data(outline);
 
-      // Get time correction value
-      iTimeCorrection = ntohl(pheader->tenth_msec_correction) * 100;
-
-      // See if time correction has allready been applied
-      if (pheader->activity_flags & 0x40)
-        iTimeCorrection = 0;
     } // If first record in
 
     // Send data points until record is consumed, or we have sent enough
@@ -618,7 +633,7 @@ int argc;
  char *retmsg ;
 
  if (argc!=2) {
-  fprintf(stderr,"Missing port argument\n");
+  fprintf(stderr, "Usage:  %s <portnumber>\n", argv[0]);
   exit(100);
  }
  port_number = atol(argv[1]);
@@ -637,7 +652,7 @@ int argc;
  signal(SIGPIPE, SIG_IGN);
 
  // Set up to run program as a daemon
-// daemonize();
+ daemonize();
 
  /* Create the socket to listen on */
  fd = socket(AF_INET, SOCK_STREAM, 0);

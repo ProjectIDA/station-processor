@@ -217,7 +217,7 @@ begin
         pcret->opt_zoneadjust = 1 ;
         pcret->opt_secfilter = OSF_DATASERV ;
       end
-  sprintf(configstruc.par_create.host_software, "Seneca Version %s", SEN_VER) ;
+  sprintf(configstruc.par_create.host_software, "q330serv Version %s", SEN_VER) ;
 end
 
 void save_configuration (void)

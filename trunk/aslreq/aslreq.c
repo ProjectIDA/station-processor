@@ -328,9 +328,11 @@ fprintf(stderr, "DEBUG loop on sample %d of %ld\n", iSample, rq_iSamples);
     }
     if ((firstframe < 0) || (firstframe > dframes))
     {
-      fprintf(stderr, "illegal first data frame! (firstframe=%d, dframes=%d)\n",
-              firstframe,dframes);
-      exit(0);
+      fprintf(stderr,
+          "illegal first data frame! Skipping! (firstframe=%d, dframes=%d)\n",
+           firstframe,dframes);
+      indexFirst++;
+      continue;
     }
     if ((level < 1) || (level > 3))
     {

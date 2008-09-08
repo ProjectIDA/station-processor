@@ -197,6 +197,7 @@ int TransferSamples(
   int   iLoopSize;
   int   iLine;
   int   i,j,k;
+  int   iEmpty;
   int   iSeek;
   int   iRecord;
   int   iLoopRecordSize;
@@ -290,11 +291,12 @@ rq_iSamples);
   // Loop until we've sent rq_iSamples data points
   iSample = 0;
   i=0;
+  iEmpty = 0;
   iLine = 0;
   while (iSample < rq_iSamples)
   {
 fprintf(stderr, "DEBUG loop on sample %d of %ld\n", iSample, rq_iSamples);
-    iRecord = (i + indexFirst) % iLoopSize;
+    iRecord = (i + indexFirst + iEmpty) % iLoopSize;
     iSeek = iRecord * iLoopRecordSize;
 
     // Seek to the record position
@@ -331,7 +333,7 @@ fprintf(stderr, "DEBUG loop on sample %d of %ld\n", iSample, rq_iSamples);
       fprintf(stderr,
           "illegal first data frame! Skipping! (firstframe=%d, dframes=%d)\n",
            firstframe,dframes);
-      indexFirst++;
+      iEmpty++;
       continue;
     }
     if ((level < 1) || (level > 3))

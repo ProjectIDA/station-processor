@@ -1283,7 +1283,7 @@ char *GetRecordRange(
     } // error parsing header
 
     // See if record End Time is after desired start time
-    if ((iCmp=ST_TimeComp2(tRecEnd, tBeginTime)) > 0)
+    if ((iCmp=ST_TimeComp2(tRecEnd, tBeginTime)) >= 0)
     {
       // Need to find an earlier record
       iHigh = iMid-1;
@@ -1343,7 +1343,7 @@ char *GetRecordRange(
     } // error parsing header
 
     // See if record Start time is after desired end time
-    if (ST_TimeComp2(tRecStart, tEndTime) >= 0)
+    if (ST_TimeComp2(tRecStart, tEndTime) > 0)
     {
       // Need to find an earlier record
       iHigh = iMid-1;

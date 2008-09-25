@@ -7,21 +7,28 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <dirent.h>
+#include <syslog.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include "include/diskloop.h"
 #include "include/dcc_time_proto2.h"
 #include "include/netreq.h"
 
+// The maximum number of channels we could possibly expect from a station
+#define MAX_CHAN 500
+
 extern int errno;
 void daemonize();
+
+int WildMatch(char *pattern, char *target);
 
 #define perror(ster) fprintf(stderr,"Error: %s (%x)\n",ster,errno)
 
 int client_connected=0;
 char incmdbuf[80];
 char prsbuf[80] ;
-char lgstation_id[5] ;
+char lgstation_id[6] ;
 unsigned char lgrec[SEEDRECSIZE];
 int fd, sockpath ;
 long seqnum ;
@@ -36,6 +43,65 @@ void close_client_connection()
  close(sockpath) ;
  client_connected = 0 ;
 }
+
+void send_string (char *msg)
+{
+ int i, flag, send_attempts ;
+ int iSent;
+ int iLength;
+ char *bufptr;
+
+ /* Set up non-blocking write to the socket */
+ send_attempts = 0 ;
+ iSent = 0;
+ iLength = strlen(msg);
+ bufptr = msg;
+ while (send_attempts < 200 && iSent < iLength)
+ {
+  ++send_attempts;
+  flag = MSG_DONTWAIT ;
+  i = send(sockpath, &bufptr[iSent], iLength-iSent, flag);
+//fprintf (stderr, "DEBUG Bytes sent = %i\n", i) ;
+  if (i < 0)
+  {
+   if (errno==EAGAIN)
+   {
+//fprintf(stderr, "DEBUG Would block error\n") ;
+    if (send_attempts>=120)
+    {
+      syslog(LOG_ERR, "Write timed out - closing connection") ;
+      fprintf(stderr, "Write timed out - closing connection") ;
+      close_client_connection() ;
+      return ;
+    }
+    sleep(1) ;
+   }
+   else
+   {
+     if ((errno==ENOTCONN) || (errno==EPIPE))
+      fprintf(stderr,"Client Disconnected\n");
+     else
+      fprintf(stderr,"error on send (%x)\n", errno) ;
+     close_client_connection() ;
+     return ;
+   }
+  } // Error return from send
+  else
+  {
+   iSent += i;
+   if (iSent < iLength)
+     usleep(100000);
+  } // send was good
+ } // while send not timed out
+
+ // Make sure string was sent
+ if (iSent < iLength)
+ {
+  fprintf(stderr,"Write too many attempts- closing connection") ;
+  syslog(LOG_ERR,"Write too many attempts- closing connection") ;
+  close_client_connection() ;
+ }
+} // send_string()
 
 void send_record (void *seedrec)
 {
@@ -235,7 +301,7 @@ int TransferData(
   
   // Get ending time of data request
   rq_tEndTime = ST_AddToTime2(rq_tBeginTime, 0, 0, 0, rq_iSeconds, 0);
-/*  
+/*
 fprintf(stderr,
 "TransferData(%s %s/%s %d,%03d,%02d:%02d:%02d-%d,%03d,%02d:%02d:%02d\n",
 rq_station,rq_loc,rq_chan,
@@ -243,8 +309,8 @@ rq_tBeginTime.year, rq_tBeginTime.day,
 rq_tBeginTime.hour, rq_tBeginTime.minute, rq_tBeginTime.second,
 rq_tEndTime.year, rq_tEndTime.day,
 rq_tEndTime.hour, rq_tEndTime.minute, rq_tEndTime.second
-);
-*/
+); */
+
   // Get index of first and last record for this data request
   LoopRecordSize(&iLoopRecordSize);
   errmsg = GetRecordRange(rq_station, rq_chan, rq_loc,
@@ -344,6 +410,501 @@ void parse_request(char srch)
  prsbuf[j] = 0;
 }
 
+// Process DIRREQ command to get a listing of all seed channels that
+// fit the pattern supplied by the command line
+// shearreq host port DIRREQ station.[location-]channel <DATE start> <DATE end>
+// Where location and channel can be wildcarded with * or ?.
+// <DATE> is yyyy/mm/dd hh:mm:ss
+// <DATE start> can be replaced with a * for earliest possible start time
+// <DATE end> can be replaced with a * to indicate go until end of data
+// RETURNS:
+// A sequence of newline terminated lines that look like:
+// 3 ANMO seed channels match: ANMO.00-BH? * *
+// 00/BHZ 2008/09/03 09:55:57  2008/09/08 13:54:17  2599
+// 00/BHN 2008/09/03 09:55:57  2008/09/08 13:54:17  2599
+//   /BC1 2008/09/03 09:55:57  2008/09/08 13:54:17  2600
+// FINISHED
+//
+// The two dates are the start and end times for data matching request
+// The final count is the number of seed records within that time span
+// If there are errors parsing anything past the DATREQ keyword you will see:
+// Error: 1 parsing DIRREQ: <repeat of line sent>
+// ... various messages about what was wrong, match count from above
+// FINISHED
+void cmd_DIRREQ()
+{
+ char rqlocation[4] ;
+ char rqchannel[4] ;
+ char drlocation[4] ;
+ char drchannel[4] ;
+ char homedir[MAXCONFIGLINELEN+1];
+ char stationdir[MAXCONFIGLINELEN*2+1];
+ char fullfile[MAXCONFIGLINELEN*2+1];
+ char chaninfo[MAX_CHAN][80];
+ char str[80];
+ char *retstr;
+ int  prslen;
+ int  badval;
+ int  j;
+ int  namelength;
+ int  iSeek;
+ struct dirent *nextdir;
+ DIR  *dirptr;
+ FILE *fp_buf;
+
+ long rqyear, rqmonth, rqday ;
+ int rqhour, rqmin, rqsec ;
+ short outyr1, outmon1, outday1, outjday1;
+ short outyr2, outmon2, outday2, outjday2;
+ STDTIME2 rqstart ;
+ STDTIME2 rqfinish ;
+ STDTIME2 drstart ;
+ STDTIME2 drfinish ;
+ int days_mth[13] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31} ;
+ int indexFirst;
+ int indexLast;
+ int iCount;
+ int iLoopSize;
+ int iRateFactor;
+ int iRateMult;
+ int iSamples;
+ int iSpanDay;
+ int iSpanHour;
+ int iSpanMin;
+ int iSpanSec;
+ int iSpanTMSec;
+ double dSampleRate;
+ seed_header headerstart;
+ seed_header headerfinish;
+ int   iLoopRecordSize;
+ int   iChanCount;
+
+ /* Parse and validate station name*/
+ ++cmdcnt ;
+ parse_request('.') ;
+ prslen = strlen(prsbuf) ;
+ if (prslen < 3 || prslen > 5)
+ {
+  sprintf(str, "Error: 1 parsing DIRREQ: %s\n", &incmdbuf[7]);
+  send_string(str);
+  send_string("Invalid or missing station name\n") ;
+  send_string("FINISHED\n");
+  return ;
+ }
+ memcpy(lgstation_id, prsbuf, prslen) ;
+ lgstation_id[prslen] = 0;
+
+ // Get home data directory
+ if ((retstr=LoopDirectory(homedir)) != NULL)
+ {
+  syslog(LOG_ERR, "netreq:cdm_DIRREQ(): %s\n", retstr);
+  sprintf(str, "Error: 1 parsing DIRREQ: %s\n", &incmdbuf[7]);
+  send_string(str);
+  send_string("ASP internal error, LoopDirectory() call\n") ;
+  send_string("FINISHED\n");
+  return;
+ }
+
+ // Add Station directory
+ strcpy(stationdir, homedir);
+ stationdir[strlen(homedir)] = '/';
+ strcpy(&stationdir[strlen(homedir)+1], lgstation_id);
+ stationdir[strlen(stationdir)+1] = 0;
+ stationdir[strlen(stationdir)] = '/';
+
+ /* Parse and validate [location-]channel */
+ strcpy(rqlocation, "  ") ;
+ ++cmdcnt ;
+ parse_request(' ') ;
+ prslen = strlen(prsbuf) ;
+ badval = 0 ;
+ for (j=0; j < prslen && prsbuf[j] != '-'; j++)
+  ; // just search
+ if (j < prslen)
+ {
+   // found - separating location from channel
+   if (j == 0 || j > 2 || j > prslen-2 || j < prslen-4)
+   {
+    badval = 1;
+   }
+   else
+   {
+    strncpy(rqlocation, prsbuf, j);
+    rqlocation[j] = 0;
+    strncpy(rqchannel, &prsbuf[j+1], prslen-j-1);
+    rqchannel[prslen-j-1] = 0;
+   }
+ }
+ else
+ {
+  // No '-' specifying a location code
+  if (prslen > 3 || prslen < 1)
+  {
+   badval = 1;
+  }
+ }
+ if (badval == 1)
+ {
+fprintf(stderr, "DEBUG Invalid [location-]channel name '%s'\n", prsbuf);
+  sprintf(str, "Error: 1 parsing DIRREQ: %s\n", &incmdbuf[7]);
+  send_string(str);
+  send_string("Invalid [location-]channel name\n");
+  send_string("FINISHED\n");
+  return ;
+ }
+
+ // get record size
+ LoopRecordSize(&iLoopRecordSize);
+
+ // open station directory
+ dirptr = opendir(stationdir);
+ if (dirptr == NULL)
+ {
+  syslog(LOG_ERR, "cmd_DIRREQ(): Unable to open data directory: '%s'\n",
+         stationdir);
+fprintf(stderr, "cmd_DIRREQ(): Unable to open data directory: '%s'\n",
+         stationdir);
+fprintf(stderr, "opendir failed, errno=%d, '%s'\n", errno, strerror(errno));
+   sprintf(str,"Error: 1 parsing DIRREQ: %s\n", &incmdbuf[7]); 
+   send_string(str);
+   send_string("Unable to open station directory\n");
+   send_string("FINISHED\n") ;
+  return;
+ }
+
+ /* Parse and validate start time of yyyy/mm/dd */
+ ++cmdcnt ;
+ parse_request(' ') ;
+ rqyear = 1950 ;
+ rqmonth = 1 ;
+ rqday = 1 ;
+ rqstart = ST_CnvJulToSTD2(ST_Julian2(rqyear, rqmonth, rqday));
+
+ if (strcmp(prsbuf, "*") != 0)
+ {
+  // Start date is not a * so parse it out
+  iCount = sscanf(prsbuf, "%ld/%ld/%ld", &rqyear, &rqmonth, &rqday) ;
+  if (iCount != 3) badval = 1;
+  if (rqyear < 1980 || rqyear > 3000) badval = 1 ;
+  if (rqmonth < 1 || rqmonth > 12) badval = 1 ;
+  if (badval == 0)
+  {
+   if (rqyear % 4 == 0) days_mth[2] = 29 ;
+   if (rqday < 1 || rqday > days_mth[rqmonth]) badval = 1 ;
+  }
+  if (badval == 1)
+  {
+   sprintf(str, "Error: 1 parsing DIRREQ: %s\n", &incmdbuf[7]);
+   send_string(str);
+   send_string("Invalid start date yyyy/mm/dd\n") ;
+   send_string("FINISHED\n") ;
+   return ;
+  }
+  rqstart.year = rqyear ;
+  /* Calculate days since beginning of year */
+  rqstart.day = 0 ;
+  j = 0 ;
+  while (j < rqmonth)
+  {
+   rqstart.day = rqstart.day + days_mth[j] ;
+   ++j ;
+  }
+  rqstart.day = rqstart.day + rqday ;
+
+  /* Parse and validate time of hh:mm:ss */
+  ++cmdcnt ;
+  parse_request(' ') ;
+  rqhour = 100 ;
+  rqmin = 100 ;
+  rqsec = 100 ;
+  iCount = sscanf(prsbuf,"%d:%d:%d", &rqhour, &rqmin, &rqsec) ;
+  if (iCount < 1) badval = 0;
+  if (rqhour < 0 || rqhour > 23) badval = 1 ;
+  if (rqmin < 0 || rqmin > 59) badval = 1 ;
+  if (rqsec < 0 || rqsec > 59) badval = 1 ;
+  if (badval == 1)
+  {
+   sprintf(str, "Error: 1 parsing DIRREQ: %s\n", &incmdbuf[7]);
+   send_string(str);
+   send_string("Invalid start time hh:mm:ss\n") ;
+   send_string("FINISHED\n") ;
+   return ; 
+  }
+  rqstart.hour = rqhour ;
+  rqstart.minute = rqmin ;
+  rqstart.second = rqsec ;
+  rqstart.tenth_msec = 0 ;
+ } // if start date was not a '*'
+
+ // Parse and validate end time of yyyy/mm/dd
+ ++cmdcnt ;
+ parse_request(' ') ;
+ 
+ rqyear = 3000 ;
+ rqmonth = 1 ;
+ rqday = 1 ;
+ rqfinish = ST_CnvJulToSTD2(ST_Julian2(rqyear, rqmonth, rqday));
+
+ if (strcmp(prsbuf, "*") != 0)
+ {
+  // End date is not a * so parse it out
+  iCount = sscanf(prsbuf, "%ld/%ld/%ld", &rqyear, &rqmonth, &rqday) ;
+  if (iCount != 3) badval = 1;
+  if (rqyear < 1980 || rqyear > 3000) badval = 1 ;
+  if (rqmonth < 1 || rqmonth > 12) badval = 1 ;
+  if (badval == 0)
+  {
+   if (rqyear % 4 == 0) days_mth[2] = 29 ;
+   if (rqday < 1 || rqday > days_mth[rqmonth]) badval = 1 ;
+  }
+  if (badval == 1)
+  {
+   sprintf(str, "Error: 1 parsing DIRREQ: %s\n", &incmdbuf[7]);
+   send_string(str);
+   send_string("Invalid finish date yyyy/mm/dd\n") ;
+   send_string("FINISHED\n") ;
+   return ;
+  }
+  rqfinish.year = rqyear ;
+  /* Calculate days since beginning of year */
+  rqfinish.day = 0 ;
+  j = 0 ;
+  while (j < rqmonth)
+  {
+   rqfinish.day = rqfinish.day + days_mth[j] ;
+   ++j ;
+  }
+  rqfinish.day = rqfinish.day + rqday ;
+
+  /* Parse and validate time of hh:mm:ss */
+  ++cmdcnt ;
+  parse_request(' ') ;
+  rqhour = 100 ;
+  rqmin = 100 ;
+  rqsec = 100 ;
+  iCount = sscanf(prsbuf,"%d:%d:%d", &rqhour, &rqmin, &rqsec) ;
+  if (iCount < 1) badval = 0;
+  if (rqhour < 0 || rqhour > 23) badval = 1 ;
+  if (rqmin < 0 || rqmin > 59) badval = 1 ;
+  if (rqsec < 0 || rqsec > 59) badval = 1 ;
+  if (badval == 1)
+  {
+   sprintf(str, "Error: 1 parsing DIRREQ: %s\n", &incmdbuf[7]);
+   send_string(str);
+   send_string("Invalid finish time hh:mm:ss\n") ;
+   send_string("FINISHED\n") ;
+   return ; 
+  }
+  rqfinish.hour = rqhour ;
+  rqfinish.minute = rqmin ;
+  rqfinish.second = rqsec ;
+  rqfinish.tenth_msec = 0 ;
+ } // if start date was not a '*'
+
+//fprintf(stderr, "start %s ", ST_PrintDate2(rqstart, 1));
+//fprintf(stderr, "end %s\n", ST_PrintDate2(rqfinish, 1));
+
+ // Get list of directory files
+ iChanCount = 0;
+ while ((nextdir=readdir(dirptr)) != NULL && iChanCount < MAX_CHAN)
+ {
+  // Only check files that end in .buf
+  namelength = strlen(nextdir->d_name);
+  if (namelength < 5) continue;
+  if (strcmp(&nextdir->d_name[namelength-4], ".buf") != 0)
+   continue;
+
+  // Get location and channel
+  if (nextdir->d_name[2] == '_')
+  {
+    // location code is given
+    strncpy(drlocation, nextdir->d_name, 2);
+    drlocation[2] = 0;
+    strncpy(drchannel, &nextdir->d_name[3], 3);
+    drchannel[3] = 0;
+  }
+  else
+  {
+    // blank location
+    strcpy(drlocation, "  ");
+    strncpy(drchannel, nextdir->d_name, 3);
+    nextdir->d_name[3] = 0;
+  }
+  
+  // Compare location and channel allowing wildcards
+  if (!WildMatch(rqlocation, drlocation))
+   continue;
+  if (!WildMatch(rqchannel, drchannel))
+   continue;
+
+  // Location and channel match, check time spans
+  retstr = GetRecordRange(lgstation_id, drchannel, drlocation,
+           rqstart, rqfinish, 
+           &indexFirst, &indexLast, &iCount, &iLoopSize);
+  if (retstr != NULL)
+  {
+   syslog(LOG_ERR, "cmd_DIRREQ(): GetRecordRange: '%s'\n",
+          retstr);
+   sprintf(str, "Error: 1 parsing DIRREQ: %s\n", &incmdbuf[7]);
+   send_string(str);
+   send_string("ASP internal error, GetRecordRange() call\n") ;
+   send_string("FINISHED\n");
+   return;
+  }
+//fprintf(stderr, "Returning %d records, index %d..%d, buf length %d, rec %d\n",
+//iCount, indexFirst,indexLast,iLoopSize, iLoopRecordSize);
+
+  // Open the buffer file
+  strcpy(fullfile, stationdir);
+  strcpy(&fullfile[strlen(stationdir)], nextdir->d_name);
+  if ((fp_buf=fopen(fullfile, "r")) == NULL)
+  {
+    // Unable to open buffer file so have to skip it
+    fprintf(stderr, "Unable to open '%s'\n", fullfile);
+    syslog(LOG_ERR, "cmd_DIRREQ(): Unable to open '%s'\n", fullfile);
+    continue;
+  }
+
+  // See if there is data within the requested time span
+  if (iCount < 1) continue;
+
+  // Get the actual start and finish times of the data records
+  iSeek = indexFirst * iLoopRecordSize;
+  fseek(fp_buf, iSeek, SEEK_SET);
+
+  if (iSeek != ftell(fp_buf))
+  {
+    // If seek failed, we hit end of file, set iHigh
+    fprintf(stderr, "Unable to seek to %d in '%s'\n", iSeek, fullfile);
+    syslog(LOG_ERR, "cmd_DIRREQ(): Unable to seed to %d in '%s'\n", 
+           iSeek, fullfile);
+    fclose(fp_buf);
+    continue;
+  } // Failed to seek to required file buffer position
+
+  // Read in the first seed record header
+  if (fread(&headerstart, sizeof(headerstart), 1, fp_buf) != 1)
+  {
+    syslog(LOG_ERR, "cmd_DIRREQ(): Unable to read record %d in %s",
+            indexFirst, fullfile);
+    fclose(fp_buf);
+    continue;
+  } // Failed to read record
+
+  // Seek to finish record
+  iSeek = indexLast * iLoopRecordSize;
+  fseek(fp_buf, iSeek, SEEK_SET);
+
+  if (iSeek != ftell(fp_buf))
+  {
+    // If seek failed, we hit end of file, set iHigh
+    fprintf(stderr, "Unable to seek to %d in '%s'\n", iSeek, fullfile);
+    syslog(LOG_ERR, "cmd_DIRREQ(): Unable to seed to %d in '%s'\n", 
+           iSeek, fullfile);
+    fclose(fp_buf);
+    continue;
+  } // Failed to seek to required file buffer position
+
+  // Read in the last seed record header
+  if (fread(&headerfinish, sizeof(headerfinish), 1, fp_buf) != 1)
+  {
+    syslog(LOG_ERR, "cmd_DIRREQ(): Unable to read record %d in %s",
+            indexLast, fullfile);
+    fclose(fp_buf);
+    continue;
+  } // Failed to read record
+
+  // Get start time for start record
+  drstart.year = ntohs(headerstart.yr);
+  drstart.day = ntohs(headerstart.jday);
+  drstart.hour = (int)(headerstart.hr);
+  drstart.minute = (int)(headerstart.minute);
+  drstart.second = (int)(headerstart.seconds);
+  drstart.tenth_msec = ntohs(headerstart.tenth_millisec);
+
+  // Get end time for last record
+  drfinish.year = ntohs(headerfinish.yr);
+  drfinish.day = ntohs(headerfinish.jday);
+  drfinish.hour = (int)(headerfinish.hr);
+  drfinish.minute = (int)(headerfinish.minute);
+  drfinish.second = (int)(headerfinish.seconds);
+  drfinish.tenth_msec = ntohs(headerfinish.tenth_millisec);
+
+  // Calculate time span of last record
+  iSamples = (unsigned short)ntohs(headerfinish.samples_in_record);
+  iRateFactor = (short)ntohs(headerfinish.sample_rate_factor);
+  iRateMult = (short)ntohs(headerfinish.sample_rate_multiplier);
+
+  // Get sample rate, See SEED Reference Manual Chp 8
+  // Fixed Section of Data Header for formulas
+  dSampleRate = 0;
+  if (iRateFactor > 0 && iRateMult > 0)
+    dSampleRate = (double)(iRateFactor * iRateMult);
+
+  if (iRateFactor > 0 && iRateMult < 0)
+    dSampleRate = -((double)iRateFactor / (double)iRateMult);
+
+  if (iRateFactor < 0 && iRateMult > 0)
+    dSampleRate = -((double)iRateMult / (double)iRateFactor);
+
+  if (iRateFactor < 0 && iRateMult < 0)
+    dSampleRate = 1.0 / (double)(iRateFactor * iRateMult);
+
+  // Get Span time in tenths of milliseconds
+  if (iRateFactor != 0 && iRateMult != 0)
+    iSpanTMSec = (int)((iSamples / dSampleRate) * 10000.0);
+  else
+    iSpanTMSec = 0;
+
+  // Add to start time to get end time
+  iSpanSec = iSpanTMSec/10000;
+  iSpanTMSec = iSpanTMSec % 10000;
+  iSpanMin = iSpanSec / 60;
+  iSpanSec = iSpanSec % 60;
+  iSpanHour = iSpanMin / 60;
+  iSpanMin = iSpanMin % 60;
+  iSpanDay = iSpanHour / 24;
+  iSpanHour = iSpanHour % 24;
+  drfinish = ST_AddToTime2(drfinish,
+          iSpanDay, iSpanHour, iSpanMin, iSpanSec, iSpanTMSec);
+  if (drfinish.tenth_msec > 0)
+  {
+    drfinish.second++;
+    drfinish.tenth_msec = 0;
+  }
+//fprintf(stderr, "DEBUG %s.%s/%s count %d %s ",
+//lgstation_id, drlocation, drchannel, iCount, ST_PrintDate2(drstart, 1));
+//fprintf(stderr, " %s\n", ST_PrintDate2(drfinish, 1));
+
+  ST_CnvJulToCal2(ST_GetJulian2(drstart),
+     &outyr1, &outmon1, &outday1, &outjday1);
+  ST_CnvJulToCal2(ST_GetJulian2(drfinish),
+     &outyr2, &outmon2, &outday2, &outjday2);
+
+  sprintf(chaninfo[iChanCount], 
+"%2.2s/%3.3s %04d/%02d/%02d %02d:%02d:%02d %04d/%02d/%02d %02d:%02d:%02d %d\n",
+         drlocation, drchannel, outyr1, outmon1, outday1,
+         drstart.hour, drstart.minute, drstart.second,
+         outyr2, outmon2, outday2,
+         drfinish.hour, drfinish.minute, drfinish.second,
+         iCount);
+
+  iChanCount++;
+ } // while more files in directory to check
+
+ // Send data to the requestor
+ sprintf(str, "%d seed channels match: %s\n", iChanCount, &incmdbuf[7]);
+ send_string(str);
+ for (j=0; j < iChanCount && client_connected; j++)
+ {
+   send_string(chaninfo[j]);
+ }
+ if (client_connected)
+  send_string("FINISHED\n");
+ 
+// 3 ANMO seed channels match: ANMO.00-BH? * *
+} // cmd_DIRREQ()
+
 void process__request()
 {
  int j, prslen ;
@@ -370,14 +931,23 @@ void process__request()
  strcpy (&rqlogmsg[j], "\" received") ;
  add_log_message(rqlogmsg) ;
 
- /* Check that the first word is 'DATREQ' - if not, close connection
-  to probers */
+ // Check that the first word is 'DATREQ' or 'DIRREQ' - if not, 
+ // close connection to probers
  cmdcnt = 0 ;
  parse_request(' ') ;
- if (strcmp(prsbuf, "DATREQ") != 0)
+ if (strcmp(prsbuf, "DATREQ") != 0 && strcmp(prsbuf, "DIRREQ") != 0)
  {
+  sleep(60);
   close_client_connection() ;
   return ;
+ }
+
+ // Handle DIRREQ command seperately
+ if (strcmp(prsbuf, "DIRREQ") == 0)
+ {
+   cmd_DIRREQ();
+   close_client_connection() ;
+   return;
  }
 
  /* Parse and validate station name*/
@@ -386,6 +956,7 @@ void process__request()
  prslen = strlen(prsbuf) ;
  if (prslen < 3 || prslen > 5)
  {
+  syslog(LOG_ERR, "Invalid or missing station name");
   add_log_message("Invalid or missing station name") ;
   write_log_record() ;
   return ;
@@ -408,6 +979,7 @@ void process__request()
    if (prsbuf[1] == '-')
     {
      memcpy(rqlocation, prsbuf, 1) ;
+     rqlocation[1] = 0;
      memcpy(rqchannel, &prsbuf[2], 4) ;
     }
    else
@@ -417,6 +989,7 @@ void process__request()
    if (prsbuf[2] == '-')
    {
     memcpy(rqlocation, prsbuf, 2) ;
+    rqlocation[2] = 0;
     memcpy(rqchannel, &prsbuf[3], 4) ;
    }
    else
@@ -427,6 +1000,7 @@ void process__request()
  }
  if (badval == 1)
  {
+  syslog(LOG_ERR, "Invalid [location-]channel name") ;
   add_log_message("Invalid [location-]channel name") ;
   write_log_record() ;
   return ;
@@ -439,7 +1013,7 @@ void process__request()
  rqmonth = 0 ;
  rqday = 0 ;
  count = sscanf(prsbuf, "%ld/%ld/%ld", &rqyear, &rqmonth, &rqday) ;
- if (rqyear < 2005 || rqyear > 2050) badval = 1 ;
+ if (rqyear < 1980 || rqyear > 3000) badval = 1 ;
  if (rqmonth < 1 || rqmonth > 12) badval = 1 ;
  if (badval == 0)
  {
@@ -448,6 +1022,7 @@ void process__request()
  }
  if (badval == 1)
  {
+  syslog(LOG_ERR, "Invalid time yyyy/mm/dd") ;
   add_log_message("Invalid time yyyy/mm/dd") ;
   write_log_record() ;
   return ;
@@ -475,6 +1050,7 @@ void process__request()
  if (rqsec < 0 || rqsec > 59) badval = 1 ;
  if (badval == 1)
  {
+  syslog(LOG_ERR, "Invalid time hh:mm:ss") ;
   add_log_message("Invalid time hh:mm:ss") ;
   write_log_record() ;
   return ; 
@@ -484,13 +1060,14 @@ void process__request()
  rqstart.second = rqsec ;
  rqstart.tenth_msec = 0 ;
 
- /* Parse and validate duration (limit of four hours of data) */
+ /* Parse and validate duration  */
  ++cmdcnt ;
  parse_request(' ') ;
  rqdur = 0 ;
  count = sscanf(prsbuf,"%ld", &rqdur) ;
- if (rqdur < 1 || rqdur > 14400)
+ if (rqdur < 1)
  {
+  syslog(LOG_ERR, "Invalid duration") ;
   add_log_message("Invalid duration") ;
   write_log_record() ;
   return ;
@@ -526,7 +1103,7 @@ int argc;
   exit(100);
  }
  port_number = atol(argv[1]);
- fprintf(stderr,"Starting on port number %s\n", argv[1]);
+// fprintf(stderr,"Starting on port number %s\n", argv[1]);
 
  client_connected = 0 ;
 
@@ -541,7 +1118,7 @@ int argc;
  signal(SIGPIPE, SIG_IGN);
 
  // Set up to run program as a daemon
- daemonize();
+// daemonize();
 
  /* Create the socket to listen on */
  fd = socket(AF_INET, SOCK_STREAM, 0);

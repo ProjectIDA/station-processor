@@ -14,14 +14,14 @@ CFLAGS = -Wall -I.. -I. -I$(LIB330_DIR)
 
 LIBS += -lm -lpthread
 
-SRCS = netseed.c daemonize.c
+SRCS = netseed.c daemonize.c wildmatch.c
 
 OBJS = $(SRCS:%.c=%.o)
 
 netseed : $(LIB330_DIR)/lib330.a ../lib/dalib.a ../lib/dcctime2lib.a $(OBJS)
 	$(CC) $(OBJS) ../lib/dalib.a ../lib/dcctime2lib.a $(LIBS) -o netseed
 
-netseed.o: ../include/diskloop.h ../include/netseed.h
+netseed.o: ../include/diskloop.h ../include/netreq.h
 
 $(LIB330_DIR)/lib330.a : 
 	@echo

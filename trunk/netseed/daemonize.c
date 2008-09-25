@@ -11,7 +11,7 @@
 #include <signal.h>
 
 /* Change this to whatever your daemon is called */
-#define DAEMON_NAME "netreq"
+#define DAEMON_NAME "netseed"
 
 /* Change this to the user under which to run -- only if run as root */
 #define RUN_AS_USER "maint"

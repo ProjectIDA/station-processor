@@ -542,6 +542,7 @@ void process__request()
    if (prsbuf[1] == '-')
     {
      memcpy(rqlocation, prsbuf, 1) ;
+     rqlocation[1] = 0;
      memcpy(rqchannel, &prsbuf[2], 4) ;
     }
    else
@@ -551,6 +552,7 @@ void process__request()
    if (prsbuf[2] == '-')
    {
     memcpy(rqlocation, prsbuf, 2) ;
+    rqlocation[2] = 0;
     memcpy(rqchannel, &prsbuf[3], 4) ;
    }
    else

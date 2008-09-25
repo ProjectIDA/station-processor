@@ -21,7 +21,7 @@ void daemonize();
 int client_connected=0;
 char incmdbuf[80];
 char prsbuf[80] ;
-char lgstation_id[5] ;
+char lgstation_id[6] ;
 unsigned char lgrec[SEEDRECSIZE];
 int fd, sockpath ;
 long seqnum ;
@@ -390,7 +390,7 @@ void process__request()
   write_log_record() ;
   return ;
  }
- memcpy(lgstation_id, prsbuf, prslen) ;
+ memcpy(lgstation_id, prsbuf, prslen + 1) ;
  memcpy(rqstation, prsbuf, prslen + 1) ;
 
  /* Parse and validate [location-]channel */
@@ -402,14 +402,16 @@ void process__request()
  switch (prslen)
  {
   case 3 :
-   memcpy(rqchannel, prsbuf, 4);
+   memcpy(rqchannel, prsbuf, 3);
+   rqchannel[3] = 0;
    break ;
   case 5 :
    if (prsbuf[1] == '-')
     {
      memcpy(rqlocation, prsbuf, 1) ;
      rqlocation[1] = 0;
-     memcpy(rqchannel, &prsbuf[2], 4) ;
+     memcpy(rqchannel, &prsbuf[2], 3) ;
+     rqchannel[3] = 0;
     }
    else
     badval = 1 ;
@@ -419,7 +421,8 @@ void process__request()
    {
     memcpy(rqlocation, prsbuf, 2) ;
     rqlocation[2] = 0;
-    memcpy(rqchannel, &prsbuf[3], 4) ;
+    memcpy(rqchannel, &prsbuf[3], 3) ;
+    rqchannel[3] = 0;
    }
    else
     badval = 1 ;

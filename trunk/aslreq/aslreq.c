@@ -26,7 +26,7 @@ LONG decode_SEED_micro_header (SEED_data_record *sdr, SHORT *firstframe, SHORT *
 int client_connected=0;
 char incmdbuf[80];
 char prsbuf[80] ;
-char lgstation_id[5] ;
+char lgstation_id[6] ;
 unsigned char lgrec[SEEDRECSIZE];
 int fd, sockpath ;
 long seqnum ;
@@ -495,7 +495,7 @@ void process__request()
  seqnum = 1 ;
  lgframes = 0 ;
  lgcount = 64 ;
- for (j=0; j<5; j++) lgstation_id[j] = ' ' ;
+ strcpy(lgstation_id, "     ");
  for (j=lgcount; j<SEEDRECSIZE; j++) lgrec[j] = ' ' ; 
  memcpy (rqlogmsg, "Request of \"", 12) ;
  cmdlen = strlen(incmdbuf) ;
@@ -524,7 +524,7 @@ void process__request()
   write_log_record() ;
   return ;
  }
- memcpy(lgstation_id, prsbuf, prslen) ;
+ memcpy(lgstation_id, prsbuf, prslen + 1) ;
  memcpy(rqstation, prsbuf, prslen + 1) ;
 
  /* Parse and validate [location-]channel */

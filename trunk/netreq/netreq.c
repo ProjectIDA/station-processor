@@ -537,7 +537,7 @@ int argc;
 
  // Parse the q330driver configuration file
  if ((retmsg=ParseDiskLoopConfig(
-              "/etc/q330/DLG1/diskloop.config")) != NULL)
+              "/etc/q330/diskloop.config")) != NULL)
  {
   fprintf(stderr, "%s: %s\n", argv[0], retmsg);
   exit(1);

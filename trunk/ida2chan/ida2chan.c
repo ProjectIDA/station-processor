@@ -162,6 +162,7 @@ int main (int argc, char **argv)
   char    loc[8];
   char    buf_filename[2*MAXCONFIGLINELEN+2];
   char    *loopDir=".";
+  int     year, doy, hour, minute, second, tmsec;
 
   if (argc < 2 || argc > 2)
   {
@@ -241,6 +242,21 @@ int main (int argc, char **argv)
       exit(1);
     }
     fclose(fp_buf);
+
+    // Debug log ISI sequence number, channel, time
+    seed_header *pheader;
+    pheader = (seed_header *)seedrec;
+    year = ntohs(pheader->yr);
+    doy = ntohs(pheader->jday);
+    hour = (int)pheader->hr;
+    minute = (int)pheader->minute;
+    second = (int)pheader->seconds;
+    tmsec = ntohs(pheader->tenth_millisec);
+    int *int2x32;
+    int2x32 = (int *)&local.raw.hdr.seqno.counter;
+    printf("%08x %08x %08x %s %s/%s %04d,%03d,%02d:%02d:%02d.%04d\n",
+          local.raw.hdr.seqno.signature, int2x32[1], int2x32[0],
+          station, loc, chan, year, doy, hour, minute, second, tmsec);
 
   } // for each disk loop record
 

@@ -23,7 +23,7 @@ void daemonize();
 
 int WildMatch(char *pattern, char *target);
 
-#define perror(ster) fprintf(stderr,"Error: %s (%x)\n",ster,errno)
+#define perror(ster) {char *errstr=strerror(errno);fprintf(stderr,"%s: %s(%x)\n",ster,errstr,errno);syslog(LOG_ERR,"%s: %s(%x)\n",ster,errstr,errno);}
 
 int client_connected=0;
 char incmdbuf[80];
@@ -35,6 +35,31 @@ long seqnum ;
 char lgframes ;
 int lgcount ;
 int cmdcnt, cmdlen ;
+static struct sockaddr from ;
+static socklen_t fromlen = sizeof(struct sockaddr);
+
+/*
+  Routines to send seed data out over LISS connection
+
+  int open_socket(int portnum)
+    Creates a socket and binds it to portnum.
+    Return value is the file descriptor for socket.
+    If -1 then there was a system error (see errno)
+    If there is a bind error it will try again.
+    sets static global fd to the socket fd
+    This call only needs to be made once.
+
+  int accept_client(const char *whitelist, int iDebug)
+    Accepts a new client connection, waits until one is made
+    whitelist is a comma separated string of IP addresses allowed to connect
+    iDebug says whether to put out debuging information
+     1 = success, global sockpath set to file descriptor
+    -1 = failure, see errno
+
+  void close_client_connection()
+    closes down the current connection
+    sets client_connected = 0 so next send will accept a new connection
+*/
 
 void close_client_connection()
 {
@@ -42,7 +67,192 @@ void close_client_connection()
  shutdown(sockpath, SHUT_RDWR) ;
  close(sockpath) ;
  client_connected = 0 ;
+fprintf(stderr, "Connection closed\n");
 }
+
+int open_socket(int port_number)
+{
+ struct sockaddr_in sin ;
+ struct linger lingeropt ;
+ int flag2 ;
+ int itry;
+ socklen_t j ;
+
+ client_connected = 0 ;
+
+ /* Create the socket to listen on */
+ fd = socket(AF_INET, SOCK_STREAM, 0);
+ if(fd < 0)
+ {
+  perror("socket");
+  return -1;
+ }
+
+ /* Set up the structure, set the socket option(s) and bind to the port */
+ memset (&sin, 0, sizeof(struct sockaddr_in)) ;
+ sin.sin_addr.s_addr = INADDR_ANY;
+ sin.sin_family      = AF_INET;   /* Internet address format */
+ sin.sin_port        = htons(port_number);
+ flag2 = 1 ;
+ j = sizeof(int) ;
+ setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &flag2, j) ;
+ j = sizeof(struct linger) ;
+ getsockopt(fd, SOL_SOCKET, SO_LINGER, &lingeropt, &j) ;
+ if (lingeropt.l_onoff)
+ {
+  fprintf(stderr, "Setting linger option\n") ;
+  lingeropt.l_onoff = 0 ;
+  lingeropt.l_linger = 0 ;
+  j = sizeof(struct linger) ;
+  setsockopt(fd, SOL_SOCKET, SO_LINGER, &lingeropt, j) ;
+ }
+
+ // Continue to attempt bind for up to 5 minutes (6 sec * 50)
+ for (itry=0; itry < 50; itry++)
+ {
+  if(bind(fd, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) < 0)
+  {
+   syslog(LOG_ERR, "Bind error, retry in 6 seconds.\n");
+   fprintf(stderr, "Bind error, retry in 6 seconds.\n");
+   sleep(6);
+  }
+  else break;
+ } // for each bind attempt
+ if (itry == 50)
+ {
+  perror("bind");
+  return -1;
+ }
+
+ /* Set up the pending request depth */
+ if( listen(fd, 1) < 0)
+ {
+  perror("listen");
+  return -1;
+ }
+
+ return fd;
+} // open_socket()
+
+int accept_client(const char *whitelist, int iDebug)
+{
+  char *checklist;
+  char peer_name[16];
+  char white_name[16];
+  char peer_ip[4];
+  char white_ip[4];
+  static char *whitebuf=NULL;
+  int  found=0;
+  int  i,j;
+  struct hostent *whitehost;
+
+  // One time malloc of buffer space for whitelist
+  if (whitelist != NULL && whitebuf == NULL)
+  {
+   whitebuf = malloc(strlen(whitelist)+1);
+  }
+
+  /*
+   * Wait for connection requests ......
+   */
+  if (iDebug && whitelist)
+    fprintf(stderr, "Limiting connections to hosts %s\n", whitelist);
+  else
+    syslog(LOG_INFO, "Limiting connections to hosts %s\n", whitelist);
+
+  sockpath = accept(fd, &from, &fromlen);
+  if(sockpath < 0)
+  {
+   perror("accept");
+   return -1;
+  }
+  peer_ip[0] = from.sa_data[2];
+  peer_ip[1] = from.sa_data[3];
+  peer_ip[2] = from.sa_data[4];
+  peer_ip[3] = from.sa_data[5];
+
+  // get ip name of client that connected to us
+  sprintf(peer_name, "%u.%u.%u.%u",
+      (unsigned char)from.sa_data[2],
+      (unsigned char)from.sa_data[3],
+      (unsigned char)from.sa_data[4],
+      (unsigned char)from.sa_data[5]);
+
+  // Valid socket, see if user is on our whitelist
+  if (whitelist != NULL)
+  {
+   found=0;
+   checklist = (char *)whitelist;
+   while (*checklist != 0 && !found)
+   {
+     // get next comma separated host into whitebuf, advance checklist
+     for(i=0; *checklist != 0 && *checklist != ','; i++,checklist++)
+       whitebuf[i] = *checklist;
+     whitebuf[i] = 0;
+     if (*checklist == ',') checklist++;
+
+     // get ip address for whitebuf hostname
+     whitehost = gethostbyname(whitebuf);
+     if (whitehost == NULL)
+     {
+       // Failed to turn host into an IP address
+       if (iDebug)
+         fprintf(stderr, "Whitelist host '%s' not found\n", whitebuf);
+       else
+         syslog(LOG_ERR, "Whitelist host '%s' not found\n", whitebuf);
+       continue;
+     }
+
+     // check whitehost against peer_name
+     for (i=0; whitehost->h_addr_list[i] != NULL && !found; i++)
+     {
+       white_ip[0] = whitehost->h_addr_list[i][0];
+       white_ip[1] = whitehost->h_addr_list[i][1];
+       white_ip[2] = whitehost->h_addr_list[i][2];
+       white_ip[3] = whitehost->h_addr_list[i][3];
+       sprintf(white_name, "%u.%u.%u.%u",
+           (unsigned char)white_ip[0],
+           (unsigned char)white_ip[1],
+           (unsigned char)white_ip[2],
+           (unsigned char)white_ip[3]
+        );
+
+       if (iDebug)
+         fprintf(stderr, "Comparing host ip[%d] %s and %s\n",
+                 i, white_name, peer_name);
+       for (j=0; j < 3 && peer_ip[j] == white_ip[j]; j++)
+         ; // looking for first missmatch
+       if (j == 3 && (white_ip[3] == 0 || white_ip[3] == peer_ip[3]))
+       {
+         found = 1;
+       }
+     } // for each address listed for this host
+   } // while there are more hosts to check on whitelist
+
+   // If client not found on whitelist then close clonnection
+   if (!found)
+   {
+     if (iDebug)
+       fprintf(stderr,
+               "Client %s was not on whitelist '%s', connection closed\n",
+               peer_name, whitelist);
+     else
+       syslog(LOG_INFO,
+               "Client %s was not on whitelist '%s', connection closed\n",
+               peer_name, whitelist);
+     close_client_connection();
+     return 0;
+   }
+  }  // whitelist enabled
+
+  if (iDebug)
+    fprintf(stderr, "Client connection accepted from %s\n", peer_name);
+  else
+    syslog(LOG_INFO, "Client connection accepted from %s\n", peer_name);
+
+  client_connected = 1 ;
+  return 1;
+} // accept_client()
 
 void send_string (char *msg)
 {
@@ -560,11 +770,12 @@ fprintf(stderr, "DEBUG Invalid [location-]channel name '%s'\n", prsbuf);
  dirptr = opendir(stationdir);
  if (dirptr == NULL)
  {
+  retstr = strerror(errno);
   syslog(LOG_ERR, "cmd_DIRREQ(): Unable to open data directory: '%s'\n",
          stationdir);
 fprintf(stderr, "cmd_DIRREQ(): Unable to open data directory: '%s'\n",
          stationdir);
-fprintf(stderr, "opendir failed, errno=%d, '%s'\n", errno, strerror(errno));
+fprintf(stderr, "opendir failed, errno=%d, '%s'\n", errno, retstr);
    sprintf(str,"Error: 1 parsing DIRREQ: %s\n", &incmdbuf[7]); 
    send_string(str);
    send_string("Unable to open station directory\n");
@@ -598,6 +809,7 @@ fprintf(stderr, "opendir failed, errno=%d, '%s'\n", errno, strerror(errno));
    send_string(str);
    send_string("Invalid start date yyyy/mm/dd\n") ;
    send_string("FINISHED\n") ;
+   closedir(dirptr);
    return ;
   }
   rqstart.year = rqyear ;
@@ -628,6 +840,7 @@ fprintf(stderr, "opendir failed, errno=%d, '%s'\n", errno, strerror(errno));
    send_string(str);
    send_string("Invalid start time hh:mm:ss\n") ;
    send_string("FINISHED\n") ;
+   closedir(dirptr);
    return ; 
   }
   rqstart.hour = rqhour ;
@@ -663,6 +876,7 @@ fprintf(stderr, "opendir failed, errno=%d, '%s'\n", errno, strerror(errno));
    send_string(str);
    send_string("Invalid finish date yyyy/mm/dd\n") ;
    send_string("FINISHED\n") ;
+   closedir(dirptr);
    return ;
   }
   rqfinish.year = rqyear ;
@@ -693,6 +907,7 @@ fprintf(stderr, "opendir failed, errno=%d, '%s'\n", errno, strerror(errno));
    send_string(str);
    send_string("Invalid finish time hh:mm:ss\n") ;
    send_string("FINISHED\n") ;
+   closedir(dirptr);
    return ; 
   }
   rqfinish.hour = rqhour ;
@@ -749,6 +964,7 @@ fprintf(stderr, "opendir failed, errno=%d, '%s'\n", errno, strerror(errno));
    send_string(str);
    send_string("ASP internal error, GetRecordRange() call\n") ;
    send_string("FINISHED\n");
+   closedir(dirptr);
    return;
   }
 //fprintf(stderr, "Returning %d records, index %d..%d, buf length %d, rec %d\n",
@@ -760,13 +976,19 @@ fprintf(stderr, "opendir failed, errno=%d, '%s'\n", errno, strerror(errno));
   if ((fp_buf=fopen(fullfile, "r")) == NULL)
   {
     // Unable to open buffer file so have to skip it
-    fprintf(stderr, "Unable to open '%s'\n", fullfile);
-    syslog(LOG_ERR, "cmd_DIRREQ(): Unable to open '%s'\n", fullfile);
+    retstr = strerror(errno);
+    fprintf(stderr, "Unable to open '%s', %s\n", fullfile, retstr);
+    syslog(LOG_ERR, "cmd_DIRREQ(): Unable to open '%s', %s\n",
+           fullfile, retstr);
     continue;
   }
 
   // See if there is data within the requested time span
-  if (iCount < 1) continue;
+  if (iCount < 1)
+  {
+    fclose(fp_buf);
+    continue;
+  }
 
   // Get the actual start and finish times of the data records
   iSeek = indexFirst * iLoopRecordSize;
@@ -813,6 +1035,9 @@ fprintf(stderr, "opendir failed, errno=%d, '%s'\n", errno, strerror(errno));
     fclose(fp_buf);
     continue;
   } // Failed to read record
+
+  // Done with this file, close it
+  fclose(fp_buf);
 
   // Get start time for start record
   drstart.year = ntohs(headerstart.yr);
@@ -892,6 +1117,9 @@ fprintf(stderr, "opendir failed, errno=%d, '%s'\n", errno, strerror(errno));
   iChanCount++;
  } // while more files in directory to check
 
+ // Done with directory so close it
+ closedir(dirptr);
+
  // Send data to the requestor
  sprintf(str, "%d seed channels match: %s\n", iChanCount, &incmdbuf[7]);
  send_string(str);
@@ -922,7 +1150,7 @@ void process__request()
  seqnum = 1 ;
  lgframes = 0 ;
  lgcount = 64 ;
- for (j=0; j<5; j++) lgstation_id[j] = ' ' ;
+ strcpy(lgstation_id, "     ");
  for (j=lgcount; j<SEEDRECSIZE; j++) lgrec[j] = ' ' ; 
  memcpy (rqlogmsg, "Request of \"", 12) ;
  cmdlen = strlen(incmdbuf) ;
@@ -961,7 +1189,7 @@ void process__request()
   write_log_record() ;
   return ;
  }
- memcpy(lgstation_id, prsbuf, prslen) ;
+ memcpy(lgstation_id, prsbuf, prslen + 1) ;
  memcpy(rqstation, prsbuf, prslen + 1) ;
 
  /* Parse and validate [location-]channel */
@@ -1089,14 +1317,11 @@ int main(argc,argv)
 char *argv[];
 int argc;
 {
- struct sockaddr_in sin ;
- struct sockaddr from ;
- struct linger lingeropt ;
- socklen_t fromlen = sizeof(struct sockaddr);
- int flag2 ;
- socklen_t j ;
- long port_number ;
+ int port_number ;
  char *retmsg ;
+ char *whitelist = NULL;
+ int  iReturn;
+ int  iDebug = 1;
 
  if (argc!=2) {
   fprintf(stderr,"Missing port argument\n");
@@ -1120,50 +1345,33 @@ int argc;
  // Set up to run program as a daemon
 // daemonize();
 
- /* Create the socket to listen on */
- fd = socket(AF_INET, SOCK_STREAM, 0);
- if(fd < 0) {
-  perror("socket");
-  exit(1);
- }
- /* Set up the structure, set the socket option(s) and bind to the port */
- memset (&sin, 0, sizeof(struct sockaddr_in)) ;
- sin.sin_addr.s_addr = INADDR_ANY;
- sin.sin_family      = AF_INET;   /* Internet address format */
- sin.sin_port        = htons(port_number);
- flag2 = 1 ;
- j = sizeof(int) ;
- setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &flag2, j) ;
- j = sizeof(struct linger) ;
- getsockopt(fd, SOL_SOCKET, SO_LINGER, &lingeropt, &j) ;
- if (lingeropt.l_onoff)
+ // open request socket
+ if (open_socket(port_number) < 0)
  {
-  fprintf(stderr, "Setting linger option\n") ;
-  lingeropt.l_onoff = 0 ;
-  lingeropt.l_linger = 0 ;
-  j = sizeof(struct linger) ;
-  setsockopt(fd, SOL_SOCKET, SO_LINGER, &lingeropt, j) ;
+   fprintf(stderr, "Failed to open socket on port %d\n", port_number);
+   exit(1);
  }
- if(bind(fd, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) < 0) {
-  perror("bind");
-  exit(1);
- }
- /* Set up the pending request depth */
- if( listen(fd, 1) < 0) {
-  perror("listen");
-  exit(1);
- }
- while(1) { /* Do this forever */
+
+ // endless loop waiting for connection requests
+ while(1)
+ {
   /*
    * Wait for connection requests ......
    */
-  sockpath = accept(fd, &from, &fromlen);
-  if(sockpath < 0) {
-   perror("accept");
-   exit(1);
-  }
-  /* fprintf(stderr,"Client connection accepted\n"); */
-  client_connected = 1 ;
+    iReturn = accept_client(whitelist, iDebug);
+
+    // If client was not on whitelist then try again
+    if (iReturn == 0)
+      continue;
+
+    if (iReturn < 0)
+    {
+      // No longer able to accept connections, exit
+      fprintf(stderr, "No longer able to accept connections, exiting!\n");
+      syslog(LOG_ERR, "No longer able to accept connections, exiting!\n");
+      exit(1);
+    }
+
   read_socket();
   if (client_connected == 1) process__request();
  }

@@ -1343,7 +1343,7 @@ int argc;
  signal(SIGPIPE, SIG_IGN);
 
  // Set up to run program as a daemon
-// daemonize();
+ daemonize();
 
  // open request socket
  if (open_socket(port_number) < 0)

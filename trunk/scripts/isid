@@ -34,16 +34,39 @@ start () {
 stop ()
 {
     echo "Killing $PROG" 
-    pid=`pidof $PROG`
-#    pid=`ps -e | grep $PROG | awk '{print $1}'`
-    if test -z $pid  
-        then
-            echo "No active process."
-        else
-            echo "Killing pid: $pid" 
-            kill -15 $pid
-    fi
+    while pidof $PROG > /dev/null
+    do
+        pids=`pidof $PROG`
+        killparent $pids
+    done
+
+    logger "END isid"
 }
+
+# sends kill to the smallest pid in a list of pids
+killparent()
+{
+# Only do something if arguments were passed in
+if [[ $# > 0 ]] ; then
+
+  best=$1
+  shift
+  # Process each argument
+  while [[ $# > 0 ]]
+  do
+    #See if this pid is smaller
+    if [[ $best > $1 ]] ; then
+      #remember new smallest pid
+      best=$1
+    fi
+
+    # Done processing current argument, get next one
+    shift
+  done
+  kill -15 $best
+fi
+}
+
 
 case "$1" in
 

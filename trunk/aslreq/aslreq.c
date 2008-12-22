@@ -1,5 +1,7 @@
 /*
-  Network server program to fill ASL ascii format siesmic data rerequests
+  Network server program to fill ASL ascii format siesmic data requests vi ASLREQ
+  Accepts SER330 command to change serial number in seneca.config
+  Accepts RMSREQ command to get ascii RMS values for a channel
  */
 #include <stdio.h>
 #include <string.h>
@@ -9,6 +11,7 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <syslog.h>
 #include "include/diskloop.h"
 #include "include/dcc_time_proto2.h"
 #include "include/netreq.h"
@@ -33,6 +36,7 @@ long seqnum ;
 char lgframes ;
 int lgcount ;
 int cmdcnt, cmdlen ;
+int gDebug=0;
 
 void close_client_connection()
 {
@@ -478,6 +482,43 @@ void parse_request(char srch)
  prsbuf[j] = 0;
 }
 
+// Process SER330 command
+// This changes the serial number in seneca.config file
+// then restarts the q330serv program to use the new serial number
+void process_ser330()
+{
+ int64_t serno;
+ int     count;
+ char    cmdstr[80];
+ fprintf(stderr, "Processing %s\n", incmdbuf);
+
+ // Validate the serial number
+ ++cmdcnt ;
+ parse_request(' ') ;
+ serno = 0 ;
+ count = sscanf(prsbuf,"%Lx", &serno) ;
+ if (count != 1)
+ {
+   send_data ("Unable to parse serial number\n") ;
+   if (client_connected == 1) close_client_connection() ;
+   return;
+ }
+
+ // Use a shell script to make changes, restart q330serv
+ sprintf(cmdstr, "newser330 %016Lx", serno);
+ if (system(cmdstr) == -1)
+ {
+   if (gDebug)
+     fprintf(stderr, "system(%s) returned error\n", cmdstr);
+   else
+     syslog(LOG_ERR, "system(%s) returned error\n", cmdstr);
+   send_data ("newser330 command returned error, status unknown\n") ;
+   if (client_connected == 1) close_client_connection() ;
+   return;
+ }
+ 
+} // process_ser330()
+
 void process__request()
 {
  int j, prslen ;
@@ -504,14 +545,26 @@ void process__request()
  strcpy (&rqlogmsg[j], "\" received") ;
  add_log_message(rqlogmsg) ;
 
- /* Check that the first word is 'ASLREQ' - if not, close connection
-  to probers */
+ /* Check for valid request keyword 'ASLREQ' or 'SER330' or 'RMSREQ'
+  - if not, close connection to probers */
  cmdcnt = 0 ;
  parse_request(' ') ;
- if (strcmp(prsbuf, "ASLREQ") != 0)
+ if (strcmp(prsbuf, "ASLREQ") != 0 && 
+     strcmp(prsbuf, "SER330") != 0 &&
+     strcmp(prsbuf, "RMSREQ") != 0)
  {
   close_client_connection() ;
   return ;
+ }
+ fprintf(stderr, "DEBUG msg '%s'\n", rqlogmsg);
+
+ // Handle SER330 request seperately
+ if (strcmp(prsbuf, "SER330") == 0)
+ {
+  process_ser330();
+  if (client_connected == 0) return;
+  write_log_record();
+  return;
  }
 
  /* Parse and validate station name*/
@@ -658,13 +711,16 @@ int argc;
  char *retmsg ;
  char peer_name[16];
 
- if (argc!=2) {
-  fprintf(stderr, "Usage:  %s <portnumber>\n", argv[0]);
+ if (argc < 2 || argc > 3 || (argc == 3 && strcmp(argv[2], "debug") != 0))
+ {
+  fprintf(stderr, "Usage:  %s <portnumber> [ debug ]\n", argv[0]);
   exit(100);
  }
  port_number = atol(argv[1]);
  fprintf(stderr,"Starting on port number %s\n", argv[1]);
 
+ if (argc == 3)
+  gDebug = 1;
  client_connected = 0 ;
 
  // Parse the q330driver configuration file
@@ -678,7 +734,8 @@ int argc;
  signal(SIGPIPE, SIG_IGN);
 
  // Set up to run program as a daemon
-// daemonize();
+ if (!gDebug)
+  daemonize();
 
  /* Create the socket to listen on */
  fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -732,7 +789,11 @@ int argc;
   fprintf(stderr,"Client connection accepted from %s\n", peer_name);
   client_connected = 1 ;
   read_socket();
-  if (client_connected == 1) process__request();
+  if (client_connected == 1)
+  {
+   process__request();
+   close_client_connection();
+  }
  }
 } // main()
 

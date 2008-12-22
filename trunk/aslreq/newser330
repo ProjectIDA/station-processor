@@ -1,0 +1,31 @@
+#! /bin/bash
+
+if [[ $# != 1 ]] ; then
+  echo "Usage: $0 <serialnumber>"
+  echo "  Updates the seneca.config serial number"
+  echo "  Restarts the q330serv program to use the new serial number"
+  exit 1
+fi
+
+echo Changing Q330 seneca.config serial number to $1
+
+cd /etc/q330/DLG1 ; Seneca << end
+y
+c
+a
+$1
+s
+x
+q
+end
+
+pid=`/bin/ps -e | grep q330serv | sed -e 's/^  *//' -e 's/ .*//'`
+if [ "${pid}" != "" ]
+then
+  echo Restarting q330serv
+  /bin/kill ${pid}
+  sleep 10
+  q330serv /etc/q330/DLG1
+fi
+
+exit 0

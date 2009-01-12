@@ -28,9 +28,10 @@ mmddyy who Changes
 050707 fcs Add argument for config directory for multiple q330 support
 111907 fcs Convert to q330serv working with q330arch to merge multiple q330s
 041408 fcs Add status information to mapstatus shared memory region
+122208 fcs Give more time to shutdown server and flush data queues
 ******************************************************************************/
 #define WHOAMI "q330serv"
-#define VERSION_DATE  "10 November 2007"
+#define VERSION_DATE  "22 December 2008"
 
 #include "globals.h"
 #include "libtypes.h"
@@ -91,10 +92,10 @@ static void sigterm_nodaemon(int sig)
 
   fprintf(stderr, "q330serv shutting down\n");
   lib_change_state (context, LIBSTATE_IDLE, LIBERR_CLOSED) ;
-  // Give program up to 5 seconds to reach idle state
-  for (i=1; i < 10 && lib_get_state(context, &err, &opstat) != LIBSTATE_IDLE; i++)
+  // Give program up to 15 seconds to reach idle state
+  for (i=1; i < 150 && lib_get_state(context, &err, &opstat) != LIBSTATE_IDLE; i++)
   {
-    usleep(500000);
+    usleep(100000);
   }
   if ((libstate=lib_get_state(context, &err, &opstat)) != LIBSTATE_IDLE)
     fprintf(stderr, "lib330 failed to reach LIBSTATE_IDLE in sigterm_nodaemon\n");

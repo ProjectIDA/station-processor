@@ -23,8 +23,17 @@
 
 static void sigterm_handler()
 {
+  int i;
+  enum tliberr err ;
+  enum tlibstate libstate;
+
   lib_change_state (context, LIBSTATE_IDLE, LIBERR_CLOSED) ;
-  sleep(3);
+  for (i=0; i < 150 && 
+       lib_get_state(context, &err, &opstat) != LIBSTATE_IDLE; i++)
+  {
+    // Sleep 1/10th of a second
+    usleep(100000);
+  } // give state machine some time to idle
   lib_change_state (context, LIBSTATE_TERM, LIBERR_CLOSED) ;
   sleep(2);
 

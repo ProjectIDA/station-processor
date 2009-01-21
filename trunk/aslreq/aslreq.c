@@ -1,7 +1,17 @@
 /*
-  Network server program to fill ASL ascii format siesmic data requests vi ASLREQ
+  Network server program to support SAT testing of Q330 boxes from labview
   Accepts SER330 command to change serial number in seneca.config
   Accepts RMSREQ command to get ascii RMS values for a channel
+  Accepts ASLREQ command to get ascii time series data for a given channel
+
+  Input formats:
+
+    ASLREQ <station>.[<location>-]<channel> <year>/<month>/<day> <hour>:<min>:<sec> <samples>
+  
+    SER330 <hex serial number>
+
+    RMSREQ <station>.[<location>-]<channel> <year>/<month>/<day> <hour>:<min>:<sec> <samples> [<loglocation>-]<logchannel>
+
  */
 #include <stdio.h>
 #include <string.h>
@@ -264,8 +274,6 @@ rq_iSamples);
     fprintf(stderr, "%s\n", errmsg);
     return 0;
   }
-  fprintf(stderr, "Returning %d records, index %d..%d, buf length %d, rec %d\n",
-  iCount, indexFirst,indexLast,iLoopSize, iLoopRecordSize);
 
   // Make sure there are data records to return
   if (iCount < 1)
@@ -482,6 +490,228 @@ void parse_request(char srch)
  prsbuf[j] = 0;
 }
 
+// Process RMSREQ command
+// This command returns averaged RMS values for a given channel
+void process_rmsreq(
+  const char  *rq_station,   // station name
+  const char  *rq_chan,      // Channel ID
+  const char  *rq_loc,       // Location ID
+  STDTIME2    rq_tBeginTime, // Start time
+  long        rq_iSamples    // Number of data points to transfer
+  )
+{
+ char loglocation[4] ;
+ char logchannel[4] ;
+ char str_record[8192];
+ char log_msg[8192];
+ char msgbuf[512];
+ char loopDir[MAXCONFIGLINELEN+1];
+ char buf_filename[2*MAXCONFIGLINELEN+2];
+ static char looperrstr[MAXCONFIGLINELEN+2];
+ char *errmsg;
+ char *msgptr;
+ int prslen ;
+ int badval ;
+ int          iLoopRecordSize;
+ int          indexFirst;
+ int          indexLast;
+ int          iStart;
+ int          iCount;
+ int          iLoopSize;
+ int          iSample;
+ int          i;
+ int          iTry;
+ int          iEmpty;
+ int          iRecord;
+ int          iSeek;
+ double       rms_sum[3];
+ STDTIME2     rq_tEndTime;
+ FILE         *fp_buf;
+ seed_header  *pheader;
+
+ // Parse and validate log [location-]channel
+ strcpy(loglocation, "  ") ;
+ ++cmdcnt ;
+ parse_request(' ') ;
+ prslen = strlen(prsbuf) ;
+ badval = 0 ;
+ switch (prslen)
+ {
+  case 3 :
+   memcpy(logchannel, prsbuf, 4);
+   break ;
+  case 5 :
+   if (prsbuf[1] == '-')
+    {
+     memcpy(loglocation, prsbuf, 1) ;
+     loglocation[1] = 0;
+     memcpy(logchannel, &prsbuf[2], 4) ;
+    }
+   else
+    badval = 1 ;
+   break ;
+  case 6 :
+   if (prsbuf[2] == '-')
+   {
+    memcpy(loglocation, prsbuf, 2) ;
+    loglocation[2] = 0;
+    memcpy(logchannel, &prsbuf[3], 4) ;
+   }
+   else
+    badval = 1 ;
+   break ;
+  default :
+   badval = 1 ;
+ }
+ if (badval == 1)
+ {
+  send_data ("Invalid log [location-]channel name\n");
+  return ;
+ }
+
+fprintf(stderr, 
+"DEBUG process RMSREQ %s.%s-%s in %s-%s %d,%d,%02d:%02d:%02d %ld %s-%s\n",
+rq_station,rq_loc,rq_chan, loglocation, logchannel,
+rq_tBeginTime.year, rq_tBeginTime.day,
+rq_tBeginTime.hour, rq_tBeginTime.minute, rq_tBeginTime.second,
+rq_iSamples, loglocation, logchannel);
+
+  // Get index of first record for this data request
+  rq_tEndTime = ST_AddToTime2(rq_tBeginTime, 1, 0, 0, 0, 0);
+  LoopRecordSize(&iLoopRecordSize);
+  errmsg = GetRecordRange(rq_station, logchannel, loglocation,
+             rq_tBeginTime, rq_tEndTime,
+             &indexFirst, &indexLast, &iCount, &iLoopSize);
+  if (errmsg != NULL)
+  {
+    sprintf(msgbuf, "%s\n", errmsg);
+    send_data(msgbuf);
+    return;
+  }
+
+  // Make sure there are data records to return
+  if (iCount < 1)
+  {
+    send_data("No log records found for given day\n");
+    return;
+  }
+
+  // Get name of buffer file
+  // If blank location code, leave off leading location code in filename
+  LoopDirectory(loopDir);
+  if (loglocation[0] == ' ' || loglocation[0] == 0)
+  {
+    sprintf(buf_filename, "%s/%s/%s.buf",
+        loopDir, rq_station, logchannel);
+  }
+  else
+  {
+    sprintf(buf_filename, "%s/%s/%s_%s.buf",
+        loopDir, rq_station, loglocation, logchannel);
+  }
+
+  // Open the buffer file
+  if ((fp_buf=fopen(buf_filename, "r")) == NULL)
+  {
+    // Buffer file does not exist so no records to return
+    sprintf(msgbuf, "Unable to open log file %s\n", buf_filename);
+    send_data(msgbuf);
+    return;
+  }
+
+  // Loop until we've averaged rq_iSamples data points
+  iSample = 0;
+  iTry = 0;
+  for (i=0; i < 3; i++)
+    rms_sum[i] = 0.0;
+  while (iSample < rq_iSamples && iTry < iLoopSize)
+  {
+    iRecord = (iTry + indexFirst + iEmpty) % iLoopSize;
+    iSeek = iRecord * iLoopRecordSize;
+
+    // Seek to the record position
+    fseek(fp_buf, iSeek, SEEK_SET);
+    if (iSeek != ftell(fp_buf))
+    {
+      // If seek failed, we hit end of file, set iHigh
+      fprintf(stderr, "process_rms: Unable to seek to %d in %s",
+              iSeek, buf_filename);
+      fclose(fp_buf);
+      sprintf(msgbuf, "Only found %d of requested %ld rms samples\n",
+            iSample, rq_iSamples);
+      send_data(msgbuf);
+      return;
+    } // Failed to seek to required file buffer position
+
+    // Read in the data
+    if (fread(str_record, iLoopRecordSize, 1, fp_buf) != 1)
+    {
+      sprintf(looperrstr, "Unable to read record %d in %s\n",
+              iRecord, buf_filename);
+      fclose(fp_buf);
+      send_data(looperrstr);
+      return;
+    } // Failed to read record
+
+    // Convert the log record into a message string
+    pheader = (seed_header *)str_record;
+    iStart = min(ntohs(pheader->first_data_byte), 128);
+    iCount = min(ntohs(pheader->samples_in_record), 
+                 iLoopRecordSize-iStart-1);
+    strncpy(log_msg, &str_record[iStart], iCount);
+    log_msg[iCount] = 0;
+
+    // Search the log record for rms lines matching requested channel
+    msgptr = log_msg;
+    while(*msgptr != 0 && iSample < rq_iSamples)
+    {
+      // Look for {125} messages
+      if (strncmp(msgptr, "{125}", 5) == 0)
+      {
+        // Look for Matching channel and location code
+        if (strncmp(&msgptr[27], rq_loc, 2) == 0 &&
+            strncmp(&msgptr[30], rq_chan, 3) == 0)
+        {
+          double rms[3];
+          if (sscanf(&msgptr[34], "%lf %lf %lf",
+                      &rms[0], &rms[1], &rms[2] ) == 3)
+          {
+            for (i=0; i < 3; i++)
+              rms_sum[i] += rms[i];
+            iSample++;
+          }
+        } // RMS line matches desired channel and location
+      } // string started with {125}
+
+      // Time to find start of next line
+      while (*msgptr != 0 && *msgptr != '\n')
+        msgptr++;
+      if (*msgptr == '\n') msgptr++;
+    } // while we need to check more lines for desired RMS values
+    
+    iTry++;
+  } // while more samples need to found
+
+  // Close buffer file
+  fclose(fp_buf);
+
+  if (iSample < rq_iSamples)
+  {
+    sprintf(msgbuf, "Only found %d/%ld samples, aborted.\n",
+            iSample, rq_iSamples);
+    send_data(msgbuf);
+  }
+  else
+  {
+    // Send the averaged rms values back to requestor
+    sprintf(msgbuf, "RMS %s-%s: %.3lf %.3lf %.3lf\n", rq_loc, rq_chan,
+            rms_sum[0]/iSample, rms_sum[1]/iSample, rms_sum[2]/iSample);
+    send_data(msgbuf);
+  }
+
+  return;
+} // process_rmsreq()
+
 // Process SER330 command
 // This changes the serial number in seneca.config file
 // then restarts the q330serv program to use the new serial number
@@ -524,6 +754,7 @@ void process__request()
  int j, prslen ;
  int badval, count ;
  char rqlogmsg[120] ;
+ char rqcmd[8] ;
  char rqstation[6] ;
  char rqlocation[4] ;
  char rqchannel[4] ;
@@ -557,6 +788,8 @@ void process__request()
   return ;
  }
  fprintf(stderr, "DEBUG msg '%s'\n", rqlogmsg);
+ strncpy(rqcmd, prsbuf, 6);
+ rqcmd[6] = 0;
 
  // Handle SER330 request seperately
  if (strcmp(prsbuf, "SER330") == 0)
@@ -683,6 +916,15 @@ void process__request()
   add_log_message("invalid number of samples") ;
   write_log_record() ;
   return ;
+ }
+
+ // Handle RMSREQ seperately
+ if (strcmp(rqcmd, "RMSREQ") == 0)
+ {
+  process_rmsreq(rqstation, rqchannel, rqlocation, rqstart, rqsamples);
+  if (client_connected == 0) return;
+  write_log_record();
+  return;
  }
 
  /* Call the diskloop handler to find and send any available data

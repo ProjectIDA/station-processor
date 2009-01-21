@@ -1163,7 +1163,7 @@ void process__request()
  add_log_message(rqlogmsg) ;
 
  if (iDebug)
-  fprintf(stderr, "Request: '%s'", incmdbuf);
+  fprintf(stderr, "Request: '%s'\n", incmdbuf);
  // Check that the first word is 'DATREQ' or 'DIRREQ' - if not, 
  // close connection to probers
  cmdcnt = 0 ;

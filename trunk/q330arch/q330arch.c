@@ -68,6 +68,17 @@ void ShowUsage()
     printf("    Optionaly start server in debug mode\n");
 } // ShowUsage()
 
+//////////////////////////////////////////////////////////////////////////////
+
+static void sigterm_q330arch()
+{
+  // Set flat requesting a graceful program exit
+  if (mapshm != NULL)
+    mapshm->bQuit = 1;
+  else
+    exit(0);
+} // sigterm_q330arch()
+
 char *ArchiveSeed(char *record)
 {
   int  i;
@@ -167,6 +178,7 @@ int main (int argc, char **argv)
   {
     daemonize();
   }
+  signal(SIGTERM, sigterm_q330arch); // Gracefuly shutdown
 
   // Let user know what station we are archiving for
   if (g_bDebug)
@@ -180,7 +192,10 @@ int main (int argc, char **argv)
   // Set up the shared memory segment
   if ((retmsg = MapSharedMem((void **)&mapshm)) != NULL)
   {
-    fprintf(stderr, "%s:main %s\n", WHOAMI, retmsg);
+    if (g_bDebug)
+      fprintf(stderr, "%s:main %s\n", WHOAMI, retmsg);
+    else
+      syslog(LOG_ERR, "%s:main %s\n", WHOAMI, retmsg);
     exit(1);
   }
   memset(mapshm, 0, sizeof(struct s_mapshm));
@@ -222,15 +237,15 @@ int main (int argc, char **argv)
     // Handle case where quit flag has been set
     if (mapshm->bQuit)
     {
-      if (mapshm->bDebug)
-        fprintf(stderr, "Quit flag detected, exiting %s\n", WHOAMI);
-
       if (mapshm->listen_tid)
       {
+        if (mapshm->bDebug)
+          fprintf(stderr, "Quit flag detected, init shutdown %s\n", WHOAMI);
+
         pthread_kill(mapshm->listen_tid, 15);
         touched = 1;
+        mapshm->listen_tid = 0;
       }
-      mapshm->listen_tid = 0;
       for (i=0; i<MAX_CLIENTS; i++)
       {
         if (mapshm->client_tid[i] > 0)
@@ -247,7 +262,10 @@ int main (int argc, char **argv)
     {
       if (mapshm->bQuit)
       {
-        fprintf(stderr, "Exiting %s via quit flag\n", WHOAMI);
+        if (g_bDebug)
+          fprintf(stderr, "Exiting %s via quit flag\n", WHOAMI);
+        else
+          syslog(LOG_INFO, "Exiting %s\n", WHOAMI);
         exit(EXIT_SUCCESS);
       }
       usleep(10000);

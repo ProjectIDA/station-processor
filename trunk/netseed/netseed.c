@@ -1325,13 +1325,13 @@ int argc;
 
  if (argc < 2 || argc > 3)
  {
-  fprintf(stderr,"Usage: %s <port> [debug]\n");
+  fprintf(stderr,"Usage: %s <port> [debug]\n", argv[0]);
   exit(100);
  }
 
  if (argc == 3 && strcmp(argv[2], "debug") != 0)
  {
-  fprintf(stderr,"Usage: %s <port> [debug]\n");
+  fprintf(stderr,"Usage: %s <port> [debug]\n", argv[0]);
   exit(100);
  }
  if (argc == 3)

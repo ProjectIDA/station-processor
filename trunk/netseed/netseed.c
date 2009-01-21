@@ -1321,14 +1321,23 @@ int argc;
  char *retmsg ;
  char *whitelist = NULL;
  int  iReturn;
- int  iDebug = 1;
+ int  iDebug = 0;
 
- if (argc!=2) {
-  fprintf(stderr,"Missing port argument\n");
+ if (argc < 2 || argc > 3)
+ {
+  fprintf(stderr,"Usage: %s <port> [debug]\n");
   exit(100);
  }
+
+ if (argc == 3 && strcmp(argv[2], "debug") != 0)
+ {
+  fprintf(stderr,"Usage: %s <port> [debug]\n");
+  exit(100);
+ }
+ if (argc == 3)
+  iDebug = 1;
+
  port_number = atol(argv[1]);
-// fprintf(stderr,"Starting on port number %s\n", argv[1]);
 
  client_connected = 0 ;
 
@@ -1343,7 +1352,8 @@ int argc;
  signal(SIGPIPE, SIG_IGN);
 
  // Set up to run program as a daemon
- daemonize();
+ if (!iDebug)
+   daemonize();
 
  // open request socket
  if (open_socket(port_number) < 0)

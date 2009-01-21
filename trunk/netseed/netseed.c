@@ -18,6 +18,9 @@
 // The maximum number of channels we could possibly expect from a station
 #define MAX_CHAN 500
 
+// Global debug flag
+int  iDebug = 0;
+
 extern int errno;
 void daemonize();
 
@@ -481,7 +484,7 @@ void read_socket ()
 
  }
 
-}
+} // read_socket()
 
 //////////////////////////////////////////////////////////////////////////////
 // Routine that processes data request
@@ -1159,6 +1162,8 @@ void process__request()
  strcpy (&rqlogmsg[j], "\" received") ;
  add_log_message(rqlogmsg) ;
 
+ if (iDebug)
+  fprintf(stderr, "Request: '%s'", incmdbuf);
  // Check that the first word is 'DATREQ' or 'DIRREQ' - if not, 
  // close connection to probers
  cmdcnt = 0 ;
@@ -1169,7 +1174,7 @@ void process__request()
   close_client_connection() ;
   return ;
  }
-
+ 
  // Handle DIRREQ command seperately
  if (strcmp(prsbuf, "DIRREQ") == 0)
  {
@@ -1321,7 +1326,6 @@ int argc;
  char *retmsg ;
  char *whitelist = NULL;
  int  iReturn;
- int  iDebug = 0;
 
  if (argc < 2 || argc > 3)
  {

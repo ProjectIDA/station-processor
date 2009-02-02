@@ -12,11 +12,12 @@ PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 RETVAL=0
 #PROG=`basename $0`
 PROG=q330serv
+MAXWAIT=15
 numargs=$#
 command=$1
 
 # Make sure binary exists
-if [ ! -x /usr/local/sbin/q330serv ]
+if [ ! -x /usr/local/sbin/$PROG  ]
 then
     echo "Error: Executable missing! Exiting..."
     exit 0
@@ -55,6 +56,11 @@ if [[ $# > 0 ]] ; then
     shift
   done
   kill -15 $best
+  while ps aux | grep $best | grep -v grep
+  do 
+     sleep 1
+     echo "Waiting for PID: $best"
+  done
 fi
 }
 
@@ -75,13 +81,27 @@ stop ()
     do
         echo "Killing $PROG $arg" 
         pid=`ps axo pid,command | grep $PROG | grep $arg | grep -v grep | grep -v stop | awk '{print $1}'`
-        if test  -z $pid  
+        if test  -z "$pid"  
         then
             echo "No active process."
+            exit
         else
             echo "Killing pid: $pid" 
             kill -15 $pid
         fi
+    done
+    # Enforced wait to ensure exit
+    while pidof /usr/local/sbin/q330serv 
+    do  
+        echo "Still running... "
+        sleep 1
+        if [ $MAXWAIT -le 1 ] 
+        then
+           exit
+        else
+           MAXWAIT=`expr $MAXWAIT - 1`
+#           echo "MAXWAIT is $MAXWAIT"
+        fi 
     done
 }
 
@@ -103,7 +123,7 @@ case "$command" in
         ;;
 
     *)
-        echo "Usage: /etc/init.d/q330driver {start|stop|reload|force-reload|restart}"
+        echo "Usage: /etc/init.d/q330serv {start|stop|reload|force-reload|restart}"
         exit 1
 esac
 

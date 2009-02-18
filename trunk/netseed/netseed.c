@@ -148,6 +148,7 @@ int accept_client(const char *whitelist, int iDebug)
   int  found=0;
   int  i,j;
   struct hostent *whitehost;
+  static int first=1;
 
   // One time malloc of buffer space for whitelist
   if (whitelist != NULL && whitebuf == NULL)
@@ -158,10 +159,14 @@ int accept_client(const char *whitelist, int iDebug)
   /*
    * Wait for connection requests ......
    */
-  if (iDebug && whitelist)
-    fprintf(stderr, "Limiting connections to hosts %s\n", whitelist);
-  else
-    syslog(LOG_INFO, "Limiting connections to hosts %s\n", whitelist);
+  if (whitelist && first)
+  {
+    if (iDebug)
+      fprintf(stderr, "Limiting connections to hosts %s\n", whitelist);
+    else
+      syslog(LOG_INFO, "Limiting connections to hosts %s\n", whitelist);
+    first = 0;
+  }
 
   sockpath = accept(fd, &from, &fromlen);
   if(sockpath < 0)
@@ -946,7 +951,7 @@ fprintf(stderr, "opendir failed, errno=%d, '%s'\n", errno, retstr);
     // blank location
     strcpy(drlocation, "  ");
     strncpy(drchannel, nextdir->d_name, 3);
-    nextdir->d_name[3] = 0;
+    drchannel[3] = 0;
   }
   
   // Compare location and channel allowing wildcards
@@ -1174,6 +1179,9 @@ void process__request()
   close_client_connection() ;
   return ;
  }
+ if (!iDebug)
+   syslog(LOG_INFO, "Request: '%s'\n", incmdbuf);
+
  
  // Handle DIRREQ command seperately
  if (strcmp(prsbuf, "DIRREQ") == 0)

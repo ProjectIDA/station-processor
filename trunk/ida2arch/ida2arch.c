@@ -203,9 +203,9 @@ static BOOL ReadRawPacket(ISI *isi, ISI_RAW_PACKET *raw)
         if (isi->frame.payload.type != ISI_IACP_RAW_PKT)
         {
             if (gDebug)
-              fprintf(stderr, "unexpected type %lud packet ignored\n", isi->frame.payload.type);
+              fprintf(stderr, "unexpected type %d packet ignored\n", isi->frame.payload.type);
             else
-              syslog(LOG_ERR, "unexpected type %lud packet ignored\n", isi->frame.payload.type);
+              syslog(LOG_ERR, "unexpected type %d packet ignored\n", isi->frame.payload.type);
         }
         else
         {
@@ -230,6 +230,13 @@ static BOOL ReadRawPacket(ISI *isi, ISI_RAW_PACKET *raw)
           syslog(LOG_INFO, "server disconnect\n");
         break;
 
+      case ISI_TIMEDOUT:
+        if (gDebug)
+          fprintf(stderr, "ISI_TIMEDOUT\n");
+        else
+          syslog(LOG_INFO, "ISI_TIMEDOUT\n");
+        break;
+
       default:
         perror("isiReadFrame");
         break;
@@ -252,7 +259,7 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
   char    chan[8];
   char    loc[8];
   char    loc_station[16];
-  char    sequence_str[(8*3+4)*3];
+  char    sequence_str[(8*3+4)*3+6];
   char    seq_filename[2*MAXCONFIGLINELEN+2];
   char    loopDir[2*MAXCONFIGLINELEN+2];
   char    *retmsg;
@@ -303,10 +310,10 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
         sprintf(loc_station, "%2.2s/%3.3s", loc, chan);
         if (check_filter(filter, loc_station) != 1)
           continue;
+        int2x32 = (int *)&raw.hdr.seqno.counter;
 
         if (gDebug)
         {
-          int2x32 = (int *)&raw.hdr.seqno.counter;
           fprintf(stderr, "Read %s %s/%s %08x %08x %08x\n",
             station, loc, chan,
             raw.hdr.seqno.signature, int2x32[1], int2x32[0]);

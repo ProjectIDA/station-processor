@@ -1357,7 +1357,10 @@ int argc;
  if ((retmsg=ParseDiskLoopConfig(
               "/etc/q330/DLG1/diskloop.config")) != NULL)
  {
-  fprintf(stderr, "%s: %s\n", argv[0], retmsg);
+  if (iDebug)
+    fprintf(stderr, "%s: %s\n", argv[0], retmsg);
+  else
+    syslog(LOG_ERR, "%s[Exit]: %s\n", argv[0], retmsg);
   exit(1);
  }
 

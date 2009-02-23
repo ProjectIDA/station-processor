@@ -340,7 +340,7 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
         LoopDirectory(loopDir);
         sprintf(seq_filename, "/%s/%s/isi.seq",
                 loopDir, SiteSpec);
-        if ((fp_seq=fopen(seq_filename, "w")) == NULL)
+        if ((fp_seq=fopen(seq_filename, "r+")) == NULL)
         {
           if (gDebug)
             fprintf(stderr, "raw(): failed to create %s",

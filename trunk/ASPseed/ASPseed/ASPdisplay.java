@@ -113,31 +113,32 @@ class TransferFrame extends JFrame implements ActionListener, FocusListener
 
 		Spring s = Spring.constant(0, 20, 10000);
 		Spring s0 = Spring.constant(0, 0, 0);
-		layout.putConstraint(SpringLayout.WEST, movePanel, s, 
+
+		layout.putConstraint(SpringLayout.EAST, timeSpanPanel, s0, 
+				SpringLayout.EAST, panel);
+		layout.putConstraint(SpringLayout.EAST, scrollMsgBox, s0,
+				SpringLayout.EAST, panel);
+		layout.putConstraint(SpringLayout.EAST, movePanel, s0,
+				SpringLayout.EAST, panel);
+
+		layout.putConstraint(SpringLayout.WEST, entryPanel, s0,
 				SpringLayout.WEST, panel);
+		layout.putConstraint(SpringLayout.WEST, movePanel, s0, 
+				SpringLayout.WEST, entryPanel);
 		layout.putConstraint(SpringLayout.WEST, scrollMsgBox, s0,
 				SpringLayout.WEST, movePanel);
-		layout.putConstraint(SpringLayout.WEST, entryPanel, s0,
-				SpringLayout.WEST, scrollMsgBox);
-
-		layout.putConstraint(SpringLayout.EAST, panel, s, 
-				SpringLayout.EAST, timeSpanPanel);
-		layout.putConstraint(SpringLayout.EAST, timeSpanPanel, s,
-				SpringLayout.EAST, scrollMsgBox);
-		layout.putConstraint(SpringLayout.EAST, scrollMsgBox, s,
-				SpringLayout.EAST, movePanel);
 
 		layout.putConstraint(SpringLayout.NORTH, movePanel, s,
 				SpringLayout.NORTH, panel);
 		layout.putConstraint(SpringLayout.NORTH, entryPanel, s,
 				SpringLayout.SOUTH, movePanel);
+
 		layout.putConstraint(SpringLayout.NORTH, timeSpanPanel, s0,
 				SpringLayout.NORTH, entryPanel);
 		layout.putConstraint(SpringLayout.NORTH, scrollMsgBox, s,
 				SpringLayout.SOUTH, timeSpanPanel);
 		layout.putConstraint(SpringLayout.SOUTH, panel, s, 
 				SpringLayout.SOUTH, scrollMsgBox);
-
 		panel.add(movePanel);
 		panel.add(entryPanel);
 		panel.add(timeSpanPanel);
@@ -237,19 +238,35 @@ class TransferFrame extends JFrame implements ActionListener, FocusListener
 		panel.add(extendFilenameCheckBox);
 		panel.add(transferButton);
 		
-
 		SpringLayout layout = (SpringLayout) panel.getLayout();
-		Spring s = Spring.constant(6, 20, 20);
+		
+		// Set button width to max of all items
+		Spring maxWidthSpring = layout.getConstraints(quitButton).getWidth();
+		maxWidthSpring = Spring.max(maxWidthSpring, 
+				layout.getConstraints(cancelButton).getWidth());
+		maxWidthSpring = Spring.max(maxWidthSpring, 
+				layout.getConstraints(extendFilenameCheckBox).getWidth());
+		maxWidthSpring = Spring.max(maxWidthSpring, 
+				layout.getConstraints(transferButton).getWidth());
+		layout.getConstraints(quitButton).setWidth(maxWidthSpring);
+		layout.getConstraints(cancelButton).setWidth(maxWidthSpring);
+		layout.getConstraints(extendFilenameCheckBox).setWidth(maxWidthSpring);
+		layout.getConstraints(transferButton).setWidth(maxWidthSpring);
+		
+		// Now link up the buttons
+		Spring s = Spring.constant(8, 20, 20);
 		Spring s0 = Spring.constant(0, 0, 0);
-		layout.putConstraint(SpringLayout.WEST, extendFilenameCheckBox, s, 
-				SpringLayout.WEST, panel);
-		layout.putConstraint(SpringLayout.WEST, cancelButton, s0, 
-				SpringLayout.WEST, extendFilenameCheckBox);
-		layout.putConstraint(SpringLayout.WEST, quitButton, s0, 
-				SpringLayout.WEST, cancelButton);
-		layout.putConstraint(SpringLayout.WEST, transferButton, s0, 
-				SpringLayout.WEST, quitButton);
-
+		Spring s1 = Spring.constant(10, 40, 40);
+		layout.putConstraint(SpringLayout.NORTH, quitButton, s1,
+				SpringLayout.NORTH, panel);
+		layout.putConstraint(SpringLayout.NORTH, cancelButton, s1,
+				SpringLayout.SOUTH, quitButton);
+		layout.putConstraint(SpringLayout.NORTH, extendFilenameCheckBox, s1,
+				SpringLayout.SOUTH, cancelButton);
+		layout.putConstraint(SpringLayout.NORTH, transferButton, s1,
+				SpringLayout.SOUTH, extendFilenameCheckBox);
+		layout.putConstraint(SpringLayout.SOUTH, panel, s1, 
+				SpringLayout.SOUTH, transferButton);
 
 		layout.putConstraint(SpringLayout.EAST, quitButton, s0, 
 				SpringLayout.EAST, transferButton);
@@ -257,19 +274,17 @@ class TransferFrame extends JFrame implements ActionListener, FocusListener
 				SpringLayout.EAST, quitButton);
 		layout.putConstraint(SpringLayout.EAST, extendFilenameCheckBox, s0, 
 				SpringLayout.EAST, cancelButton);
-		layout.putConstraint(SpringLayout.EAST, panel, s, 
+		layout.putConstraint(SpringLayout.EAST, panel, s0, 
 				SpringLayout.EAST, extendFilenameCheckBox);
 
-		layout.putConstraint(SpringLayout.NORTH, quitButton, s,
-				SpringLayout.NORTH, panel);
-		layout.putConstraint(SpringLayout.NORTH, cancelButton, s,
-				SpringLayout.SOUTH, quitButton);
-		layout.putConstraint(SpringLayout.NORTH, extendFilenameCheckBox, s,
-				SpringLayout.SOUTH, cancelButton);
-		layout.putConstraint(SpringLayout.NORTH, transferButton, s,
-				SpringLayout.SOUTH, extendFilenameCheckBox);
-		layout.putConstraint(SpringLayout.SOUTH, panel, s, 
-				SpringLayout.SOUTH, transferButton);
+		layout.putConstraint(SpringLayout.WEST, transferButton, s0, 
+				SpringLayout.WEST, quitButton);
+		layout.putConstraint(SpringLayout.WEST, quitButton, s0, 
+				SpringLayout.WEST, cancelButton);
+		layout.putConstraint(SpringLayout.WEST, cancelButton, s0, 
+				SpringLayout.WEST, extendFilenameCheckBox);
+		layout.putConstraint(SpringLayout.WEST, extendFilenameCheckBox, s, 
+				SpringLayout.WEST, panel);
 
 		return panel;
 	} // createActionPanel()
@@ -634,8 +649,8 @@ class TransferFrame extends JFrame implements ActionListener, FocusListener
   		hostField.setEnabled(true);
   		portField.setEnabled(true);
   		maxRecordField.setEnabled(true);
+  		localSeedFileFrame.rescanCurrentDirectory();
   		setCursor(null); //turn off the wait cursor
-  		Toolkit.getDefaultToolkit().beep();
   	} // done()
   } // class TransferTask
 

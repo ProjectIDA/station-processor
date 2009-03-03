@@ -519,13 +519,12 @@ void process_rmsreq(
  int          iCount;
  int          iLoopSize;
  int          iSample;
- int          i;
  int          iTry;
  int          iEmpty;
  int          iRecord;
  int          iSeek;
- double       rms_sum[3];
  STDTIME2     rq_tEndTime;
+ STDTIME2     startTime;
  FILE         *fp_buf;
  seed_header  *pheader;
 
@@ -577,10 +576,12 @@ rq_tBeginTime.hour, rq_tBeginTime.minute, rq_tBeginTime.second,
 rq_iSamples, loglocation, logchannel);
 
   // Get index of first record for this data request
-  rq_tEndTime = ST_AddToTime2(rq_tBeginTime, 1, 0, 0, 0, 0);
+  startTime = ST_AddToTime2(rq_tBeginTime, 0, -1, 0, 0, 0);
+  rq_tEndTime = rq_tBeginTime;
+  rq_tEndTime.year = 3000; // give max year as end time
   LoopRecordSize(&iLoopRecordSize);
   errmsg = GetRecordRange(rq_station, logchannel, loglocation,
-             rq_tBeginTime, rq_tEndTime,
+             startTime, rq_tEndTime,
              &indexFirst, &indexLast, &iCount, &iLoopSize);
   if (errmsg != NULL)
   {
@@ -588,6 +589,8 @@ rq_iSamples, loglocation, logchannel);
     send_data(msgbuf);
     return;
   }
+fprintf(stderr, "indexFirst=%d, indexLast=%d, iCount=%d, iLoopSize=%d\n",
+indexFirst, indexLast, iCount, iLoopSize);
 
   // Make sure there are data records to return
   if (iCount < 1)
@@ -620,11 +623,11 @@ rq_iSamples, loglocation, logchannel);
   }
 
   // Loop until we've averaged rq_iSamples data points
+  // Or the record time is before the requested start time
   iSample = 0;
   iTry = 0;
-  for (i=0; i < 3; i++)
-    rms_sum[i] = 0.0;
-  while (iSample < rq_iSamples && iTry < iLoopSize)
+  while (iSample < rq_iSamples &&
+         ((iTry + indexFirst + iEmpty + iLoopSize - 1) % iLoopSize) != indexLast)
   {
     iRecord = (iTry + indexFirst + iEmpty) % iLoopSize;
     iSeek = iRecord * iLoopRecordSize;
@@ -633,7 +636,7 @@ rq_iSamples, loglocation, logchannel);
     fseek(fp_buf, iSeek, SEEK_SET);
     if (iSeek != ftell(fp_buf))
     {
-      // If seek failed, we hit end of file, set iHigh
+      // If seek failed, we hit end of file
       fprintf(stderr, "process_rms: Unable to seek to %d in %s",
               iSeek, buf_filename);
       fclose(fp_buf);
@@ -672,14 +675,41 @@ rq_iSamples, loglocation, logchannel);
         if (strncmp(&msgptr[27], rq_loc, 2) == 0 &&
             strncmp(&msgptr[30], rq_chan, 3) == 0)
         {
-          double rms[3];
-          if (sscanf(&msgptr[34], "%lf %lf %lf",
-                      &rms[0], &rms[1], &rms[2] ) == 3)
+          // The time must be after the start time
+          int year=0;
+          int month=0;
+          int dom=0;
+          int hour=0;
+          int minute=0;
+          int second=0;
+          int iCmp;
+          STDTIME2 rms_time={0};
+          LONG julian;
+
+          if (sscanf(&msgptr[6], "%d-%d-%d %d:%d:%d",
+              &year, &month, &dom, &hour,&minute, &second) == 6)
           {
-            for (i=0; i < 3; i++)
-              rms_sum[i] += rms[i];
-            iSample++;
+            julian = ST_Julian2(year, month, dom);
+            rms_time = ST_CnvJulToSTD2(julian);
+            rms_time = ST_AddToTime2(rms_time, 0, hour, minute, second, 0);
           }
+
+          iCmp = ST_TimeComp2(rms_time, rq_tBeginTime);
+          if (iCmp >= 0)
+          {
+            double rms[3];
+            if (sscanf(&msgptr[34], "%lf %lf %lf",
+                        &rms[0], &rms[1], &rms[2] ) == 3)
+            {
+              sprintf(msgbuf, "%.3lf\n", rms[1]);
+              send_data(msgbuf);
+              iSample++;
+              if (gDebug)
+              {
+                fprintf(stderr, "Sample %d: %70.70s\n", iSample, msgptr);
+              }
+            } // no errors scanning line
+          } // Time is after desired start time
         } // RMS line matches desired channel and location
       } // string started with {125}
 
@@ -697,15 +727,8 @@ rq_iSamples, loglocation, logchannel);
 
   if (iSample < rq_iSamples)
   {
-    sprintf(msgbuf, "Only found %d/%ld samples, aborted.\n",
+    sprintf(msgbuf, "Error, only found %d/%ld samples.\n",
             iSample, rq_iSamples);
-    send_data(msgbuf);
-  }
-  else
-  {
-    // Send the averaged rms values back to requestor
-    sprintf(msgbuf, "RMS %s-%s: %.3lf %.3lf %.3lf\n", rq_loc, rq_chan,
-            rms_sum[0]/iSample, rms_sum[1]/iSample, rms_sum[2]/iSample);
     send_data(msgbuf);
   }
 

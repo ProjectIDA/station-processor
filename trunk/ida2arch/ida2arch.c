@@ -340,7 +340,7 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
         LoopDirectory(loopDir);
         sprintf(seq_filename, "/%s/%s/isi.seq",
                 loopDir, SiteSpec);
-        if ((fp_seq=fopen(seq_filename, "r+")) == NULL)
+        if ((fp_seq=fopen(seq_filename, "w+")) == NULL)
         {
           if (gDebug)
             fprintf(stderr, "raw(): failed to create %s",
@@ -348,6 +348,7 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
           else
             syslog(LOG_ERR, "raw(): failed to create %s",
                   seq_filename);
+          exit(1);
         } // unable to create index file
         else
         {
@@ -470,14 +471,14 @@ FILE *fp_seq;
               fprintf(stderr, "%s: unrecognized argument: '%s'\n", argv[0], argv[i]);
               help(argv[0]);
            }
-           else
-           {
-              syslog(LOG_ERR, "Unrecognized argument: '%s'\n", argv[i]);
-           }
         }
     }
 
-    if (req == NULL) help(argv[0]);
+    if (req == NULL)
+    {
+      help(argv[0]);
+      exit(1);
+    }
 
     // If we are not in debug mode, run program as a daemon
     gDebug = gDebug || VERBOSE;

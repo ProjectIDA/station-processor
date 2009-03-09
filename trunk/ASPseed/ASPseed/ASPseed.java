@@ -28,8 +28,8 @@ public class ASPseed
 	{
 		System.out.print(
 				"USAGE: ASPseed get|getnew <host> <port> <station>.[<location>-]<channel>\n" +
-				"               <start yyyy/mm/dd> <start hh:mm:ss>\n" +
-				"               <end yyyy/mm/dd> <end hh:mm:ss> <savedir>|<savefile>\n" +
+				"                 <start yyyy/mm/dd> <start hh:mm:ss>\n" +
+				"                 <end yyyy/mm/dd> <end hh:mm:ss> <savedir>|<savefile>\n" +
 				"   or  ASPseed dir <host> <port> <station>\n" +
 				"	<host>          Host name or IP address\n" +
 				"	<port>          4003 or other port number\n" +
@@ -70,7 +70,7 @@ public class ASPseed
 				"  5)  Two digit day of month 1-31 of start time\n" +
 				"  6)  Two digit hour 0-23 of start time\n" +
 				"  7)  Two digit minute 0-59 of start time\n" +
-				" 8)  The extension .seed\n" +
+				"  8)  The extension .seed\n" +
 				"\n" +
 				"  Example request of 00-BHZ starting at 2008/09/12 1:28\n" +
 				"  Resulting file name = 00BHZ0809120128.seed\n"

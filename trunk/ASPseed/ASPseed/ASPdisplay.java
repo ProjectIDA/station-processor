@@ -2,6 +2,7 @@ package ASPseed;
 
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.EventQueue;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -32,7 +33,6 @@ import javax.swing.JTextArea;
 import javax.swing.ListSelectionModel;
 import javax.swing.Spring;
 import javax.swing.SpringLayout;
-import javax.swing.SwingWorker;
 
 import dcctime.DeltaTime;
 import dcctime.stdtime;
@@ -144,7 +144,7 @@ class TransferFrame extends JFrame implements ActionListener, FocusListener
 		panel.add(timeSpanPanel);
 		panel.add(scrollMsgBox);
 
-		add(panel);
+		getContentPane().add(panel);
 	} // constructor TransferFrame()
 
 	protected JComponent createListPanel()
@@ -159,7 +159,6 @@ class TransferFrame extends JFrame implements ActionListener, FocusListener
 		channelListBox.setVisibleRowCount(12);
 		channelListBox.setPrototypeCellValue(
 		"00-BHZ 2008/01/01 00:00:00 2008/12/31 24:00:00 200000");
-		//		channelListBox.setVisible(true);
 
 		JScrollPane scrollChannelListBox = new JScrollPane(channelListBox);
 		scrollChannelListBox.setName("Channel List");
@@ -305,7 +304,8 @@ class TransferFrame extends JFrame implements ActionListener, FocusListener
 
 		// This is a navigate and list only file frame
 		localSeedFileFrame.setControlButtonsAreShown(false);
-		localSeedFileFrame.getComponent(3).setVisible(false);
+		localSeedFileFrame.getComponent(localSeedFileFrame.
+				getComponentCount()-1).setVisible(false);
 
 		panel.add(listPanel);
 		panel.add(actionPanel);
@@ -620,21 +620,40 @@ class TransferFrame extends JFrame implements ActionListener, FocusListener
 	
 	} // listFiltered()
 	
-  class TransferTask extends SwingWorker
+  class TransferTask extends Thread
   {
-  	/*
-  	 * Main task. Executed in background thread.
+  	public TransferTask()
+  	{
+  		// Run Thread constructor
+  		super();
+  	} // TransferTask()
+  	
+  	/* 
+  	 * Starts a background thread which connects up to a server and gets a
+  	 * listing of seed records matching the filter passed in via the DirSocket 
+  	 * constructor. 
+  	 * @see java.lang.Thread#run()
   	 */
-  	public Object doInBackground() 
+ 	public void run() 
   	{
   		Transfer();
-  		return null;
-  	} // doInBackground()
+  		EventQueue.invokeLater(new
+  				Runnable()
+  		{
+
+				public void run()
+        {
+	        CleanUp();
+        }
+  		});
+  		
+  		return;
+  	} // run()
 
   	/*
-  	 * Executed in event dispatching thread
+  	 * To be called after task is done running
   	 */
-  	public void done() {
+  	public void CleanUp() {
   		quitButton.setEnabled(true);
   		transferButton.setEnabled(true);
   		listAllButton.setEnabled(true);
@@ -651,7 +670,7 @@ class TransferFrame extends JFrame implements ActionListener, FocusListener
   		maxRecordField.setEnabled(true);
   		localSeedFileFrame.rescanCurrentDirectory();
   		setCursor(null); //turn off the wait cursor
-  	} // done()
+  	} // CleanUp()
   } // class TransferTask
 
 	public void Transfer()
@@ -878,6 +897,15 @@ class TransferFrame extends JFrame implements ActionListener, FocusListener
 						// We found the entry in the filtered list
 						msgBox.append("Transfering data from channel " 
 								+ selected.substring(0,6) + " to file " + filename + "\n");
+						EventQueue.invokeLater(new
+			  				Runnable()
+			  		{
+							public void run()
+			        {
+								msgBox.append("\r");
+					  		localSeedFileFrame.rescanCurrentDirectory();
+			        }
+			  		});
 
 						// Get data for this channel and time period
 						SeedSocket getSeedThread = new SeedSocket(hostname, port, id, startDate,
@@ -922,11 +950,26 @@ class TransferFrame extends JFrame implements ActionListener, FocusListener
 			
 			if (bCancel)
 			{
-				msgBox.append("Transfer canceled\n");
+				EventQueue.invokeLater(new
+	  				Runnable()
+	  		{
+					public void run()
+	        {
+						msgBox.append("Transfer canceled\n");
+	        }
+	  		});
 				return;
 			}
-			msgBox.append("Transfer complete\n");
+			EventQueue.invokeLater(new
+  				Runnable()
+  		{
+				public void run()
+        {
+					msgBox.append("Transfer complete\n");
+        }
+  		});
 		} // if request did not have any errors
+		
 	} // Transfer()
 	
 	public void actionPerformed(ActionEvent e)
@@ -951,7 +994,7 @@ class TransferFrame extends JFrame implements ActionListener, FocusListener
   		maxRecordField.setEnabled(false);
   		setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
       transferTask = new TransferTask();
-      transferTask.execute();
+      transferTask.start();
 		}
 		else if (command.compareTo("List All") == 0)
 		{

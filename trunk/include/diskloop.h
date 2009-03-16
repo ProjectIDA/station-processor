@@ -117,11 +117,23 @@ int           *piSeqNum,    // Returns the sequence number for the record
 int           *piSamples    // Returns the number of samples
   );                        // returns NULL or an error string pointer
 
+//////////////////////////////////////////////////////////////////////////////
+// Print a list of all the spans for the given channel
 char *DumpSpans(
   const char  *station,   // station name
   const char  *chan,      // Channel ID
   const char  *loc        // Location ID
   );                      // returns NULL or an error string pointer
+
+//////////////////////////////////////////////////////////////////////////////
+// Print a list of all the spans for the given channel and record range
+char *RangeSpans(
+  const char  *station,    // station name
+  const char  *chan,       // Channel ID
+  const char  *loc,        // Location ID
+  int         firstRecord, // First record in range
+  int         lastRecord   // Last record in range
+  );                       // returns NULL or an error string pointer
 
 #endif // _DISKLOOP_H_ defined
 

@@ -92,6 +92,7 @@ int main (int argc, char **argv)
 
     printf("Returned %d records for %s %s/%s from %d to %d, max %d\n",
           iCount, station, loc, chan, iFirst, iLast, iMaxRecord);
+    retmsg = RangeSpans(station, chan, loc, iFirst, iLast);
     exit(0);
   } // command line arguments request data lookup
 

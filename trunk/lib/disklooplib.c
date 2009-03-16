@@ -1562,3 +1562,182 @@ char *DumpSpans(
   return NULL;
 } // DumpSpans()
 
+//////////////////////////////////////////////////////////////////////////////
+// Print a list of all the spans for the given channel
+char *RangeSpans(
+  const char  *station,    // station name
+  const char  *chan,       // Channel ID
+  const char  *loc,        // Location ID
+  int         firstRecord, // First record in range
+  int         lastRecord   // Last record in range
+  )                        // returns NULL or an error string pointer
+{
+  char  buf_filename[2*MAXCONFIGLINELEN+2];
+  char  idx_filename[2*MAXCONFIGLINELEN+2];
+  char  str_header[FRAME_SIZE];
+  char    recStation[8];
+  char    recLoc[4];
+  char    recChan[4];
+  FILE  *fp_buf;
+  FILE  *fp_idx;
+  STDTIME2    tRecStart;
+  STDTIME2    tRecEnd;
+  DELTA_T2    tDeltaT;
+  long        lDeltaTMS;
+  int   iFlipRecord;
+  int   iMaxRecord;
+  int   iRecord;
+  int   iSeek;
+  int   iMid;
+  int   iSpanIndex;
+  int   bFirst=1;
+  int   iCount;
+  int   iSeqNum;
+  int   iSamples;
+  STDTIME2    tSpanStart;
+  STDTIME2    tSpanEnd;
+
+
+  // The configuration file must be parsed before this routine can work
+  if (parse_state == 0)
+  {
+    sprintf(looperrstr, "RangeSpans: ParseDiskLoopConfig not run yet");
+    return looperrstr;
+  }
+
+  // Get names of buffer and index files
+  // If blank location code, leave off leading location code in filename
+  if (loc[0] == ' ' || loc[0] == 0)
+  {
+    sprintf(buf_filename, "%s/%s/%s.buf",
+        loopDir, StripNetworkID(station), chan);
+    sprintf(idx_filename, "%s/%s/%s.idx",
+        loopDir, StripNetworkID(station), chan);
+  }
+  else
+  {
+    sprintf(buf_filename, "%s/%s/%s_%s.buf",
+        loopDir, StripNetworkID(station), loc, chan);
+    sprintf(idx_filename, "%s/%s/%s_%s.idx",
+        loopDir, StripNetworkID(station), loc, chan);
+  }
+
+  // Make sure that buffer file exists
+  if ((fp_buf=fopen(buf_filename, "r")) == NULL)
+  {
+    // Buffer file does not exist so no last record to return
+    return NULL;
+  }
+
+  // Make sure that index file exists
+  if ((fp_idx=fopen(idx_filename, "r")) == NULL)
+  {
+    // Index file does not exist so no last record to return
+    fclose(fp_buf);
+    return NULL;
+  }
+
+  // Load index info
+  if (ParseIndexInfo(fp_idx, &iFlipRecord, &iMaxRecord) != NULL)
+  {
+    sprintf(looperrstr, "RangeSpans: Data format error in %s",
+             idx_filename);
+    fclose(fp_buf);
+    fclose(fp_idx);
+    return looperrstr;
+  } // error reading index and max record value
+
+  if (iFlipRecord < 0 || iFlipRecord >= iMaxRecord)
+  {
+    sprintf(looperrstr, "RangeSpans: Invalid index 0 <= %d < %d in %s",
+            iFlipRecord, iMaxRecord, idx_filename);
+    fclose(fp_buf);
+    fclose(fp_idx);
+    return looperrstr;
+  } // error reading index and max record value
+
+  // Loop through all records in file
+  bFirst = 1;
+  iCount = 0;
+  for (iMid=firstRecord; (iMid%iMaxRecord) != ((lastRecord+1)%iMaxRecord);
+       iMid++)
+  {
+    // Convert iMid to a record offset inside circular buffer
+    iRecord = iMid % iMaxRecord;
+    if (bFirst)
+      iSpanIndex = iRecord;
+
+    // Seek to the record position
+    iSeek = iRecord * iLoopRecordSize;
+    fseek(fp_buf, iSeek, SEEK_SET);
+    if (iSeek != ftell(fp_buf))
+    {
+      // If seek failed, assume we hit the end of file
+      sprintf(looperrstr, "RangeSpans: Unable to seek to header %d in %s",
+              iRecord, buf_filename);
+      fclose(fp_buf);
+      fclose(fp_idx);
+      return looperrstr;
+    } // Failed to seek to required file buffer position
+
+    // Read in the header only
+    if (fread(str_header, FRAME_SIZE, 1, fp_buf) != 1)
+    {
+      
+      sprintf(looperrstr, "RangeSpans: Unable to read header %d in %s",
+              iRecord, buf_filename);
+      fclose(fp_buf);
+      fclose(fp_idx);
+      return looperrstr;
+    } // Failed to read record
+
+    // parse out header info
+    if (ParseSeedHeader(str_header, recStation, recChan, recLoc,
+                &tRecStart, &tRecEnd, &iSeqNum, &iSamples) != NULL)
+    {
+      fclose(fp_buf);
+      fclose(fp_idx);
+      return looperrstr;
+    } // error parsing header
+
+    // If not first record, check for gap
+    if (!bFirst)
+    {
+      tDeltaT = ST_DiffTimes2(tRecStart, tSpanEnd);
+      lDeltaTMS = ST_DeltaToMS2(tDeltaT);
+
+      if (lDeltaTMS > 10 || lDeltaTMS < -10)
+      {
+        printf("%s %s/%s Span %s",
+            station, loc, chan, ST_PrintDate2(tSpanStart, 1));
+        printf(" to %s %d records, start index %d, %ld tms gap\n",
+            ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex, lDeltaTMS);
+
+        // Remember new span start time
+        tSpanStart = tRecStart;
+        iSpanIndex = iRecord;
+        iCount=0;
+      }  // found a gap or overlap
+    } // Not the first record
+    else
+    {
+      tSpanStart = tRecStart;
+      bFirst = 0;
+    } // first record
+    
+    tSpanEnd = tRecEnd;
+    iCount++;
+  } // loop through all records
+
+  // Print out last remaining span
+  printf("%s %s/%s Span %s",
+      station, loc, chan, ST_PrintDate2(tSpanStart, 1));
+  printf(" to %s %d records, start index %d\n",
+      ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex);
+
+  fclose(fp_buf);
+  fclose(fp_idx);
+
+  return NULL;
+} // RangeSpans()
+

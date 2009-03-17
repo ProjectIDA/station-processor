@@ -21,6 +21,7 @@ mmddyy who Changes
 ==============================================================================
 032607 fcs Creation
 020808 fcs Converted fork calls to pthread_create calls
+031709 fcs Add pthread_detach calls to free up thread memory after halting
 ******************************************************************************/
 #define WHOAMI "q330arch"
 #define VERSION_DATE  "8 February 2008"
@@ -227,6 +228,7 @@ int main (int argc, char **argv)
         WHOAMI, strerror(errno));
     exit(1);
   }
+  pthread_detach(server_tid);
   mapshm->listen_tid = server_tid;
 
   // Infinite loop waiting for buffers to get filled up

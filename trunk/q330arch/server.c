@@ -17,6 +17,7 @@ mmddyy who Changes
 032607 fcs Creation
 111907 fcs Modified to work with all seed records, not just log messages
 020808 fcs Use pthread_create instead of fork calls
+031709 fcs Call pthread_detach after pthread_create to reclaim memory
 *****************************************************************************/
 
 #include <stdio.h>
@@ -63,7 +64,7 @@ char *MapSharedMem(void **mapshm)
    if (unixadr != NULL && unixadr != 0)
    {
      *mapshm = unixadr;
-     return NULL;
+     pthread_exit(NULL);
    }
 
    /* Attach the shared memory segment */
@@ -148,7 +149,7 @@ void *ServerReadThread(void *params)
         }
         mapshm->client_tid[iClient] = 0;
         close(iSocket);
-        return NULL;
+        pthread_exit(NULL);
       } // connection closed
 
 //      if (mapshm->bDebug)
@@ -204,7 +205,7 @@ void *StartServer(void *params)
   {
     fprintf(stderr, "%s\n", errstr);
     mapshm->bQuit = 1;
-    return NULL;
+    pthread_exit(NULL);
   }
 
   if (mapshm->bDebug)
@@ -222,7 +223,7 @@ void *StartServer(void *params)
     fprintf(stderr,"StartServer: Cannot open socket (err %d,%d)\n",
 	    errno,listen_socket);
     mapshm->bQuit = 1;
-    return NULL;
+    pthread_exit(NULL);
   }
 
   /* Set up structure and bind to port number */
@@ -247,7 +248,7 @@ void *StartServer(void *params)
       }
       fprintf(stderr,"Cannot bind (err %d - %s)\n",errno,strerror(errno));
       mapshm->bQuit = 1;
-      return NULL;
+      pthread_exit(NULL);
     }
     break;
   } // infinite loop
@@ -257,7 +258,7 @@ void *StartServer(void *params)
     fprintf(stderr,"dnetport: cannot set listen depth to %d (%d)\n",
 	    MAX_CLIENTS,errno);
     mapshm->bQuit = 1;
-    return NULL;
+    pthread_exit(NULL);
   }
  
   /* Loop forever waiting for connection requests */
@@ -328,8 +329,9 @@ void *StartServer(void *params)
       fprintf(stderr, "%s:StartServer pthread_create ServerReadThread: %s\n",
         WHOAMI, strerror(errno));
       mapshm->bQuit = 1;
-      return NULL;
+      pthread_exit(NULL);
     } // error starting child thread
+    pthread_detach(child_tid);
 
     mapshm->client_tid[client] = child_tid;
     if (mapshm->bDebug)

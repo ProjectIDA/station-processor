@@ -1,8 +1,8 @@
 MACHINE = $(shell uname -m)
 ifeq ($(MACHINE), armv5tel)
-  LIB330_DIR = /home/q330dev/lib330
+  LIB330_DIR = ../../../lib330
 else
-  LIB330_DIR = /usr/local/lib/lib330
+  LIB330_DIR = ../../../lib330
 endif
 
 CC = gcc

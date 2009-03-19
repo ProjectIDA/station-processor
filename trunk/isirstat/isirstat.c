@@ -275,7 +275,7 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
         // Print additional status info
         printf("     count=%llu, numpkt=%d, update=%s\n",
                sys.count, sys.numpkt,
-               utilTimeString(sys.tstamp.write, 108, datebuf, BUFLEN));
+               utilTimeString(sys.tstamp.write, 100, datebuf, BUFLEN));
     } // While no errors reading from ida disk loop
 
 } // raw()

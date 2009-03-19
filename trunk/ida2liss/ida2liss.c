@@ -683,6 +683,7 @@ struct s_mapshm *mapshm=NULL;
             WHOAMI, strerror(errno));
           exit(1);
         }
+        pthread_detach(mapshm->listen_tid);
 
         if (begstr != NULL && !isiStringToSeqno(begstr, &begseqno)) {
             fprintf(stderr, "illegal beg seqno '%s'\n", begstr);

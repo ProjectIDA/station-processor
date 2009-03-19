@@ -206,8 +206,8 @@ void acsPrint(
   write(fd, lineStr, 2);
   write(fd, "007F\003", 5);
 
-fprintf(stderr, "Send: P%s%s%s\n",
-lineStr, "00010", msg);
+//fprintf(stderr, "Send: P%s%s%s\n",
+//lineStr, "00010", msg);
   // Print message
   write(fd, "\001P", 2);
   write(fd, lineStr, 2);
@@ -252,27 +252,36 @@ void *KeypadThread(void *params)
     // Next 4 chars should be 'K' 2 char key and EXT end message char
     if (read(mapkeypad->fdKeypad, &retstr, 4) != 4)
     {
-fprintf(stderr, "Failed to read 4 chars from keypad after getting SOH char\n");
+      if (bDebug)
+        fprintf(stderr, "Failed to read 4 chars from keypad after getting SOH char\n");
+      else
+        syslog(LOG_ERR, "Failed to read 4 chars from keypad after getting SOH char\n");
       continue;
     }
 
     // Verify the K character
     if (retstr[0] != 'K')
     {
-fprintf(stderr, "Keypad string did not start with K character\n");
+      if (bDebug)
+        fprintf(stderr, "Keypad string did not start with K character\n");
+      else
+        syslog(LOG_ERR, "Keypad string did not start with K character\n");
       continue;
     }
     // Verify that 4th character is EXT termination character
     if (retstr[3] != 0x03)
     {
-fprintf(stderr, "Keypad string did not end with EXT character\n");
+      if (bDebug)
+        fprintf(stderr, "Keypad string did not end with EXT character\n");
+      else
+        syslog(LOG_ERR, "Keypad string did not end with EXT character\n");
       continue;
     }
 
     // save the time and character
     mapkeypad->timePress = ST_GetCurrentTime2();
     mapkeypad->key = (retstr[2] & 0x07);
-fprintf(stderr, "Detected keypress %d\n", mapkeypad->key);
+//fprintf(stderr, "Detected keypress %d\n", mapkeypad->key);
   } // loop forever
 }
 
@@ -317,10 +326,10 @@ int WaitKeypad(
   }
   while (seconds < 0 || ST_TimeComp2(now, endTime) <= 0);
 
-if (mapkeypad->key > -1)
-fprintf(stderr, "Waitkeypad detected key press %d\n", mapkeypad->key+1);
-else
-fprintf(stderr, "Waitkeypad timed out after %d seconds\n", seconds);
+//if (mapkeypad->key > -1)
+//fprintf(stderr, "Waitkeypad detected key press %d\n", mapkeypad->key+1);
+//else
+//fprintf(stderr, "Waitkeypad timed out after %d seconds\n", seconds);
   
   return mapkeypad->key+1;
 } // Waitkeypad
@@ -545,7 +554,7 @@ void FindDLG(int *piNumDlg)
 
     close(fd);
   } // loop through all directory name matches
-fprintf(stderr, "DEBUG FindDLG got %d digitizers\n", iDir);
+//fprintf(stderr, "DEBUG FindDLG got %d digitizers\n", iDir);
   // Close directory
   *piNumDlg = iDir;
 } // FindDLG()
@@ -674,9 +683,9 @@ int main (int argc, char **argv)
       mapstatus->ixReadArch = mapstatus->ixWriteArch;
       watchdogArch = mapstatus->archWatchdog[mapstatus->ixReadArch];
 
-fprintf(stderr, "Dig %d Read[%d][%d] Time: %s %s\n",
-iDig, mapstatus->ixReadStatus[iDig], mapstatus->ixReadData[iDig],
-dlg[iDig].stat_gps.date, dlg[iDig].stat_gps.time);
+//fprintf(stderr, "Dig %d Read[%d][%d] Time: %s %s\n",
+//iDig, mapstatus->ixReadStatus[iDig], mapstatus->ixReadData[iDig],
+//dlg[iDig].stat_gps.date, dlg[iDig].stat_gps.time);
     } // loop through all of the digitizers
 
     // Loop through each display screen

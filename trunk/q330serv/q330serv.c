@@ -98,7 +98,10 @@ static void sigterm_nodaemon(int sig)
     usleep(100000);
   }
   if ((libstate=lib_get_state(context, &err, &opstat)) != LIBSTATE_IDLE)
-    fprintf(stderr, "lib330 failed to reach LIBSTATE_IDLE in sigterm_nodaemon\n");
+    if (debug_arg)
+      fprintf(stderr, "lib330 failed to reach LIBSTATE_IDLE in sigterm_nodaemon\n");
+    else
+      syslog(LOG_ERR, "lib330 failed to reach LIBSTATE_IDLE in sigterm_nodaemon\n");
   // Give program up to 2 seconds to reach terminated state
   lib_change_state (context, LIBSTATE_TERM, LIBERR_CLOSED) ;
   usleep(500000);
@@ -343,35 +346,50 @@ int main (int argc, char **argv)
     err = lib_get_status(context, SRB_GLB, &stat_global);
     if (err != LIBERR_NOERR)
     {
-      fprintf(stderr, "Global status not available\n");
+      if (debug_arg)
+        fprintf(stderr, "Global status not available\n");
+      else
+        syslog(LOG_ERR, "Global status not available\n");
       continue;
     } // error getting status
 
     err = lib_get_status(context, SRB_GST, &stat_gps);
     if (err != LIBERR_NOERR)
     {
-      fprintf(stderr, "GPS status not available\n");
+      if (debug_arg)
+        fprintf(stderr, "GPS status not available\n");
+      else
+        syslog(LOG_ERR, "GPS status not available\n");
       continue;
     } // error getting status
 
     err = lib_get_status(context, SRB_PWR, &stat_pwr);
     if (err != LIBERR_NOERR)
     {
-      fprintf(stderr, "Power status not available\n");
+      if (debug_arg)
+        fprintf(stderr, "Power status not available\n");
+      else
+        syslog(LOG_ERR, "Power status not available\n");
       continue;
     } // error getting status
 
     err = lib_get_status(context, SRB_BOOM, &stat_boom);
     if (err != LIBERR_NOERR)
     {
-      fprintf(stderr, "Boom status not available\n");
+      if (debug_arg)
+        fprintf(stderr, "Boom status not available\n");
+      else
+        syslog(LOG_ERR, "Boom status not available\n");
       continue;
     } // error getting status
 
     err = lib_get_status(context, SRB_PLL, &stat_pll);
     if (err != LIBERR_NOERR)
     {
-      fprintf(stderr, "PLL status not available\n");
+      if (debug_arg)
+        fprintf(stderr, "PLL status not available\n");
+      else
+        syslog(LOG_ERR, "PLL status not available\n");
       continue;
     } // error getting status
 

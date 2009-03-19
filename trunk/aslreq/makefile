@@ -9,7 +9,7 @@ LIB330_DIR=../../../lib330
 CC = gcc
 COPT =
 LIBS = -L$(LIB330_DIR) -l330
-CFLAGS = -Wall -I.. -I. -Iseedlib -I$(LIB330_DIR)
+CFLAGS = -g -Wall -I.. -I. -Iseedlib -I$(LIB330_DIR)
 
 
 LIBS += -lm -lpthread

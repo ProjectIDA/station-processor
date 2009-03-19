@@ -753,7 +753,6 @@ void process_ser330()
  if (count != 1)
  {
    send_data ("Unable to parse serial number\n") ;
-   if (client_connected == 1) close_client_connection() ;
    return;
  }
 
@@ -766,7 +765,6 @@ void process_ser330()
    else
      syslog(LOG_ERR, "system(%s) returned error\n", cmdstr);
    send_data ("newser330 command returned error, status unknown\n") ;
-   if (client_connected == 1) close_client_connection() ;
    return;
  }
  

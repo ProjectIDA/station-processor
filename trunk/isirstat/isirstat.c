@@ -34,6 +34,7 @@ mmddyy who Changes
 #define LOCALBUFLEN SEED_RECLEN
 #define UNKNOWN 0
 #define RAW     1
+#define BUFLEN  256
 
 char *server   = NULL;
 
@@ -41,7 +42,7 @@ int iDebug;
 
 static UINT32 flags = QDP_DEFAULT_HLP_RULE_FLAG;
 static QDPLUS_PAR par = QDPLUS_DEFAULT_PAR;
-static ISI_DL snap;
+static ISI_DL *dl, snap;
 static ISI_DL_SYS sys;
 
 LOGIO logio, *lp = NULL;
@@ -177,6 +178,8 @@ static BOOL ReadRawPacket(ISI *isi, ISI_RAW_PACKET *raw)
 
 static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno, ISI_SEQNO *endseqno, char *SiteSpec)
 {
+  ISI_GLOB glob;
+  
   ISI *isi;
   ISI_RAW_PACKET raw;
   ISI_DATA_REQUEST *dreq;
@@ -187,7 +190,14 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
   char    loc[8];
   char    loc_station[16];
   char    seedrec[SEED_RECLEN];
+  char    datebuf[BUFLEN];
   int     year, doy, hour, minute, second, tmsec;
+
+  if (!isidlSetGlobalParameters(NULL, WHOAMI, &glob))
+  {
+     fprintf(stderr, "%s: isidlSetGlobalParameters: %s\n", WHOAMI, strerror(errno));
+     exit(1);
+  }
 
     dreq = BuildRawRequest(compress, begseqno, endseqno, SiteSpec);
 
@@ -222,6 +232,21 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
 //            utilPrintHexDump(stderr, raw.payload, 64);
 //      }
 
+        // Open the disk loop for the site this packet comes from
+        if ((dl = isidlOpenDiskLoop(&glob, raw.hdr.site, NULL, ISI_RDONLY)) == NULL)
+        {
+          fprintf(stderr, "%s: isidlOpenDiskLoop failed for site=%s\n", WHOAMI, raw.hdr.site);
+          exit(1);
+        }
+
+        // Get snapshot of the disk loop
+        if (!isidlSnapshot(dl, &snap, &sys))
+        {
+          fprintf(stderr, "%s: isidlSnapshot failed for site=%s\n",
+                  WHOAMI, raw.hdr.site);
+          exit(1);
+        }
+
         // See if location/channel match our filter string
         SeedHeaderSNLC(raw.payload, station,chan,loc);
         sprintf(loc_station, "%2.2s/%3.3s", loc, chan);
@@ -247,6 +272,10 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
               station, loc, chan, year, doy, hour, minute, second, tmsec,
               raw.hdr.seqno.signature, int2x32[1], int2x32[0]);
 
+        // Print additional status info
+        printf("     count=%llu, numpkt=%d, update=%s\n",
+               sys.count, sys.numpkt,
+               utilTimeString(sys.tstamp.write, 108, datebuf, BUFLEN));
     } // While no errors reading from ida disk loop
 
 } // raw()

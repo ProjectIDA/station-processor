@@ -232,21 +232,6 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
 //            utilPrintHexDump(stderr, raw.payload, 64);
 //      }
 
-        // Open the disk loop for the site this packet comes from
-        if ((dl = isidlOpenDiskLoop(&glob, raw.hdr.site, NULL, ISI_RDONLY)) == NULL)
-        {
-          fprintf(stderr, "%s: isidlOpenDiskLoop failed for site=%s\n", WHOAMI, raw.hdr.site);
-          exit(1);
-        }
-
-        // Get snapshot of the disk loop
-        if (!isidlSnapshot(dl, &snap, &sys))
-        {
-          fprintf(stderr, "%s: isidlSnapshot failed for site=%s\n",
-                  WHOAMI, raw.hdr.site);
-          exit(1);
-        }
-
         // See if location/channel match our filter string
         SeedHeaderSNLC(raw.payload, station,chan,loc);
         sprintf(loc_station, "%2.2s/%3.3s", loc, chan);
@@ -271,6 +256,21 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
         printf("%-4s %s/%s %04d,%03d,%02d:%02d:%02d.%04d  index %08x %08x %08x\n",
               station, loc, chan, year, doy, hour, minute, second, tmsec,
               raw.hdr.seqno.signature, int2x32[1], int2x32[0]);
+
+        // Open the disk loop for the site this packet comes from
+        if ((dl = isidlOpenDiskLoop(&glob, raw.hdr.site, NULL, ISI_RDONLY)) == NULL)
+        {
+          fprintf(stderr, "%s: isidlOpenDiskLoop failed for site=%s\n", WHOAMI, raw.hdr.site);
+          exit(1);
+        }
+
+        // Get snapshot of the disk loop
+        if (!isidlSnapshot(dl, &snap, &sys))
+        {
+          fprintf(stderr, "%s: isidlSnapshot failed for site=%s\n",
+                  WHOAMI, raw.hdr.site);
+          exit(1);
+        }
 
         // Print additional status info
         printf("     count=%llu, numpkt=%d, update=%s\n",

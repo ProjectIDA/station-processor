@@ -5,7 +5,7 @@ else
   LIB330_DIR = ../../../lib330
 endif
 
-CC = gcc
+CC = gcc -g -Wl,--hash-style=both
 COPT = 
 LIBS =
 CFLAGS = -Wall -I.. -I. -I$(LIB330_DIR)

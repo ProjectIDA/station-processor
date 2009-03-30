@@ -1,6 +1,6 @@
 MACHINE = $(shell uname -m)
 
-CC = gcc
+CC = gcc -g -Wl,--hash-style=both
 COPT = 
 LIBS =
 CFLAGS = -Wall -I.. -I.

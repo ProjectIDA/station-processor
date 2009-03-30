@@ -258,6 +258,7 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
               raw.hdr.seqno.signature, int2x32[1], int2x32[0]);
 
         // Open the disk loop for the site this packet comes from
+/*
         if ((dl = isidlOpenDiskLoop(&glob, raw.hdr.site, NULL, ISI_RDONLY)) == NULL)
         {
           fprintf(stderr, "%s: isidlOpenDiskLoop failed for site=%s\n", WHOAMI, raw.hdr.site);
@@ -276,6 +277,7 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
         printf("     count=%llu, numpkt=%d, update=%s\n",
                sys.count, sys.numpkt,
                utilTimeString(sys.tstamp.write, 100, datebuf, BUFLEN));
+*/
     } // While no errors reading from ida disk loop
 
 } // raw()

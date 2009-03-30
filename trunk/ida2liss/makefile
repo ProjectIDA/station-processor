@@ -25,7 +25,7 @@ DEFS    = -D$(OSNAME) -D$(OSTYPE) -D_REENTRANT
 
 # End IDA stuff
 
-CC = gcc -g
+CC = gcc -g -Wl,--hash-style=both
 COPT =
 LIBS = -L $(LIBIDA)
 CFLAGS = -Wall -I.. -I. -I$(HOME)/ida_build/include $(DEFS)

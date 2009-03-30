@@ -1,5 +1,5 @@
 LIBIDA=$(HOME)/lib/$(PLATFORM)
-CC = gcc
+CC = gcc -g -Wl,--hash-style=both
 COPT = 
 LIB330_DIR = ../../../lib330
 LIBS = -L$(LIBIDA)

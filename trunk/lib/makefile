@@ -1,3 +1,4 @@
+CC=gcc -g -Wl,--hash-style=both
 OBJ=\
   disklooplib.o
 

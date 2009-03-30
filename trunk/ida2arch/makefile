@@ -22,7 +22,7 @@ endif
 DEFS    = -D$(OSNAME) -D$(OSTYPE) -D_REENTRANT
 # End IDA stuff
 
-CC = gcc
+CC = gcc -g -Wl,--hash-style=both
 COPT = 
 LIB330_DIR = ../../../lib330
 LIBS = -L $(LIBIDA)

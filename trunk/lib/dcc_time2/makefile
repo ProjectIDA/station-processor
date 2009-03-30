@@ -3,6 +3,7 @@
 # appending a 2 to the end of the original name.  These routines
 # use STDTIME2 structures and have tenth of a millisecond precision
 #
+CC=gcc -g -Wl,--hash-style=both
 CFLAGS=-I../../include
 DCC_TIME2=../dcctime2lib.a
 PROF = -O2

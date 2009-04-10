@@ -27,12 +27,6 @@ msgtest:  msgtest.o logclient.o seedmsg.o ../lib/dalib.a
         ../lib/dalib.a ../lib/dcctime2lib.a $(LIBS) \
         -o msgtest
 
-shmget: shmget.o
-	$(CC) shmget.o $(LIBS) -o shmget
-
-shmwrite: shmwrite.o
-	$(CC) shmwrite.o $(LIBS) -o shmwrite
-
 clean : 
 		rm -f *.o log330
 

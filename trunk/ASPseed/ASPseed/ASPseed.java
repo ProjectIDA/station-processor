@@ -319,12 +319,19 @@ public class ASPseed
 			} // loop until data collection thread says it is done
 
 			chanList = getDirThread.GetChannelList();
-			for (int i = 0; i < chanList.length; i++)
-      {
-	      System.out.println(chanList[i]);
-      }
-			System.out.println("Done listing " + getDirThread.GetChannelCount()
-					+ " available channels");
+			if (chanList == null)
+			{
+				System.out.println("No response to directory request");
+			}
+			else
+			{
+  			for (int i = 0; i < chanList.length; i++)
+        {
+  	      System.out.println(chanList[i]);
+        }
+  			System.out.println("Done listing " + getDirThread.GetChannelCount()
+  					+ " available channels");
+			}
 
 		} // running dir command from the command line
 		else // argument count is wrong, show help

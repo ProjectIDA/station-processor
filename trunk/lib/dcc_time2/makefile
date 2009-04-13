@@ -3,7 +3,14 @@
 # appending a 2 to the end of the original name.  These routines
 # use STDTIME2 structures and have tenth of a millisecond precision
 #
-CC=gcc -g -Wl,--hash-style=both
+MACHINE = $(shell uname -m)
+ifeq ($(MACHINE), armv5tel)
+  CC=gcc -g
+else
+  CC=gcc -g -Wl,--hash-style=both
+endif
+LIB330_DIR=../../../lib330
+
 CFLAGS=-I../../include
 DCC_TIME2=../dcctime2lib.a
 PROF = -O2

@@ -1,4 +1,11 @@
-CC=gcc -g -Wl,--hash-style=both
+MACHINE = $(shell uname -m)
+ifeq ($(MACHINE), armv5tel)
+  CC = gcc -g 
+else
+  CC = gcc -g -Wl,--hash-style=both
+endif
+
+LIB330_DIR=../../../lib330
 OBJ=\
   disklooplib.o
 

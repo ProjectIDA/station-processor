@@ -20,6 +20,14 @@ else
   osname=untested
 endif
 
+MACHINE = $(shell uname -m)
+ifeq ($(MACHINE), armv5tel)
+  CC=gcc -g 
+else
+  CC=gcc -g -Wl,--hash-style=both
+endif
+
+LIB330_DIR=../../../lib330
 VPATH   = 
 RANLIB  = ranlib
 LIBDIR  = ..
@@ -27,7 +35,6 @@ OPTMIZ  = -g
 INCDIR  = $(HOME)/ida_build/include
 INCS    = -I$(INCDIR) -I../..
 DEFS    = -D$(OSNAME) -D$(OSTYPE) -D_REENTRANT
-CC      = gcc -g -Wl,--hash-style=both
 CFLAGS  = $(OPTMIZ) $(INCS) $(DEFS)
 ARCHIVE = libapi.a
 OUTPUT  = $(LIBDIR)/$(ARCHIVE)

@@ -1,7 +1,13 @@
+MACHINE = $(shell uname -m)
+ifeq ($(MACHINE), armv5tel)
+  CC=gcc -g
+else
+  CC=gcc -g -Wl,--hash-style=both
+endif
+
+LIB330_DIR=../../../lib330
 LIBIDA=$(HOME)/lib/$(PLATFORM)
-CC = gcc -g -Wl,--hash-style=both
 COPT = 
-LIB330_DIR = ../../../lib330
 LIBS = -L$(LIBIDA)
 CFLAGS = -Wall -I.. -I. -I$(LIB330_DIR)
 LIBS += -lm -lpthread

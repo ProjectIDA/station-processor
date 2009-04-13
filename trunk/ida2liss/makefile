@@ -25,7 +25,13 @@ DEFS    = -D$(OSNAME) -D$(OSTYPE) -D_REENTRANT
 
 # End IDA stuff
 
-CC = gcc -g -Wl,--hash-style=both
+ifeq ($(MACHINE), armv5tel)
+  CC = gcc -g 
+else
+  CC = gcc -g -Wl,--hash-style=both
+endif
+
+LIB330_DIR=../../../lib330
 COPT =
 LIBS = -L $(LIBIDA)
 CFLAGS = -Wall -I.. -I. -I$(HOME)/ida_build/include $(DEFS)

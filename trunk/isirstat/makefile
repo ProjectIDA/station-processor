@@ -1,10 +1,4 @@
 MACHINE = $(shell uname -m)
-ifeq ($(MACHINE), armv5tel)
-  LIB330_DIR=../../../lib330
-else
-  LIB330_DIR=../../../lib330
-endif
-
 # Needed for IDA code
 ifeq ($(OSUNAME),Linux)
   osname=linux
@@ -30,7 +24,13 @@ DEFS    = -D$(OSNAME) -D$(OSTYPE) -D_REENTRANT
 
 # End IDA stuff
 
-CC = gcc -g -Wl,--hash-style=both
+ifeq ($(MACHINE), armv5tel)
+  CC = gcc -g 
+else
+  CC = gcc -g -Wl,--hash-style=both
+endif
+
+LIB330_DIR=../../../lib330
 COPT = 
 LIBS = -L$(LIB330_DIR) -L $(LIBIDA) -l330
 CFLAGS = -I.. -I. -I$(HOME)/ida_build/include $(DEFS)

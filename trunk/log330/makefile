@@ -1,11 +1,11 @@
 MACHINE = $(shell uname -m)
 ifeq ($(MACHINE), armv5tel)
-  LIB330_DIR = ../../../lib330
+  CC=gcc -g
 else
-  LIB330_DIR = ../../../lib330
+  CC=gcc -g -Wl,--hash-style=both
 endif
 
-CC = gcc -g -Wl,--hash-style=both
+LIB330_DIR=../../../lib330
 COPT = 
 LIBS =
 CFLAGS = -Wall -I.. -I. -I$(LIB330_DIR)

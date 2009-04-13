@@ -532,6 +532,8 @@ void DigitizerScreen(
   sprintf(msg, "Boom 4-6: %d %d %d",
       dlg[iDig].boom_pos[3], dlg[iDig].boom_pos[4], dlg[iDig].boom_pos[5]);
   acsPrint(fdTerm, msg, 7);
+  sprintf(msg, "GPS Quality: %d%%", dlg[iDig].clock_quality);
+  acsPrint(fdTerm, msg, 8);
 
 } // DigitizerScreen()
 

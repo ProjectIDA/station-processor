@@ -53,6 +53,7 @@ mmddyy who Changes
 
 #include "include/shmstatus.h"
 #include "include/dcc_time_proto2.h"
+#include "libsupport.h"
 
 // Set this to how long you want each screen to last
 #define SCREEN_WAIT  30
@@ -484,7 +485,7 @@ void DigitizerScreen(
   struct s_dlgstatus dlg[MAX_DLG])      // datalogger status information
 {
   char  msg[40];
-  STDTIME2  now;
+  STDTIME2  nowTime;
   DELTA_T2  diffTime;
   long      tmsDiff;
   static int bValidStatus=0;  // Set to 1 once we have good status data
@@ -493,8 +494,8 @@ void DigitizerScreen(
   acsClear(fdTerm);
 
   // If the q330serv is down and we've never had full status show nothing
-  now = ST_GetCurrentTime2();
-  diffTime = ST_DiffTimes2(now, watchdogServ[iDig]);
+  nowTime = ST_GetCurrentTime2();
+  diffTime = ST_DiffTimes2(nowTime, watchdogServ[iDig]);
   tmsDiff = ST_DeltaToMS2(diffTime);
   if (tmsDiff > 60*10000 && !bValidStatus)
   {
@@ -532,9 +533,15 @@ void DigitizerScreen(
   sprintf(msg, "Boom 4-6: %d %d %d",
       dlg[iDig].boom_pos[3], dlg[iDig].boom_pos[4], dlg[iDig].boom_pos[5]);
   acsPrint(fdTerm, msg, 7);
-  sprintf(msg, "GPS Quality: %d%%", dlg[iDig].clock_quality);
-  acsPrint(fdTerm, msg, 8);
 
+  // If six minutes between Unix clock and last GPS mark then GPS is down
+  if ((now() - dlg[iDig].stat_gps.last_good) > 360.0)
+    sprintf(msg, "GPS down          ");
+  else
+    sprintf(msg, "GPS Quality: %d%%", dlg[iDig].clock_quality);
+  if (bDebug)
+    fprintf(stderr, "DEBUG %s\n", msg);
+  acsPrint(fdTerm, msg, 8);
 } // DigitizerScreen()
 
 //////////////////////////////////////////////////////////////////////////////

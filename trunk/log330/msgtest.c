@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "include/diskloop.h"
-#include "include/log330.h"
+#include "include/q330arch.h"
 
 int main(int argc, char *argv[])
 {
@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
   for (i=1; i < 10; i++)
   {
     sprintf(msg, "Test message %d\r\n", i);
-    if ((errmsg=log330Msg(msg, station, network, channel, location)) != NULL)
+    if ((errmsg=q330LogMsg(msg, station, network, channel, location)) != NULL)
     {
       fprintf(stderr, "%s\n", errmsg);
       sleep(2);

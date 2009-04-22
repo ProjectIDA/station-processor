@@ -86,5 +86,34 @@ void SeedRecordMsg(char *msg, const char *seedrecord,
 // Send a seed record to the q330arch server
 char *q330SeedSend(void *seed_record);
 
+//////////////////////////////////////////////////////////////////////////////
+// Build an opaque seed record or records
+// This routine allocates new memory for the seed records, calling program
+//   is responsible for freeing up that memory afterwards
+// Returns NULL and a filled out recordbuf if okay
+// Returns num_records for how many seed records were created
+// Returns pointer to error string if there was a problem
+char *MakeOpaqueSeed(
+  const void *data,        // Pointer to new data to add
+  int data_length,         // Number of bytes in *data
+  int seqno,               // The sequence number to use
+  const char *station,     // The station name
+  const char *network,     // Network ID
+  const char *channel,     // Channel name
+  const char *location,    // Location code
+  const char *idstring,    // ~ Terminated ascii id string (keep this short)
+  int   iSeedRecordSize,   // Size of seed record to create
+  void  **recordbuf,       // Returns pointer to seed record(s) built
+  int   *num_records);     // How many seed records it took to store data
+
+//////////////////////////////////////////////////////////////////////////////
+// Appends an opaque data array to an existing opaque seed record
+// Returns true if successful
+int AppendOpaqueSeed(
+  char *record1,           // seed record to be appended to
+  void *data,              // data to be appended
+  int data_length,         // Number of bytes in *data
+  int iSeedRecordSize);    // Size of seed records
+
 #endif // _Q330ARCH_H_ defined
 

@@ -40,3 +40,17 @@ typedef struct
   char  reserved;
 } blockette_1000;
 
+// Blockette 2000 for opaque seed records
+typedef struct
+{
+  short type;   // 2000 for blockete 2000
+  short next_blockette_start;
+  short data_record_length;
+  short data_offset;
+  int   record_number;
+  char  word_order;
+  char  data_flags;
+  char  number_header_fields;
+  char  data_header_fields;
+} blockette_2000;
+

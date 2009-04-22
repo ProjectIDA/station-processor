@@ -31,7 +31,7 @@ mmddyy who Changes
 #include <sys/shm.h>
 #include "include/diskloop.h"
 #include "include/dcc_time_proto2.h"
-#include "include/log330.h"
+#include "include/q330arch.h"
 
 //////////////////////////////////////////////////////////////////////////////
 void ShowUsage()
@@ -100,7 +100,7 @@ int main (int argc, char **argv)
       // Send arg 3 to the log server
       LogSNCL(station, network, chan, loc);
       sprintf(msg, "%s\r\n", argv[3]);
-      if ((retmsg=log330Msg(msg, station, network, chan, loc)) != NULL)
+      if ((retmsg=q330LogMsg(msg, station, network, chan, loc)) != NULL)
       {
         // error trying to log the message
         fprintf(stderr, "log330: %s\n", retmsg);

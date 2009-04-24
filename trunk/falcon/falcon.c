@@ -19,15 +19,21 @@ mmddyy who Changes
 #include <unistd.h>
 #include <signal.h>
 #include <syslog.h>
+#include <sys/resource.h>
 #include <sys/shm.h>
-#include "include/diskloop.h"
-#include "include/dcc_time_proto2.h"
-#include "include/netreq.h"
-#include "include/q330arch.h"
 
-#define FALCON_IDSTRING  "FALC~"
-#define FALCON_CHAN      "OFA"
-#define FALCON_LOC       "90"
+#include "alarm.h"
+#include "buffer.h"
+#include "csv.h"
+#include "falcon.h"
+#include "fmash.h"
+#include "format_data.h"
+#include "get.h"
+#include "simclist.h"
+
+#include "include/netreq.h"
+#include "include/diskloop.h"
+#include "include/q330arch.h"
 
 // Global debug mode flag
 int gDebug;
@@ -152,7 +158,42 @@ int main (int argc, char **argv)
   char  chan[4];
   char  network[4];
 
-  char  msg[8192];
+  char  host[16];
+  char  port[6];
+
+  const char *name = "ANMO";
+
+  const char *user = NULL;
+  const char *pass = NULL;
+
+  st_info_t st_info;
+
+  int i = 0;
+  unsigned int interval = 0;
+
+  //char  msg[8192];
+
+  // Url string for accessing falcon
+  buffer_t* url_str = NULL;
+
+  // Context structures
+  csv_context_t* csv_buffers = NULL;
+  alarm_context_t* alarm_lines = NULL;
+
+  // Initialize the url buffer
+  url_str = buffer_init();
+  if (!url_str)
+    goto clean;
+
+  // Initialize csv buffer list
+  csv_buffers = csv_context_init();
+  if (!csv_buffers)
+    goto clean;
+
+  // Initialize alarm list
+  alarm_lines = alarm_context_init();
+  if (!alarm_lines)
+    goto clean;
 
   // Check for debug mode verses daemon mode
   if (argc == 5 && strcmp("debug", argv[4]) == 0)
@@ -183,9 +224,60 @@ int main (int argc, char **argv)
   strcpy(chan, FALCON_CHAN);
   strcpy(loc, FALCON_LOC);
 
+  strcpy(host, argv[2]);
+  strcpy(port, argv[3]);
+
+  user = station;
+  pass = station;
+  //* We are currently working on the ANMO Falcon
+  user = name;
+  pass = name;
+  // */
+
+  st_info.station  = station;
+  st_info.network  = network;
+  st_info.channel  = chan;
+  st_info.location = loc;
+
+  // contstruct the base URL
+  buffer_write(url_str, (uint8_t*)"http://", 7);
+  buffer_write(url_str, (uint8_t*)user, strlen(user));
+  buffer_write(url_str, (uint8_t*)":", 1);
+  buffer_write(url_str, (uint8_t*)pass, strlen(pass));
+  buffer_write(url_str, (uint8_t*)"@", 1);
+  buffer_write(url_str, (uint8_t*)host, strlen(host));
+  buffer_write(url_str, (uint8_t*)":", 1);
+  buffer_write(url_str, (uint8_t*)port, strlen(port));
+
+  /*
+  buffer_terminate(url_str);
+  fprintf(stdout, "url : %s\n", (char *)url_str->content);
+  // */
+
+  // How long we wait between polling events
+  interval = SLEEP_INTERVAL;
+  if (gDebug) {
+    interval = DEBUG_INTERVAL;
+  }
+
+  // Polling loop, which checks the Falcon for new data
+  // every 'interval' seconds after previous check
+  while (1)
+  {
+    if (gDebug && (i++ == DEBUG_ITERATIONS))
+      break;
+
+    /* poll the Falcon for data */
+    alarm_poll(alarm_lines, url_str, &st_info);
+    csv_poll_channels(csv_buffers, url_str, &st_info);
+
+    sleep(interval);
+  }
+
   //
   // Test code demonstrating log message usage
   //
+  /*
   sprintf(msg, "Test falcon log message for %s %s %s/%s IP %s port %s\n",
           station, network, loc, chan,
           argv[2], argv[3]);
@@ -201,7 +293,14 @@ int main (int argc, char **argv)
       syslog(LOG_ERR, "falcon: %s\n", retmsg);
     exit(1);
   }
+  // */
 
+clean:
+  csv_buffers = csv_context_destroy(csv_buffers);
+  alarm_lines = alarm_context_destroy(alarm_lines);
+  url_str = buffer_destroy(url_str);
+
+/*
 // Temp test QueueOpaque and FlushOpaque code
 {
 char *msg;
@@ -291,6 +390,7 @@ QueueOpaque(msg, strlen(msg),
 station, network, chan, loc, FALCON_IDSTRING);
 FlushOpaque();
 } // debug code
+// */
 
   return 0;
 } // main()

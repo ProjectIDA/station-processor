@@ -218,15 +218,43 @@ int AppendOpaqueSeed(
   int iDataIndex;
   int i;
 
-  // Determine how much free space is left 
+  // Allow us to see data as a seed record header
   seedrec = (seed_header *)record1;
+  if (seedrec->number_of_bollowing_blockettes == 0)
+  {
+    // No blockette 1000 so we can't do anything with this record
+    return 0;
+  }
+
+  // All records we generate havea blockette 1000 as the first blockette
   b1000 = (blockette_1000 *)&record1[ntohs(seedrec->first_blockette_byte)];
+  if (ntohs(b1000->type) != 1000)
+  {
+    // Can't append if we don't start with a blockette 1000
+    return 0;
+  }
+
+  // Only allow between 1 and 127 blockettes
+  if (seedrec->number_of_bollowing_blockettes < 1 ||
+      seedrec->number_of_bollowing_blockettes >= 127)
+  {
+    // Outside of signed 1 byte integer so don't add any more blockettes
+    return 0;
+  }
+
+  // Determine how much free space is left 
   iDataIndex = ntohs(b1000->next_blockette_start);
 
   // Loop through any additional opaque blockettes
   for (i=1; i < seedrec->number_of_following_blockettes; i++)
   {
     b2000 = (blockette_2000 *)&record1[iDataIndex];
+    if (ntohs(b2000->type) != 2000)
+    {
+      // Can't handle records composed of other than blockette 2000 here
+      return 0;
+    }
+
     if (i <  seedrec->number_of_following_blockettes-1) 
     {
       iDataIndex = ntohs(b2000->next_blockette_start);

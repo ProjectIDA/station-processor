@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include "llist.h"
 
-#include <mem_profiler.h>
-
 List *
 list_new(void)
 {

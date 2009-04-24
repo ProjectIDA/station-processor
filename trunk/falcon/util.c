@@ -35,8 +35,6 @@
 #include "url.h"
 #include "options.h"
 
-#include <mem_profiler.h>
-
 
 char output_buf[BUFSIZ];
 

@@ -14,8 +14,8 @@ OFADUMP_LIBS = $(LIBS)
 
 SRCS = falcon.c logclient.c seedmsg.c daemonize.c \
        alarm.c buffer.c csv.c fmash.c format_data.c \
-       get.c herror.c http.c llist.c mem_profiler.c \
-       murmur.c options.c simclist.c url.c util.c
+       get.c herror.c http.c llist.c murmur.c \
+       options.c simclist.c url.c util.c
 OFADUMP_SRCS = ofadump.c record.c format_data.c jio.c fmash.c \
                buffer.c simclist.c
 

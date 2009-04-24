@@ -11,8 +11,6 @@
 #include "url.h"
 #include "util.h"
 
-#include <mem_profiler.h>
-
 /*
 void
 safe_free(void *ptr)

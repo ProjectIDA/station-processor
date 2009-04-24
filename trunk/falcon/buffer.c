@@ -7,8 +7,6 @@
 #include <unistd.h>
 #include "buffer.h"
 
-#include <mem_profiler.h>
-
 buffer_t* buffer_init()
 {
     buffer_t* buf = NULL;

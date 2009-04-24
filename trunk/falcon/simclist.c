@@ -13,8 +13,6 @@
 #include <limits.h>
 #include <stdint.h>
 
-#include <mem_profiler.h>
-
 /* convert 64bit integers from host to network format */
 #define hton64(x)       (\
         htons(1) == 1 ?                                         \

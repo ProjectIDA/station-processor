@@ -220,7 +220,7 @@ int AppendOpaqueSeed(
 
   // Allow us to see data as a seed record header
   seedrec = (seed_header *)record1;
-  if (seedrec->number_of_bollowing_blockettes == 0)
+  if (seedrec->number_of_following_blockettes == 0)
   {
     // No blockette 1000 so we can't do anything with this record
     return 0;
@@ -235,8 +235,8 @@ int AppendOpaqueSeed(
   }
 
   // Only allow between 1 and 127 blockettes
-  if (seedrec->number_of_bollowing_blockettes < 1 ||
-      seedrec->number_of_bollowing_blockettes >= 127)
+  if (seedrec->number_of_following_blockettes < 1 ||
+      seedrec->number_of_following_blockettes >= 127)
   {
     // Outside of signed 1 byte integer so don't add any more blockettes
     return 0;

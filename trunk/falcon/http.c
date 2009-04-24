@@ -15,8 +15,6 @@
 #include "util.h"
 #include "llist.h"
 
-#include <mem_profiler.h>
-
 extern int default_opts;
 
 int redirect_count = 0;

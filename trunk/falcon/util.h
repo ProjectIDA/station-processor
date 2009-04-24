@@ -57,8 +57,6 @@ extern int debug_enabled;
 #define real_open_outfile(x)  (((x)->options & OPT_RESUME && !((x)->options & OPT_NORESUME)) ? (fopen((x)->outfile, "a")) : (fopen((x)->outfile, "w")))
 
 #define safe_free(x)		if(x) free(x)
-/* If we are using our own strdup, it is already encorporated into 
-   the memory profiler */
 #define safe_strdup(x)		( (x) ? strdup(x) : NULL )
 #define BUFSIZE (5*2048)
 

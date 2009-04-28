@@ -195,7 +195,8 @@ char *MakeOpaqueSeed(
     memcpy(&recptr[iSeedRecordSize*i
                    + ntohs(b1000->next_blockette_start)
                    + ntohs(b2000->data_offset)],
-           &dataptr[i*iFreeSpace], ntohs(b2000->data_record_length));
+           &dataptr[i*iFreeSpace], 
+           ntohs(b2000->data_record_length) - 15 - strlen(idstring));
   } // for each seed record we need to create
 
   return NULL;

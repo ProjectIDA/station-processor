@@ -9,6 +9,7 @@
 #include <format_data.h>
 #include <get.h>
 
+/* ===== CSV Context Handlers =========================== */
 csv_context_t* csv_context_init()
 {
     csv_context_t* csv_buffer_list = NULL;
@@ -40,6 +41,11 @@ csv_context_t* csv_context_destroy( csv_context_t* csv_buffer_list )
     return csv_buffer_list;
 }
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *   Update the csv context with the latest contents from the
+ *   Falcon. For each buffer that has at least on hour worth of
+ *   data, compress and write the data to the diskloop.
+ */
 void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
                         st_info_t* st_info )
 {
@@ -59,13 +65,13 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
     csv_buffer_t* final_csv = NULL;;
     void* tmp = NULL;
 
-    /* set up the csv directory url */
+    // Build the CSV directory URL
     url = buffer_init();
     buffer_write(url, url_str->content, url_str->length);
     buffer_write(url, (uint8_t*)path, strlen(path));
     buffer_terminate(url);
 
-    /* initialize file list */
+    // Initialize the CSV file list
     file_list = (list_t*)malloc(sizeof(list_t));
     if (!file_list)
         goto clean;
@@ -73,42 +79,52 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
     list_attributes_seeker( file_list,  _file_list_seeker );
     list_attributes_comparator( file_list,  _file_list_comparator );
 
-    /* get the html page listing the available CSV files */
+    // Get the html page listing the available CSV files
     buf = buffer_init();
     get_page((char*)url->content, buf);
 
-    /* generate a list of files from the page */
+    // Generate a list of files from the page
     if (!csv_get_file_list(file_list, buf))
         goto clean;
     buffer_reset(buf);
     buffer_reset(url);
 
-    /* step through each CSV file */
+    // Step through each CSV file and update its csv_buffer
+    // structure from the csv_buffer_list
     while (!list_empty(file_list)) 
     {
         file_name = (char*)list_fetch(file_list);
         memset(&csv_tmp, 0, sizeof(csv_tmp));
         csv_tmp.file_name = file_name;
 
-        /* if there is not a buffer for this csv file, add a new buffer */
+        // If there is not a csv buffer for this csv file, create a
+        // new buffer and add it to the list
         if ((location = list_locate(csv_buffer_list, &csv_tmp) < 0))
         {
             csv_buffer = csv_buffer_init();
             csv_buffer->file_name = file_name;
             list_append(csv_buffer_list, csv_buffer);
             buffer_exists = 1;
+        // Otherwise re-use the old csv buffer
         } else { 
             csv_buffer = list_get_at(csv_buffer_list, location);
             buffer_exists = 0;
         }
 
-        /* process the contents of this csv file */
+     // Process the contents of this CSV file
+        // Generate the URL for retrieving the file
         buffer_write(url, url_str->content, url_str->length);
         buffer_write(url, (uint8_t*)file_name, strlen(file_name));
         buffer_terminate(url);
+        // Download the file
         get_page((char*)url->content, buf);
-        printf("file '%s' [0x%08lx] uncompressed size is %lu bytes\n", file_name, (unsigned long)file_name, (unsigned long)buf->length);
+        if (gDebug) {
+            // Dance a jig for the developer
+            printf("file '%s' [0x%08lx] uncompressed size is %lu bytes\n", file_name, (unsigned long)file_name, (unsigned long)buf->length);
+        }
+        // Populate a csv_buffer with the contents of the file
         csv_parse_file(csv_buffer, buf);
+        // Empty our temporary buffers
         buffer_reset(buf);
         buffer_reset(url);
         if (!buffer_exists) {
@@ -116,8 +132,7 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
         }
     }
 
-    /* regurgitate (table printout of csv file contents for debugging) */
-
+    // Regurgitate (table printout of csv file contents for debugging)
     /*
     if (gDebug)
     {
@@ -201,27 +216,33 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
     }
     // */
 
+    // Step through the csv buffers list
     list_iterator_stop(csv_buffer_list);
     list_iterator_start(csv_buffer_list);
     while (list_iterator_hasnext(csv_buffer_list)) 
     {
+        // Grab one buffer from the list
         csv_buffer = list_iterator_next(csv_buffer_list);
         while ((csv_buffer->end_time - csv_buffer->start_time) >= 3600) 
         {
+            // Compress the csv data to FMash format
             fmash_csv_to_msh(csv_buffer, &msh_data, &msh_length);
             if (gDebug) {
+                // Brag about our accomplishments
                 printf("file '%s' compressed size is %lu bytes\n", csv_buffer->file_name, (unsigned long)msh_length);
                 format_data(msh_data, msh_length, 0, 0);
             }
+            // Add this as an opaque record
             QueueOpaque(msh_data, msh_length, st_info->station,
                         st_info->network, st_info->channel,
                         st_info->location, FALCON_IDSTRING);
         }
     }
     list_iterator_stop(csv_buffer_list);
+    // Ensure all opaque blockettes have been sent
     FlushOpaque();
-    // */
 
+// Clean up all temporary resources
 clean:
     buf = buffer_destroy(buf);
     url = buffer_destroy(url);
@@ -240,6 +261,10 @@ clean:
     }
 }
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *  Given the contents of a CSV file, populate/update a
+ *  csv_buffer_t structure.
+ */
 int csv_parse_file( csv_buffer_t* csv_buffer, buffer_t* buf )
 {
     int result = 1;
@@ -268,6 +293,7 @@ int csv_parse_file( csv_buffer_t* csv_buffer, buffer_t* buf )
     description = buffer_init();
     content_string = (char *)buf->content;
 
+    // Find the channel in the CSV file
     if (regcomp(&regex, "^Chan:,(.*)$", REG_EXTENDED | REG_NEWLINE)) {
         goto unclean;
     }
@@ -278,9 +304,9 @@ int csv_parse_file( csv_buffer_t* csv_buffer, buffer_t* buf )
     content_string[match_list[1].rm_eo] = '\0';
     csv_header->channel = atol(content_string + match_list[1].rm_so);
     content_string[match_list[1].rm_eo] = tmp_char;
-
     regfree(&regex);
-    /* extract the description from the CSV file */
+
+    // Find the description in the CSV file
     if (regcomp(&regex, "^Desc:,([^:\r\n)]+)[:](.*)$", REG_EXTENDED | REG_NEWLINE)) {
         goto unclean;
     }
@@ -298,7 +324,6 @@ int csv_parse_file( csv_buffer_t* csv_buffer, buffer_t* buf )
     buffer_terminate(description);
     tmp_char = content_string[match_list[1].rm_eo];
     content_string[match_list[1].rm_eo] = '\0';
-    /* The following description never gets freed! */
     if (csv_header->description)
     {
         free(csv_header->description);
@@ -306,17 +331,18 @@ int csv_parse_file( csv_buffer_t* csv_buffer, buffer_t* buf )
     csv_header->description = (char *)buffer_detach(description);
     description = buffer_destroy(description);
     content_string[match_list[1].rm_eo] = tmp_char;
+    regfree(&regex);
 
     /* build regex for parsing CSV file lines */
-    regfree(&regex);
     if (regcomp(&regex, "^([0-9]{2}/[0-9]{2}/[0-9]{2},[0-9]{1,2}:[0-9]{2}),([0-9-]+),([0-9-]+),([0-9-]+)$", REG_EXTENDED | REG_NEWLINE)) 
     {
         goto unclean;
     }
 
-    /* locate and break down CSV file lines */
+    // Locate and break down CSV file lines
     while (!regexec(&regex, content_string, (size_t)MAX_MATCHES, match_list, 0)) 
     {
+        // Null terminate to simplify 
         match = match_list; match++;
         timestamp = content_string + match->rm_so;
         content_string[match->rm_eo] = '\0'; match++;
@@ -335,6 +361,7 @@ int csv_parse_file( csv_buffer_t* csv_buffer, buffer_t* buf )
             goto unclean;
         }
 
+        // Parse the timestamp in this row
         memset(&time_struct, 0, sizeof(struct tm));
         strptime(timestamp, "%m/%d/%y,%H:%M", &time_struct);
         csv_row->timestamp = mktime(&time_struct);
@@ -343,14 +370,14 @@ int csv_parse_file( csv_buffer_t* csv_buffer, buffer_t* buf )
         csv_row->low       = (int32_t)atol(low);
         csv_row->empty     = 0;
 
-        /* make sure we don't duplicate lines */
+        // Make sure we don't duplicate lines
         if (csv_buffer->end_time < csv_row->timestamp) 
         {
             if (csv_buffer->start_time == 0) 
             {
                 csv_buffer->start_time = csv_row->timestamp;
             }
-            /* add new row to the list */
+            // Add a new row to the list
             list_append(csv_list, csv_row);
             csv_buffer->end_time = csv_row->timestamp;
         } 
@@ -371,6 +398,11 @@ int csv_parse_file( csv_buffer_t* csv_buffer, buffer_t* buf )
     return result;
 }
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *  Parse Falcon's webpage containing the list of 1-minute
+ *  resolution CSV files and populate file_list with the
+ *  names of these files.
+ */
 int csv_get_file_list( csv_context_t *file_list, buffer_t* buf )
 {
     int result = 1;
@@ -392,7 +424,7 @@ int csv_get_file_list( csv_context_t *file_list, buffer_t* buf )
         {
             goto unclean;
         }
-        /* find the names of all the csv files with minute resolution */
+        // Find the names of all the csv files with minute resolution
         while (!regexec(&regex, content_string, (size_t)MAX_MATCHES, match_list, 0)) 
         {
             match = match_list;
@@ -402,6 +434,7 @@ int csv_get_file_list( csv_context_t *file_list, buffer_t* buf )
             {
                 if (match->rm_so && (match->rm_eo > match->rm_so)) 
                 {
+                    // Add this file name to the list
                     buffer_write(file_name, (uint8_t*)(content_string + match->rm_so),
                                  (size_t)(match->rm_eo - match->rm_so) );
                     buffer_terminate(file_name);
@@ -425,6 +458,10 @@ int csv_get_file_list( csv_context_t *file_list, buffer_t* buf )
     return result;
 }
 
+
+/* * * * * * * * * * * * * * * * * * * * * *
+ * Simclist comparator and seeker functions
+ */
 int _file_list_seeker( const void* element, const void* indicator )
 {
     if ( element && indicator && !strcmp((char*)element, (char*)indicator))

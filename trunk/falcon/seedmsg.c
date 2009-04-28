@@ -150,9 +150,9 @@ char *MakeOpaqueSeed(
     b2000->type = htons(2000);
     b2000->next_blockette_start = htons(0);
     if (i+1 < *num_records)
-      b2000->data_record_length = htons(iFreeSpace);
+      b2000->data_record_length = htons(15 + strlen(idstring) + iFreeSpace);
     else
-      b2000->data_record_length = htons(data_length - (iFreeSpace*i));
+      b2000->data_record_length = htons(15 + strlen(idstring) + (data_length - (iFreeSpace*i)));
     b2000->data_offset = htons(15 + strlen(idstring));
     if (*num_records > 1)
       b2000->record_number = htonl(iMultiRecordSeqNo);
@@ -261,7 +261,7 @@ int AppendOpaqueSeed(
     }
     else
     {
-      iDataIndex+=ntohs(b2000->data_offset)+ntohs(b2000->data_record_length);
+      iDataIndex+=ntohs(b2000->data_record_length);
       // Round up next blockette start to an 4 byte boundry
       iDataIndex = ((iDataIndex+3) / 4) * 4;
     }
@@ -283,7 +283,7 @@ int AppendOpaqueSeed(
   b2000 = (blockette_2000 *)&record1[iDataIndex];
   b2000->type = htons(2000);
   b2000->next_blockette_start = htons(0);
-  b2000->data_record_length = htons(data_length);
+  b2000->data_record_length = htons(15 + data_length);
   b2000->data_offset = htons(15);
   b2000->record_number = htonl(0);
   b2000->word_order = 1;

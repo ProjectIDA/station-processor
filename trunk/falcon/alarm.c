@@ -8,7 +8,7 @@
 #include <get.h>
 #include <murmur.h>
 
-/* ===== Alarm Line ========================================= */
+/* ===== Alarm Line Handlers ================================ */
 alarm_line_t* alarm_line_init()
 {
     alarm_line_t* alarm_line = NULL;
@@ -40,7 +40,7 @@ alarm_line_t* alarm_line_destroy( alarm_line_t* alarm_line )
     return alarm_line;
 }
 
-/* ===== Alarm Context ========================================= */
+/* ===== Alarm Context Handlers =========================== */
 alarm_context_t* alarm_context_init()
 {
     alarm_context_t* alarm_list = NULL;
@@ -72,6 +72,11 @@ alarm_context_t* alarm_context_destroy( alarm_context_t* alarm_list )
 }
 
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *   Update the alarm list with the latest content from the
+ *   Falcon. Make sure there are no duplicates, then write
+ *   all new alarms to the diskloop.
+ */
 void alarm_poll( alarm_context_t* alarm_list, buffer_t* url_str, st_info_t* st_info )
 {
     buffer_t* url = NULL;
@@ -80,20 +85,20 @@ void alarm_poll( alarm_context_t* alarm_list, buffer_t* url_str, st_info_t* st_i
     const char* file_path = "/data/alarmhistory.txt";
     char* retmsg = NULL;
 
-    /* set up the csv directory url */
+    // Set up the csv directory url
     url = buffer_init();
     buffer_write(url, url_str->content, url_str->length);
     buffer_write(url, (uint8_t*)file_path, strlen(file_path));
     buffer_terminate(url);
 
-    /* get alarm file text */
+    // Get alarm file text
     buf = buffer_init();
     get_page((char*)url->content, buf);
 
-    /* getting alarm lines */
+    // Getting alarm lines
     alarm_filter_lines( alarm_list, buf );
 
-    /* print each line in the filtered list */
+    // Print each line in the filtered list
     list_iterator_stop(alarm_list);
     list_iterator_start(alarm_list);
     while (list_iterator_hasnext(alarm_list)) 
@@ -127,6 +132,10 @@ void alarm_poll( alarm_context_t* alarm_list, buffer_t* url_str, st_info_t* st_i
     buf = buffer_destroy(buf);
 }
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+ *  Strip out any lines that are internal Falcon issues, append
+ *  the remaining lines to the alarm context list.
+ */
 int alarm_filter_lines( alarm_context_t* alarm_list, buffer_t* buf )
 {
     int result = 1;
@@ -140,6 +149,7 @@ int alarm_filter_lines( alarm_context_t* alarm_list, buffer_t* buf )
 
     if (buffer_size(buf) && alarm_list) 
     {
+        // Construct the regular expression for filtering alarm messages
         if (regcomp(&regex, "AH([0-9]{3})[-]([0-9]{4})[-]([^ ]+)[ ]*[-]([0-9]{2}[/][0-9]{2}[/][0-9]{2} [0-9]{2}[:][0-9]{2}[:][0-9]{2})[ ]+([^\n\r]+)", REG_EXTENDED | REG_NEWLINE))
         {
             goto unclean;
@@ -147,6 +157,7 @@ int alarm_filter_lines( alarm_context_t* alarm_list, buffer_t* buf )
 
         memset(&match_list, 0, sizeof(match_list));
         content_string = (char*)buf->content;
+        // Check that these are lines we want
         while (!regexec(&regex, content_string, (size_t)MAX_MATCHES, match_list, 0)) 
         {
             match = match_list;
@@ -164,9 +175,11 @@ int alarm_filter_lines( alarm_context_t* alarm_list, buffer_t* buf )
                 line = buffer_destroy(line);
                 line_element->hash = murmur_32(line_element->text, 
                                                strlen(line_element->text), 0);
+                // If this is a duplicate message, throw it out
                 if (list_locate(alarm_list, line_element) > -1) {
                     free(line_element->text);
                     free(line_element);
+                // Otherwise, add it to the list
                 } else {
                     list_append(alarm_list, line_element);
                 }
@@ -196,20 +209,4 @@ int _alarm_list_comparator( const void* a, const void* b )
     }
     return 0;
 }
-
-/*
-int _alarm_list_seeker( const void* element, const void* indicator )
-{
-    if (element && indicator) {
-        line = (alarm_line_t*) element;
-        if (((alarm_line_t*)element)->hash == *((alarm_line_t*)indicator)->hash) {
-            if !strcmp(((alarm_line_t*)element)->text,
-                       *((alarm_line_t*)indicator)->text) {
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
-*/
 

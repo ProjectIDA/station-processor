@@ -1,11 +1,11 @@
-/* ofadump.c
+/*  ofadump.c
  *
- * Author: Joel Edwards
- *         jdedwards@usgs.gov, joeledwards@gmail.com
+ *  Author: Joel Edwards
+ *          jdedwards@usgs.gov, joeledwards@gmail.com
  * 
- * Produces raw and formatted output of a file containing
- * opaque SEED records containing compressed statistical
- * data from an RLE Technologies (R)  Falcon (C)
+ *  Produces raw and formatted output of a file containing
+ *  opaque SEED records containing compressed statistical
+ *  data from an RLE Technologies (R)  Falcon (C)
  */
 
 #include <ctype.h>
@@ -40,15 +40,17 @@ int main ( int argc, char **argv )
     size_t records_read = 0;
     size_t data_length = 0;
     size_t i = 0, j = 0;
-    uint8_t *current_record = NULL; /* the selected SEED record */
-    uint8_t *current_header = NULL; /* position of current SEED record header */
-    uint8_t *current_blockette = NULL; /* the selected blockette */
-    uint8_t *current_data = NULL; /* location of data within this blockette */
+
+    uint8_t *current_record = NULL; // The selected SEED record
+    uint8_t *current_blockette = NULL; // The selected blockette
+    uint8_t *current_data = NULL; // Location of data within this blockette
+
+    uint8_t *messy_pointer = NULL;
 
     buffer_t* msh_data = NULL;
     seed_file_info file_info;
-    seed_header header_seed; /* SEED header struct*/
-    topaque_hdr header_opaque; /* Opaque blockette header struct*/
+    seed_header header_seed; // SEED header struct
+    topaque_hdr header_opaque; // Opaque blockette header struct
     char rec_type_str[REC_TYPE_MAX_LEN + 1];
 
     size_t record_size = 0;
@@ -60,7 +62,7 @@ int main ( int argc, char **argv )
     int c;
     bool data_complete = false;
 
-    /* arguments */
+    // Arguments
     bool display_raw    = false;
     bool display_header = false;
 
@@ -69,7 +71,7 @@ int main ( int argc, char **argv )
     csv_buffer_t* csv_buffer = NULL;
     csv_row_t* csv_row = NULL;
 
-    /* ensure we received a file argument */
+    // Ensure we received the file argument
     if ( argc < 2 ) {
         print_usage( argv, NULL );
         goto clean;
@@ -106,11 +108,10 @@ int main ( int argc, char **argv )
 
     file_handle = fopen( file_name, "rb" );
     if ( !file_handle ) {
-        fprintf( stderr, "Unable to open file '%s' for reading.\n", file_name );
-        goto clean;
+        fprintf( stderr, "Unable to open file '%s' for reading.\n", file_name ); goto clean;
     }
 
-    /* interpret header type, and break into opaque block types */
+    // Interpret header type, and break into opaque block types
     while ( !eof_reached ) {
         records_read = fread( buffer, record_size, 1, file_handle );
         file_position = ftell( file_handle );
@@ -120,6 +121,10 @@ int main ( int argc, char **argv )
         if ( feof(file_handle) || ferror(file_handle) ) {
             fprintf( stdout, "EOF reached\n" );
             eof_reached = true;
+            if ( !records_read ) {
+                fprintf( stdout, "No records left\n" );
+                break;
+            }
         }
         if ( display_raw ) {
             fprintf( stdout, "Raw Data:\n");
@@ -128,19 +133,28 @@ int main ( int argc, char **argv )
                          record_size / (size_t)DUMP_BYTES );
         }
 
-        /* populate the header structs */
-        current_header = buffer;
-        loadseedhdr( (pbyte *)&current_header, &header_seed, false );
+        // Populate the header structs
+        messy_pointer = current_record = buffer;
+        loadseedhdr( (pbyte *)&messy_pointer, &header_seed, false );
         next_blockette = header_seed.first_blockette_byte;
         blockette_type = 0;
 
+        jprintf( 0, "EXPECTED first blockette : %lu\n", (unsigned long)next_blockette );
+        jprintf( 0, "EXPECTED seed record : %010lu\n", (unsigned long)buffer );
         while ( next_blockette ) {
             current_blockette = buffer + next_blockette;
-            blockette_type   = ntohs(*(int16_t *)(current_blockette + 0));
-            next_blockette   = ntohs(*(int16_t *)(current_blockette + 2));
+            blockette_type    = ntohs(*(int16_t *)current_blockette);
+            next_blockette    = ntohs(*(int16_t *)(current_blockette + 2));
+            jprintf( 0, "EXPECTED current blockette : %010lu\n", (unsigned long)current_blockette );
+            jprintf( 0, "EXPECTED next blockette offset %lu\n", next_blockette );
+            jprintf( 0, "EXPECTED blockette type %lu\n", blockette_type );
+            jprintf( 0, "EXPECTED next blockette : %010lu\n", (unsigned long)(buffer + next_blockette) );
+            jprintf( 0, "EXPECTED blockette offset %lu\n", (unsigned long)(buffer + next_blockette) - (unsigned long)current_blockette );
             if (blockette_type == 2000) {
                 blockette_length = ntohs(*(int16_t *)(current_blockette + 4));
-                loadopaquehdr( (pbyte *)&current_blockette, &header_opaque );
+                jprintf( 0, "EXPECTED blockette length %lu\n", blockette_length );
+                messy_pointer = current_blockette;
+                loadopaquehdr( (pbyte *)&messy_pointer, &header_opaque );
 
                 if ( display_header ) {
                     printf( "Found an opaque blockette:\n" );
@@ -159,7 +173,7 @@ int main ( int argc, char **argv )
                     jprintf( 1, "Opaque data flags: 0x%02lx\n", 
                             (unsigned long)header_opaque.opaque_flags );
 
-                    /* Null terminate this, otherwise it gets ugly */
+                    // null terminate this, otherwise it gets ugly
                     for (j = 0; j < REC_TYPE_MAX_LEN; j++) {
                         rec_type_str[j] = header_opaque.rec_type[j];
                         if ( header_opaque.rec_type[j] == '\0' )
@@ -168,6 +182,7 @@ int main ( int argc, char **argv )
                             break;
                         }
                     }
+                    format_data(current_blockette, header_opaque.blk_lth, 0, 0);
                     rec_type_str[j + 1] = '\0';
                     jprintf( 1, "Record type: %s\n", rec_type_str);
                     jprintf( 1, "========== RECORD DATA ========== \n" );
@@ -220,6 +235,8 @@ int main ( int argc, char **argv )
                     csv_buffer = csv_buffer_destroy(csv_buffer);
                     msh_data = buffer_destroy(msh_data);
                 }
+            } else {
+                jprintf( 0, "Skipping blockette\n" );
             }
         }
     } 

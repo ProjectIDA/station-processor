@@ -93,7 +93,7 @@ void get_seed_file_info( char *file_name, seed_file_info* file_info,
     }
 
     size_exponent = *(data_blockette + 6);
-    record_size = pow(2, size_exponent);
+    record_size = 1 << size_exponent;
     file_info->record_size = record_size;
 
     if ( print_file_info ) {

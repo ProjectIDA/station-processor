@@ -7,6 +7,11 @@
 #include <stdint.h>
 #include <time.h>
 
+#define TM_MINUTE 60
+#define TM_HOUR 3600
+
+#define MAX_ROWS 60
+
 typedef struct {
     size_t bytes;
     uint8_t num[5];

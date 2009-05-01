@@ -397,7 +397,7 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
     buffer_terminate(buf);
 
     // Generate the compressed buffer
-    for (i = 0; i < 60; i++)
+    for (i = 0; i < MAX_ROWS; i++)
     {
         // We don't have a row buffered
         if (!buffered_row)
@@ -496,9 +496,10 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
         {
             map_set(buf->content + 12, i, NO_DATA);
         }
-        current_time += 60;
+        current_time += TM_MINUTE;
         element_count++;
     }
+    end_time = current_time - TM_MINUTE;
 
     // If we didn't use this element, restore it to the list
     if (buffered_row)
@@ -506,11 +507,15 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
         list_prepend(csv->list, buffered_row);
     }
 
-    // Update the last timestamp for this csv buffer
+    // Update the starting timestamp for the csv buffer
     buffered_row = list_get_at(csv->list, (unsigned int)0);
     if (buffered_row)
     {
         csv->start_time = buffered_row->timestamp;
+    }
+    else
+    {
+        csv->start_time = end_time;
     }
     buffered_row = NULL;
 
@@ -519,7 +524,6 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
     buf->content[3] = (element_count >> 8) & 0xff;
 
     // Store the end time
-    end_time = current_time - 60;
     buf->content[8]  = (end_time      ) & 0xff;
     buf->content[9]  = (end_time >>  8) & 0xff;
     buf->content[10] = (end_time >> 16) & 0xff;
@@ -678,7 +682,7 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
                     row = NULL;
                     break;
             }
-            current_time += 60;
+            current_time += TM_MINUTE;
         }
         row = csv_row_destroy(row);
     }

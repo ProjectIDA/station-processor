@@ -73,7 +73,7 @@ void FlushOpaque()
   for (i=0; i < numRecords; i++)
   {
     if (gDebug)
-      fprintf(stderr, "Sending seed record %d to q330arch\n", seqno);
+      fprintf(stdout, "Sending seed record %d to q330arch\n", seqno);
     if ((retmsg=q330SeedSend(&seedRecordBuf[i*iSeedRecordSize])))
     {
       if (gDebug)
@@ -114,7 +114,7 @@ void QueueOpaque(
                          iSeedRecordSize))
     {
       if (gDebug)
-        fprintf(stderr, "Added new opaque message to record %d\n", seqno);
+        fprintf(stdout, "Added new opaque message to record %d\n", seqno);
 
       // Nothing else to do at this time
       return;
@@ -129,7 +129,7 @@ void QueueOpaque(
   {
     seqno++;  // Increment sequence number
     if (gDebug)
-      fprintf(stderr, "Creating new opaque message for record %d\n", seqno);
+      fprintf(stdout, "Creating new opaque message for record %d\n", seqno);
     if ((retmsg = MakeOpaqueSeed(data, data_length, seqno,
              station, network, channel, location, idstring,
              iSeedRecordSize, (void **)&seedRecordBuf, &numRecords)) != NULL)
@@ -170,6 +170,7 @@ int main (int argc, char **argv)
 
   int i = 0;
   unsigned int interval = 0;
+  unsigned int unslept  = 0;
 
   //char  msg[8192];
 
@@ -271,7 +272,9 @@ int main (int argc, char **argv)
     alarm_poll(alarm_lines, url_str, &st_info);
     csv_poll_channels(csv_buffers, url_str, &st_info);
 
-    sleep(interval);
+    unslept = sleep(interval);
+    fprintf(stdout, "slept %u seconds %s\n", (interval - unslept),
+            unslept ? "(sleep interrupted)" : "" );
   }
 
   //
@@ -282,7 +285,7 @@ int main (int argc, char **argv)
           station, network, loc, chan,
           argv[2], argv[3]);
   if (gDebug)
-    fprintf(stderr, "DEBUG %s, line %d, date %s: %s\n", 
+    fprintf(stdout, "DEBUG %s, line %d, date %s: %s\n", 
             __FILE__, __LINE__, __DATE__, msg);
   if ((retmsg=q330LogMsg(msg, station, network, "LOG", loc)) != NULL)
   {

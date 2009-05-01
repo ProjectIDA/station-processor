@@ -54,6 +54,7 @@ void format_data( const uint8_t *data, const size_t len, size_t bytes_per_line, 
                 section_lines = 0;
             }
         }
+        fprintf( stdout, "\n" );
         free(summary);
     }
 }

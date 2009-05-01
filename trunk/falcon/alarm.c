@@ -109,7 +109,7 @@ void alarm_poll( alarm_context_t* alarm_list, buffer_t* url_str, st_info_t* st_i
 
         if (gDebug)
         {
-            fprintf(stderr, "DEBUG %s, line %d, date %s: %s\n", 
+            fprintf(stdout, "DEBUG %s, line %d, date %s: %s\n", 
                     __FILE__, __LINE__, __DATE__, alarm->text);
         }
 
@@ -127,6 +127,13 @@ void alarm_poll( alarm_context_t* alarm_list, buffer_t* url_str, st_info_t* st_i
         alarm->sent = 1;
     }
     list_iterator_stop(alarm_list);
+
+    // Make sure we don't continuously accumulate alarm messages
+    while (list_size(alarm_list) > MAX_CONTEXT_ALARMS)
+    {
+        alarm = list_fetch(alarm_list);
+        alarm = alarm_line_destroy(alarm);
+    }
 
     url = buffer_destroy(url);
     buf = buffer_destroy(buf);
@@ -157,7 +164,7 @@ int alarm_filter_lines( alarm_context_t* alarm_list, buffer_t* buf )
 
         memset(&match_list, 0, sizeof(match_list));
         content_string = (char*)buf->content;
-        // Check that these are lines we want
+        // Only process lines we are interested in
         while (!regexec(&regex, content_string, (size_t)MAX_MATCHES, match_list, 0)) 
         {
             match = match_list;
@@ -174,7 +181,8 @@ int alarm_filter_lines( alarm_context_t* alarm_list, buffer_t* buf )
                 line_element->text = (char*)buffer_detach(line);
                 line = buffer_destroy(line);
                 line_element->hash = murmur_32(line_element->text, 
-                                               strlen(line_element->text), 0);
+                                               strlen(line_element->text),
+                                               HASH_SEED_32);
                 // If this is a duplicate message, throw it out
                 if (list_locate(alarm_list, line_element) > -1) {
                     free(line_element->text);
@@ -182,6 +190,11 @@ int alarm_filter_lines( alarm_context_t* alarm_list, buffer_t* buf )
                 // Otherwise, add it to the list
                 } else {
                     list_append(alarm_list, line_element);
+                    if ( list_size(alarm_list) > MAX_ALARMS )
+                    {
+                        line_element = list_fetch(alarm_list);
+                        line_element = alarm_line_destroy(line_element);
+                    }
                 }
             } 
             content_string += match->rm_eo;

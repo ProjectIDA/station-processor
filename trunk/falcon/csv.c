@@ -8,6 +8,7 @@
 #include <csv.h>
 #include <format_data.h>
 #include <get.h>
+#include <murmur.h>
 
 /* ===== CSV Context Handlers =========================== */
 csv_context_t* csv_context_init()
@@ -60,10 +61,13 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
     uint8_t* msh_data;
     size_t msh_length = 0;
     int location = 0;
+    uint64_t file_hash = 0LL;
 
-    uint8_t buffer_exists = 0;
-    csv_buffer_t* final_csv = NULL;;
+    uint8_t buffer_found = 0;
+    csv_buffer_t* final_csv = NULL;
     void* tmp = NULL;
+
+    int tally = 0;
 
     // Build the CSV directory URL
     url = buffer_init();
@@ -90,131 +94,66 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
     buffer_reset(url);
 
     // Step through each CSV file and update its csv_buffer
-    // structure from the csv_buffer_list
+    // in the csv_buffer_list
     while (!list_empty(file_list)) 
     {
+        tally++;
         file_name = (char*)list_fetch(file_list);
         memset(&csv_tmp, 0, sizeof(csv_tmp));
         csv_tmp.file_name = file_name;
+        if (gDebug) {
+            printf("file #%d is %s\n", tally, file_name);
+        }
 
         // If there is not a csv buffer for this csv file, create a
         // new buffer and add it to the list
-        if ((location = list_locate(csv_buffer_list, &csv_tmp) < 0))
+        if ((location = list_locate(csv_buffer_list, &csv_tmp)) < 0)
         {
             csv_buffer = csv_buffer_init();
             csv_buffer->file_name = file_name;
             list_append(csv_buffer_list, csv_buffer);
-            buffer_exists = 1;
+            buffer_found = 0;
+            if (gDebug) {
+                printf("Adding file '%s' to csv buffer list\n", file_name);
+            }
         // Otherwise re-use the old csv buffer
         } else { 
-            csv_buffer = list_get_at(csv_buffer_list, location);
-            buffer_exists = 0;
+            csv_buffer = (csv_buffer_t*)list_get_at(csv_buffer_list, location);
+            buffer_found = 1;
+            if (gDebug) {
+                printf("Retrieving file '%s' from csv buffer list at [%lu]\n", csv_tmp.file_name, location);
+                printf("Really retrieving file '%s'\n", csv_buffer->file_name);
+            }
         }
 
      // Process the contents of this CSV file
         // Generate the URL for retrieving the file
         buffer_write(url, url_str->content, url_str->length);
-        buffer_write(url, (uint8_t*)file_name, strlen(file_name));
+        buffer_write(url, (uint8_t*)csv_buffer->file_name,
+                     strlen(csv_buffer->file_name));
         buffer_terminate(url);
+        if (gDebug) {
+            printf("getting page %s\n", url->content);
+        }
         // Download the file
         get_page((char*)url->content, buf);
+        file_hash = murmur_64_b( buf->content, buf->length, HASH_SEED_64 );
         if (gDebug) {
-            // Dance a jig for the developer
-            printf("file '%s' [0x%08lx] uncompressed size is %lu bytes\n", file_name, (unsigned long)file_name, (unsigned long)buf->length);
+            printf("file '%s' [0x%016llx] uncompressed size is %lu bytes\n",
+                   csv_buffer->file_name, (unsigned long long)file_hash,
+                   (unsigned long)buf->length);
         }
         // Populate a csv_buffer with the contents of the file
         csv_parse_file(csv_buffer, buf);
         // Empty our temporary buffers
         buffer_reset(buf);
         buffer_reset(url);
-        if (!buffer_exists) {
+        if (buffer_found) {
             free(file_name);
         }
+        file_name = NULL;
+        csv_buffer = NULL;
     }
-
-    // Regurgitate (table printout of csv file contents for debugging)
-    /*
-    if (gDebug)
-    {
-        printf("CSV Files (%d):\n", list_size(csv_buffer_list));
-        list_iterator_stop(csv_buffer_list);
-        list_iterator_start(csv_buffer_list);
-        while (list_iterator_hasnext(csv_buffer_list)) {
-            csv_buffer = list_iterator_next(csv_buffer_list);
-
-            printf("=== PRE COMPRESSION ====================================\n");
-            printf("    file:         %s\n", csv_buffer->file_name);
-            printf("    channel:      %d\n", csv_buffer->header->channel);
-            printf("    description:  %s\n", csv_buffer->header->description);
-            printf("    lines:        %d\n", list_size(csv_buffer->list));
-            list_iterator_stop(csv_buffer->list);
-            list_iterator_start(csv_buffer->list);
-                printf("        ------------- ----------- ----------- ----------- \n");
-                printf("       | Timestamp   | Average   | High      | Low       |\n");
-                printf("        ------------- ----------- ----------- ----------- \n");
-            while (list_iterator_hasnext(csv_buffer->list)) {
-                csv_row = list_iterator_next(csv_buffer->list);
-                printf("       | % 10d | % 9d | % 9d | % 9d |\n", (int)csv_row->timestamp,
-                       csv_row->average, csv_row->high, csv_row->low );
-            }
-            list_iterator_stop(csv_buffer->list);
-
-            if (!fmash_csv_to_msh( csv_buffer, &msh_data, &msh_length ))
-            {
-                goto loop_clean;
-            }
-
-            if (!fmash_msh_to_csv( &final_csv, msh_data, msh_length ))
-            {
-                goto loop_clean;
-            }
-
-            if (!final_csv)
-            {
-                goto loop_clean;
-            }
-            if (!final_csv->header)
-            {
-                goto loop_clean;
-            }
-            if (!final_csv->list)
-            {
-                goto loop_clean;
-            }
-
-            printf("=== POST EXPANSION =====================================\n");
-            printf("    file:         %s\n", csv_buffer->file_name);
-            printf("    channel:      %d\n", csv_buffer->header->channel);
-            printf("    description:  %s\n", csv_buffer->header->description);
-            printf("    lines:        %d\n", list_size(final_csv->list));
-            list_iterator_stop(final_csv->list);
-            list_iterator_start(final_csv->list);
-                printf("        ------------- ----------- ----------- ----------- \n");
-                printf("       | Timestamp   | Average   | High      | Low       |\n");
-                printf("        ------------- ----------- ----------- ----------- \n");
-            while (list_iterator_hasnext(final_csv->list))
-            {
-                csv_row = list_iterator_next(final_csv->list);
-                printf("       | % 10d | % 9d | % 9d | % 9d |\n", (int)csv_row->timestamp,
-                       csv_row->average, csv_row->high, csv_row->low );
-            }
-            printf("\n");
-            list_iterator_stop(final_csv->list);
-
-     loop_clean:
-            csv_buffer_destroy(final_csv);
-            if (msh_data)
-            {
-                free(msh_data);
-                msh_data = NULL;
-            }
-            msh_length = 0;
-            tmp = NULL;
-
-        }
-        list_iterator_stop(csv_buffer_list);
-    }
-    // */
 
     // Step through the csv buffers list
     list_iterator_stop(csv_buffer_list);
@@ -223,22 +162,70 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
     {
         // Grab one buffer from the list
         csv_buffer = list_iterator_next(csv_buffer_list);
-        while ((csv_buffer->end_time - csv_buffer->start_time) >= 3600) 
+        fprintf(stdout, "File '%s':\n", csv_buffer->file_name);
+        fprintf(stdout, "  start time : %d\n", csv_buffer->start_time);
+        fprintf(stdout, "  end time   : %d\n", csv_buffer->end_time);
+        while ((csv_buffer->end_time - csv_buffer->start_time) >= TM_HOUR) 
         {
             // Compress the csv data to FMash format
             fmash_csv_to_msh(csv_buffer, &msh_data, &msh_length);
             if (gDebug) {
                 // Brag about our accomplishments
-                printf("file '%s' compressed size is %lu bytes\n", csv_buffer->file_name, (unsigned long)msh_length);
+                fprintf(stdout, "compressed data size is %lu bytes\n", (unsigned long)msh_length);
                 format_data(msh_data, msh_length, 0, 0);
+
+                // XXX: Make sure to comment this section out
+                //* Verify the contents of the buffer are correct...
+                if (!fmash_msh_to_csv( &final_csv, msh_data, msh_length )) {
+                    fprintf(stdout, "FMash to CSV conversion failed\n");
+                    goto queue_it;
+                }
+                if (!final_csv) {
+                    fprintf(stdout, "final_csv not created\n");
+                    goto queue_it;
+                }
+                if (!final_csv->header) {
+                    fprintf(stdout, "final_csv->header not created\n");
+                    goto queue_it;
+                }
+                if (!final_csv->list) {
+                    fprintf(stdout, "final_csv->list not created\n");
+                    goto queue_it;
+                }
+                fprintf(stdout, "=== FMASH VERIFICATION =================================\n");
+                fprintf(stdout, "    file:         %s\n", csv_buffer->file_name);
+                fprintf(stdout, "    channel:      %d\n", csv_buffer->header->channel);
+                fprintf(stdout, "    description:  %s\n", csv_buffer->header->description);
+                fprintf(stdout, "    lines:        %d\n", list_size(final_csv->list));
+                list_iterator_stop(final_csv->list);
+                list_iterator_start(final_csv->list);
+                    fprintf(stdout, "        ------------- ----------- ----------- ----------- \n");
+                    fprintf(stdout, "       | Timestamp   | Average   | High      | Low       |\n");
+                    fprintf(stdout, "        ------------- ----------- ----------- ----------- \n");
+                while (list_iterator_hasnext(final_csv->list))
+                {
+                    csv_row = list_iterator_next(final_csv->list);
+                    fprintf(stdout, "       | % 10d | % 9d | % 9d | % 9d |\n", (int)csv_row->timestamp,
+                           csv_row->average, csv_row->high, csv_row->low );
+                }
+                printf("\n");
+                list_iterator_stop(final_csv->list);
+                final_csv = csv_buffer_destroy(final_csv);
+                fflush(stdout);
+                // */
             }
+ queue_it:
             // Add this as an opaque record
             QueueOpaque(msh_data, msh_length, st_info->station,
                         st_info->network, st_info->channel,
                         st_info->location, FALCON_IDSTRING);
         }
+        fprintf(stdout, "  updated start time : %d\n", csv_buffer->start_time);
+        fprintf(stdout, "  updated end time   : %d\n", csv_buffer->end_time);
+        csv_buffer = NULL;
     }
     list_iterator_stop(csv_buffer_list);
+
     // Ensure all opaque blockettes have been sent
     FlushOpaque();
 
@@ -438,6 +425,9 @@ int csv_get_file_list( csv_context_t *file_list, buffer_t* buf )
                     buffer_write(file_name, (uint8_t*)(content_string + match->rm_so),
                                  (size_t)(match->rm_eo - match->rm_so) );
                     buffer_terminate(file_name);
+                    if (gDebug) {
+                        printf("found CSV file: %s\n", file_name->content);
+                    }
                     list_append(file_list, buffer_detach(file_name));
                     if (max_off < match->rm_eo)
                     {
@@ -491,14 +481,13 @@ int _buffer_list_seeker( const void* element, const void* indicator )
 
 int _buffer_list_comparator( const void* a, const void* b )
 {
-    if ( a && b )
-        return strcmp(((csv_buffer_t*)b)->file_name,
-                      ((csv_buffer_t*)a)->file_name);
+    if ( !a && !b )
+        return 0;
     else if ( a && !b ) 
         return -1;
     else if ( !a && b )
         return 1;
-    return 0;
+    return strcmp( ((csv_buffer_t*)b)->file_name, ((csv_buffer_t*)a)->file_name );
 }
 
 int _csv_list_seeker( const void* element, const void* indicator )
@@ -512,7 +501,11 @@ int _csv_list_seeker( const void* element, const void* indicator )
 int _csv_list_comparator( const void* a, const void* b )
 {
     if ( a && b ) {
-        if (((csv_row_t*)a)->timestamp < ((csv_row_t*)b)->timestamp)
+        if ( ((csv_row_t*)a)->timestamp && !(((csv_row_t*)b)->timestamp))
+            return 1;
+        else if ( !(((csv_row_t*)a)->timestamp) && ((csv_row_t*)b)->timestamp)
+            return -1;
+        else if (((csv_row_t*)a)->timestamp < ((csv_row_t*)b)->timestamp)
             return 1;
         else if (((csv_row_t*)a)->timestamp > ((csv_row_t*)b)->timestamp)
             return -1;

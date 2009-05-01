@@ -116,8 +116,6 @@ int main ( int argc, char **argv )
         records_read = fread( buffer, record_size, 1, file_handle );
         file_position = ftell( file_handle );
 
-        fprintf( stdout, "Read %d record(s)\n", records_read );
-        fprintf( stdout, "File position is %ld\n", file_position );
         if ( feof(file_handle) || ferror(file_handle) ) {
             fprintf( stdout, "EOF reached\n" );
             eof_reached = true;
@@ -139,20 +137,12 @@ int main ( int argc, char **argv )
         next_blockette = header_seed.first_blockette_byte;
         blockette_type = 0;
 
-        jprintf( 0, "EXPECTED first blockette : %lu\n", (unsigned long)next_blockette );
-        jprintf( 0, "EXPECTED seed record : %010lu\n", (unsigned long)buffer );
         while ( next_blockette ) {
             current_blockette = buffer + next_blockette;
             blockette_type    = ntohs(*(int16_t *)current_blockette);
             next_blockette    = ntohs(*(int16_t *)(current_blockette + 2));
-            jprintf( 0, "EXPECTED current blockette : %010lu\n", (unsigned long)current_blockette );
-            jprintf( 0, "EXPECTED next blockette offset %lu\n", next_blockette );
-            jprintf( 0, "EXPECTED blockette type %lu\n", blockette_type );
-            jprintf( 0, "EXPECTED next blockette : %010lu\n", (unsigned long)(buffer + next_blockette) );
-            jprintf( 0, "EXPECTED blockette offset %lu\n", (unsigned long)(buffer + next_blockette) - (unsigned long)current_blockette );
             if (blockette_type == 2000) {
                 blockette_length = ntohs(*(int16_t *)(current_blockette + 4));
-                jprintf( 0, "EXPECTED blockette length %lu\n", blockette_length );
                 messy_pointer = current_blockette;
                 loadopaquehdr( (pbyte *)&messy_pointer, &header_opaque );
 
@@ -182,7 +172,6 @@ int main ( int argc, char **argv )
                             break;
                         }
                     }
-                    format_data(current_blockette, header_opaque.blk_lth, 0, 0);
                     rec_type_str[j + 1] = '\0';
                     jprintf( 1, "Record type: %s\n", rec_type_str);
                     jprintf( 1, "========== RECORD DATA ========== \n" );
@@ -213,7 +202,6 @@ int main ( int argc, char **argv )
 
                 if (msh_data && data_complete) {
                     data_complete = 0;
-                    format_data(msh_data->content, msh_data->length, 0, 0);
 
                     fmash_msh_to_csv(&csv_buffer, msh_data->content, msh_data->length);
                     printf("=== POST EXPANSION ======================================\n");
@@ -235,8 +223,6 @@ int main ( int argc, char **argv )
                     csv_buffer = csv_buffer_destroy(csv_buffer);
                     msh_data = buffer_destroy(msh_data);
                 }
-            } else {
-                jprintf( 0, "Skipping blockette\n" );
             }
         }
     } 

@@ -5,7 +5,8 @@
 #define FALCON_CHAN      "OFA"
 #define FALCON_LOC       "90"
 
-#define DEBUG_ITERATIONS 3
+#define DEBUG_ITERATIONS 6
+#define DEBUG_INTERVAL 1800 
 #define DEBUG_INTERVAL 5 
 #define SLEEP_INTERVAL 1800
 

@@ -6,6 +6,8 @@
 #include <simclist.h>
 
 #define MAX_MATCHES 32
+#define MAX_CONTEXT_ALARMS 100
+#define MAX_ALARMS 256
 
 typedef list_t alarm_context_t;
 

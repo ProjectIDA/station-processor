@@ -4,7 +4,7 @@
 #include <url.h>
 #include <util.h>
 
-void get_page( const char* url_str, buffer_t* buf )
+void get_page( char* url_str, buffer_t* buf )
 {
     UrlResource* rsc;
 

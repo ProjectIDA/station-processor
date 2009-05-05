@@ -101,9 +101,6 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
         file_name = (char*)list_fetch(file_list);
         memset(&csv_tmp, 0, sizeof(csv_tmp));
         csv_tmp.file_name = file_name;
-        if (gDebug) {
-            printf("file #%d is %s\n", tally, file_name);
-        }
 
         // If there is not a csv buffer for this csv file, create a
         // new buffer and add it to the list
@@ -113,17 +110,10 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
             csv_buffer->file_name = file_name;
             list_append(csv_buffer_list, csv_buffer);
             buffer_found = 0;
-            if (gDebug) {
-                printf("Adding file '%s' to csv buffer list\n", file_name);
-            }
         // Otherwise re-use the old csv buffer
         } else { 
             csv_buffer = (csv_buffer_t*)list_get_at(csv_buffer_list, location);
             buffer_found = 1;
-            if (gDebug) {
-                printf("Retrieving file '%s' from csv buffer list at [%d]\n", csv_tmp.file_name, location);
-                printf("Really retrieving file '%s'\n", csv_buffer->file_name);
-            }
         }
 
      // Process the contents of this CSV file
@@ -162,9 +152,6 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
     {
         // Grab one buffer from the list
         csv_buffer = list_iterator_next(csv_buffer_list);
-        fprintf(stdout, "File '%s':\n", csv_buffer->file_name);
-        fprintf(stdout, "  start time : %li\n", (long)csv_buffer->start_time);
-        fprintf(stdout, "  end time   : %li\n", (long)csv_buffer->end_time);
         while ((csv_buffer->end_time - csv_buffer->start_time) >= TM_HOUR) 
         {
             // Compress the csv data to FMash format
@@ -174,7 +161,6 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
                 fprintf(stdout, "compressed data size is %lu bytes\n", (unsigned long)msh_length);
                 format_data(msh_data, msh_length, 0, 0);
 
-                // XXX: Make sure to comment this section out
                 //* Verify the contents of the buffer are correct...
                 if (!fmash_msh_to_csv( &final_csv, msh_data, msh_length )) {
                     fprintf(stdout, "FMash to CSV conversion failed\n");
@@ -216,12 +202,14 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
             }
  queue_it:
             // Add this as an opaque record
-            QueueOpaque(msh_data, msh_length, st_info->station,
-                        st_info->network, st_info->channel,
-                        st_info->location, FALCON_IDSTRING);
+            if (msh_data) {
+                QueueOpaque(msh_data, msh_length, st_info->station,
+                            st_info->network, st_info->channel,
+                            st_info->location, FALCON_IDSTRING);
+                free(msh_data);
+                msh_data = NULL;
+            }
         }
-        fprintf(stdout, "  updated start time : %li\n", (long)csv_buffer->start_time);
-        fprintf(stdout, "  updated end time   : %li\n", (long)csv_buffer->end_time);
         csv_buffer = NULL;
     }
     list_iterator_stop(csv_buffer_list);

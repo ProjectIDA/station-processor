@@ -50,7 +50,7 @@ extern char *url_error;
 
 Url *url_new(void);
 void url_destroy(Url *);
-Url *url_init(Url *, const char *);
+Url *url_init(Url *, char *);
 UrlResource *url_resource_new(void);
 void url_resource_destroy(UrlResource *);
 int is_probably_an_url(char *);

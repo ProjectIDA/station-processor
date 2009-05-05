@@ -31,8 +31,8 @@ is_probably_an_url(char *string)
     return 0;
 }
 
-const char *
-get_service_type(const char *string, Url *u)
+char *
+get_service_type(char *string, Url *u)
 {
     /* fixme: what if the string isn't at the beginning of the 
        *string? */
@@ -74,8 +74,8 @@ get_service_type(const char *string, Url *u)
 }
 
 
-const char *
-get_username(const char *string, Url *u)
+char *
+get_username(char *string, Url *u)
 {
     int i;
     char *username;
@@ -107,8 +107,8 @@ get_username(const char *string, Url *u)
 }
 
 
-const char *
-get_password(const char *string, Url *u)
+char *
+get_password(char *string, Url *u)
 {
     int i;
     char *password;
@@ -148,8 +148,8 @@ get_password(const char *string, Url *u)
 }
 
 
-const char *
-get_hostname(const char *url, Url *u)
+char *
+get_hostname(char *url, Url *u)
 {
     char *hostname;
     int i;
@@ -173,8 +173,8 @@ get_hostname(const char *url, Url *u)
     return url;
 }
 
-const char *
-get_port(const char *url, Url *u)
+char *
+get_port(char *url, Url *u)
 {
     char *port_string;
     int i;
@@ -198,8 +198,8 @@ get_port(const char *url, Url *u)
 }
 
 
-const char *
-get_path(const char *url, Url *u)
+char *
+get_path(char *url, Url *u)
 {
     int i;
     char *path;
@@ -222,8 +222,8 @@ get_path(const char *url, Url *u)
 }
 
 
-const char *
-get_file(const char *string, Url *u)
+char *
+get_file(char *string, Url *u)
 {
   char *file;
 
@@ -311,9 +311,9 @@ url_resource_destroy(UrlResource *rsrc)
 
 
 Url *
-url_init(Url *u, const char *string)
+url_init(Url *u, char *string)
 {
-	const char *sp;	/* since we're going to walk through string,
+	char *sp;	/* since we're going to walk through string,
 			               use a copy instead. */
 
   sp = string;

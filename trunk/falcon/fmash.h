@@ -17,9 +17,6 @@ typedef struct {
     uint8_t num[5];
 } varint;
 
-int32_t varint_to_int32( uint8_t* integer, size_t* bytes );
-varint int32_to_varint( int32_t integer );
-
 /* ==== CSV Data Structures ============================================ */
 typedef list_t csv_list_t;
 
@@ -68,6 +65,14 @@ csv_row_t* csv_row_destroy(csv_row_t* csv_row);
 /* =====-----------------------------------------============================ */
 int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length );
 int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length );
+
+/* ==== Variable Length Integer Support ===================================== */
+int32_t varint_to_int32( uint8_t* integer, size_t* bytes );
+varint int32_to_varint( int32_t integer );
+
+/* ==== Store 3-bit values in a bitstream =================================== */
+void map_set( uint8_t* map, int index, uint8_t value );
+uint8_t map_get( const uint8_t* map, int index );
 
 #endif
 

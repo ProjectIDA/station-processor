@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include <csv.h>
 #include <format_data.h>
@@ -66,7 +66,6 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
 
     uint8_t buffer_found = 0;
     csv_buffer_t* final_csv = NULL;
-    void* tmp = NULL;
 
     int tally = 0;
 
@@ -122,7 +121,7 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
             csv_buffer = (csv_buffer_t*)list_get_at(csv_buffer_list, location);
             buffer_found = 1;
             if (gDebug) {
-                printf("Retrieving file '%s' from csv buffer list at [%lu]\n", csv_tmp.file_name, location);
+                printf("Retrieving file '%s' from csv buffer list at [%d]\n", csv_tmp.file_name, location);
                 printf("Really retrieving file '%s'\n", csv_buffer->file_name);
             }
         }
@@ -164,8 +163,8 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
         // Grab one buffer from the list
         csv_buffer = list_iterator_next(csv_buffer_list);
         fprintf(stdout, "File '%s':\n", csv_buffer->file_name);
-        fprintf(stdout, "  start time : %d\n", csv_buffer->start_time);
-        fprintf(stdout, "  end time   : %d\n", csv_buffer->end_time);
+        fprintf(stdout, "  start time : %li\n", (long)csv_buffer->start_time);
+        fprintf(stdout, "  end time   : %li\n", (long)csv_buffer->end_time);
         while ((csv_buffer->end_time - csv_buffer->start_time) >= TM_HOUR) 
         {
             // Compress the csv data to FMash format
@@ -221,8 +220,8 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
                         st_info->network, st_info->channel,
                         st_info->location, FALCON_IDSTRING);
         }
-        fprintf(stdout, "  updated start time : %d\n", csv_buffer->start_time);
-        fprintf(stdout, "  updated end time   : %d\n", csv_buffer->end_time);
+        fprintf(stdout, "  updated start time : %li\n", (long)csv_buffer->start_time);
+        fprintf(stdout, "  updated end time   : %li\n", (long)csv_buffer->end_time);
         csv_buffer = NULL;
     }
     list_iterator_stop(csv_buffer_list);

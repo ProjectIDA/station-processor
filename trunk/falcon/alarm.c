@@ -9,6 +9,8 @@
 #include <get.h>
 #include <murmur.h>
 
+#include <include/q330arch.h>
+
 /* ===== Alarm Line Handlers ================================ */
 alarm_line_t* alarm_line_init()
 {

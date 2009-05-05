@@ -39,7 +39,7 @@ int main ( int argc, char **argv )
     uint8_t *buffer = NULL;
     size_t records_read = 0;
     size_t data_length = 0;
-    size_t i = 0, j = 0;
+    size_t i = 0;
 
     uint8_t *current_record = NULL; // The selected SEED record
     uint8_t *current_blockette = NULL; // The selected blockette
@@ -57,7 +57,6 @@ int main ( int argc, char **argv )
     int16_t next_blockette;
     int16_t blockette_type;
     int16_t blockette_length;
-    bool spanning_blockette = false;
 
     int c;
     bool data_complete = false;
@@ -65,8 +64,6 @@ int main ( int argc, char **argv )
     // Arguments
     bool display_raw    = false;
     bool display_header = false;
-
-    uint32_t print_flags = 0x00000000L;
 
     csv_buffer_t* csv_buffer = NULL;
     csv_row_t* csv_row = NULL;
@@ -164,15 +161,15 @@ int main ( int argc, char **argv )
                             (unsigned long)header_opaque.opaque_flags );
 
                     // null terminate this, otherwise it gets ugly
-                    for (j = 0; j < REC_TYPE_MAX_LEN; j++) {
-                        rec_type_str[j] = header_opaque.rec_type[j];
-                        if ( header_opaque.rec_type[j] == '\0' )
+                    for (i = 0; i < REC_TYPE_MAX_LEN; i++) {
+                        rec_type_str[i] = header_opaque.rec_type[i];
+                        if ( header_opaque.rec_type[i] == '\0' )
                             break;
-                        if ( header_opaque.rec_type[j] == '~') {
+                        if ( header_opaque.rec_type[i] == '~') {
                             break;
                         }
                     }
-                    rec_type_str[j + 1] = '\0';
+                    rec_type_str[i + 1] = '\0';
                     jprintf( 1, "Record type: %s\n", rec_type_str);
                     jprintf( 1, "========== RECORD DATA ========== \n" );
                 }

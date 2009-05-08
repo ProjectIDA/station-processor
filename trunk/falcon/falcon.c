@@ -230,17 +230,19 @@ int main (int argc, char **argv)
 
   user = station;
   pass = station;
+  // XXX: Comment the following out before releasing
   //* We are currently working on the ANMO Falcon
   user = name;
   pass = name;
   // */
 
+  // Populate the station information struct
   st_info.station  = station;
   st_info.network  = network;
   st_info.channel  = chan;
   st_info.location = loc;
 
-  // contstruct the base URL
+  // Contstruct the base URL
   buffer_write(url_str, (uint8_t*)"http://", 7);
   buffer_write(url_str, (uint8_t*)user, strlen(user));
   buffer_write(url_str, (uint8_t*)":", 1);
@@ -250,11 +252,6 @@ int main (int argc, char **argv)
   buffer_write(url_str, (uint8_t*)":", 1);
   buffer_write(url_str, (uint8_t*)port, strlen(port));
 
-  /*
-  buffer_terminate(url_str);
-  fprintf(stdout, "url : %s\n", (char *)url_str->content);
-  // */
-
   // How long we wait between polling events
   interval = SLEEP_INTERVAL;
   if (gDebug) {
@@ -262,7 +259,8 @@ int main (int argc, char **argv)
   }
 
   // Polling loop, which checks the Falcon for new data
-  // every 'interval' seconds after previous check
+  // every 'interval' seconds after the completion of
+  // the previous check.
   while (1)
   {
     if (gDebug && (i++ == DEBUG_ITERATIONS))
@@ -277,123 +275,10 @@ int main (int argc, char **argv)
             unslept ? "(sleep interrupted)" : "" );
   }
 
-  //
-  // Test code demonstrating log message usage
-  //
-  /*
-  sprintf(msg, "Test falcon log message for %s %s %s/%s IP %s port %s\n",
-          station, network, loc, chan,
-          argv[2], argv[3]);
-  if (gDebug)
-    fprintf(stdout, "DEBUG %s, line %d, date %s: %s\n", 
-            __FILE__, __LINE__, __DATE__, msg);
-  if ((retmsg=q330LogMsg(msg, station, network, "LOG", loc)) != NULL)
-  {
-    // error trying to log the message
-    if (gDebug)
-      fprintf(stderr, "falcon: %s\n", retmsg);
-    else
-      syslog(LOG_ERR, "falcon: %s\n", retmsg);
-    exit(1);
-  }
-  // */
-
 clean:
   csv_buffers = csv_context_destroy(csv_buffers);
   alarm_lines = alarm_context_destroy(alarm_lines);
   url_str = buffer_destroy(url_str);
-
-/*
-// Temp test QueueOpaque and FlushOpaque code
-{
-char *msg;
-
-msg="Test message 01 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 02 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 03 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 04 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 05 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 06 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 07 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 08 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 09 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 10 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 11 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 12 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 13 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 14 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-
-msg="Test message 15 to fill up buffer record";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-msg=
-"An extremely long message that will take at least 3 512 byte seed records"
-"to store.  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXZ";
-QueueOpaque(msg, strlen(msg), 
-station, network, chan, loc, FALCON_IDSTRING);
-FlushOpaque();
-} // debug code
-// */
 
   return 0;
 } // main()

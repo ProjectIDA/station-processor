@@ -11,7 +11,10 @@ Purpose: convert IDA isi sever feed to a LISS feed
            NOTE: Only supports single client.  If the client disconnects
              then it will pick up back where it left off when it reconnects
 ========================================================================*/
-#define RELEASE "1.1"
+
+const char *WHOAMI="ida2liss";
+const char *VersionIdentString = "Release 1.1";
+
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include "isi.h"
 #include "util.h"
@@ -29,9 +32,6 @@ Purpose: convert IDA isi sever feed to a LISS feed
 #define MAXCLIENT       1
 #define SEED_RECLEN     512
 
-char *VersionIdentString="ida2liss 1.1";
-const char *WHOAMI="ida2liss";
-
 #define LOCALBUFLEN SEED_RECLEN
 
 #ifndef DEFAULT_SERVER
@@ -40,6 +40,8 @@ const char *WHOAMI="ida2liss";
 
 #define UNKNOWN 0
 #define RAW     1
+
+void daemonize();
 
 UINT32 flags   = 0;
 char *server   = DEFAULT_SERVER;
@@ -536,7 +538,7 @@ static char *VerboseHelp =
     fprintf(stderr, "\n");
     fprintf(stderr, "%s", VerboseHelp);
     fprintf(stderr, "default server is `%s'\n", DEFAULT_SERVER);
-    fprintf(stderr, "Version %s  %s\n", RELEASE, __DATE__);
+    fprintf(stderr, "%s  %s\n", VersionIdentString, __DATE__);
     exit(1);
 
 } // help()

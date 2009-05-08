@@ -9,7 +9,7 @@ mmddyy who Changes
 020509 fcs Creation
 ******************************************************************************/
 #define WHOAMI "isirstat"
-#define RELEASE "1.1"
+const char *VersionIdentString = "Release 1.1";
 
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include <stdio.h>
@@ -93,7 +93,7 @@ void ShowUsage()
   fprintf(stderr," port defaults to 39136\n");
   fprintf(stderr," site defaults to the name reported by the remote server\n");
   fprintf(stderr," Only works with 512 byte miniseed based isi disk loop\n");
-  fprintf(stderr,"Version %s  %s\n", RELEASE, __DATE__);
+  fprintf(stderr,"%s  %s\n", VersionIdentString, __DATE__);
 }
 
 

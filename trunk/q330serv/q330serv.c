@@ -32,7 +32,7 @@ mmddyy who Changes
 050809 fcs Add release number to ShowUsage
 ******************************************************************************/
 #define WHOAMI "q330serv"
-#define RELEASE  "1.2"
+const char *VersionIdentString="Release 1.2";
 
 #include "globals.h"
 #include "libtypes.h"
@@ -122,7 +122,7 @@ void ShowUsage()
   fprintf(stderr, "Usage: %s <configdir> [debug]\n", WHOAMI);
   fprintf(stderr, "  <configdir> holds diskloop.config and seneca.config\n");
   fprintf(stderr, "  debug for output to screen, no daemonizing\n");
-  fprintf(stderr, "Version %s  %s\n", RELEASE, __DATE__);
+  fprintf(stderr, "%s  %s\n", VersionIdentString, __DATE__);
 }
 
 int main (int argc, char **argv)

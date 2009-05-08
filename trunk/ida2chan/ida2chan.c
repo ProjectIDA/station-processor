@@ -9,7 +9,7 @@ mmddyy who Changes
 080207 fcs Creation
 ******************************************************************************/
 #define WHOAMI "ida2chan"
-#define RELEASE "1.1"
+const char *VersionIdentString = "Release 1.1";
 
 #include <stdio.h>
 #include <string.h>
@@ -148,7 +148,7 @@ void ShowUsage()
 " Appends seed records from ida disk loop into indivdual channel\n");
   fprintf(stderr,
 " files in the working directory.\n");
-  fprintf(stderr,"Version %s  %s\n", RELEASE, __DATE__);
+  fprintf(stderr,"%s  %s\n", VersionIdentString, __DATE__);
 }
 
 

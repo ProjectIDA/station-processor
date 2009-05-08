@@ -1,7 +1,9 @@
 /*
   Network server program to fill SEED data rerequests
  */
-#define RELEASE "1.1"
+
+const char *VersionIdentString = "Release 1.1";
+
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -519,7 +521,7 @@ void ShowUsage()
   fprintf(stderr,
 "Usage: netreq <port>\n"
 "  Listens for rerequest packets on the specified port\n");
-  fprintf(stderr, "Version %s  %s\n", RELEASE, __DATE__);
+  fprintf(stderr, "%s  %s\n", VersionIdentString, __DATE__);
 } // ShowUsage()
 
 int main(argc,argv)

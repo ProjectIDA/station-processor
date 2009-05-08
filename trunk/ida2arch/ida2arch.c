@@ -4,6 +4,9 @@ Date:    2 January 2008
 Purpose: convert IDA isi server feed to a ASL archive disk loop
          Modified from isi general purpose client
 ========================================================================*/
+const char *WHOAMI="ida2arch";
+const char *VersionIdentString = "Release 1.1";
+
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include <stdio.h>
 #include <string.h>
@@ -25,8 +28,6 @@ Purpose: convert IDA isi server feed to a ASL archive disk loop
 #define MAXCLIENT       1
 #define SEED_RECLEN     512
 
-#define RELEASE "1.1"
-const char *WHOAMI="ida2arch";
 int gDebug=0;
 
 #define LOCALBUFLEN SEED_RECLEN
@@ -403,7 +404,7 @@ static char *VerboseHelp =
     fprintf(stderr, "\n");
     fprintf(stderr, "%s", VerboseHelp);
     fprintf(stderr, "default server is `%s'\n", DEFAULT_SERVER);
-    fprintf(stderr, "Version %s  %s\n", RELEASE, __DATE__);
+    fprintf(stderr, "%s  %s\n", VersionIdentString, __DATE__);
     exit(1);
 
 } // ShowUsage()
@@ -498,7 +499,7 @@ FILE *fp_seq;
     }
     LogSNCL(station, network, channel, location);
 
-    if (VERBOSE)  fprintf(stderr, "Version %s  %s\n", RELEASE, __DATE__);
+    if (VERBOSE)  fprintf(stderr, "%s  %s\n", VersionIdentString, __DATE__);
 
     request = UNKNOWN;
     if (strcasecmp(req, "raw") == 0) {

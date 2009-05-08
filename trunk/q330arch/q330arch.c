@@ -25,7 +25,7 @@ mmddyy who Changes
 050809 fcs Add Release number to ShowUsage
 ******************************************************************************/
 #define WHOAMI "q330arch"
-#define RELEASE  "1.2"
+const char *VersionIdentString = "Release 1.2";
 
 #define _REENTRANT
 #include <pthread.h>
@@ -72,7 +72,7 @@ void ShowUsage()
     fprintf(stderr,
 "    Optionaly start server in debug mode\n");
     fprintf(stderr,
-"Version %s  %s\n", RELEASE, __DATE__);
+"Version %s  %s\n", VersionIdentString, __DATE__);
 } // ShowUsage()
 
 //////////////////////////////////////////////////////////////////////////////

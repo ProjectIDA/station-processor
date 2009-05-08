@@ -12,7 +12,7 @@ mmddyy who Changes
 041009 fcs Create skeleton
 ******************************************************************************/
 #define FILENAME "falcon"
-#define RELEASE "1.0"
+const char *VersionIdentString = "Release 1.0";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,7 +59,7 @@ void ShowUsage()
 "    <falcon IP>     -- IP address of falcon controller\n"
 "    <falcon port>   -- Port on falcon to connect to\n"
     );
-    fprintf(stderr, "Version %s  %s\n", RELEASE, __DATE__);
+    fprintf(stderr, "%s  %s\n", VersionIdentString, __DATE__);
 } // ShowUsage()
 
 //////////////////////////////////////////////////////////////////////////////

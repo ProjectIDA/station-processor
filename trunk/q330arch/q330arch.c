@@ -22,9 +22,10 @@ mmddyy who Changes
 032607 fcs Creation
 020808 fcs Converted fork calls to pthread_create calls
 031709 fcs Add pthread_detach calls to free up thread memory after halting
+050809 fcs Add Release number to ShowUsage
 ******************************************************************************/
 #define WHOAMI "q330arch"
-#define VERSION_DATE  "8 February 2008"
+#define RELEASE  "1.2"
 
 #define _REENTRANT
 #include <pthread.h>
@@ -56,17 +57,22 @@ static struct s_mapstatus *mapstatus=NULL;
 //////////////////////////////////////////////////////////////////////////////
 void ShowUsage()
 {
-    printf(
+    fprintf(stderr,
 "Usage:\n");
-    printf(
+    fprintf(stderr,
 "  q330arch <configfile> [debug]\n");
-    printf("    Starts log seed message server as a daemon\n");
-    printf(
+    fprintf(stderr,
+"    Starts log seed message server as a daemon\n");
+    fprintf(stderr,
 "      <configfile>\n");
-    printf("    Usually /etc/q330/DLG1/diskloop.config\n");
-    printf(
+    fprintf(stderr,
+"    Usually /etc/q330/DLG1/diskloop.config\n");
+    fprintf(stderr,
 "      [debug]\n");
-    printf("    Optionaly start server in debug mode\n");
+    fprintf(stderr,
+"    Optionaly start server in debug mode\n");
+    fprintf(stderr,
+"Version %s  %s\n", RELEASE, __DATE__);
 } // ShowUsage()
 
 //////////////////////////////////////////////////////////////////////////////

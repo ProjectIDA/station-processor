@@ -9,7 +9,7 @@ mmddyy who Changes
 020807 fcs Creation
 ******************************************************************************/
 #define FILENAME "dlutil"
-#define VERSION_DATE  "8 February 2007"
+#define VERSION "1.2"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,6 +43,7 @@ int main (int argc, char **argv)
     printf("    Start and end dates are yyyy,ddd,hh:mm:ss.ssss\n");
     printf("    Without timespan it lists all contiguous time blocks\n");
     printf("    With timespan it lists range of records within timespan\n");
+    fprintf(stderr, "Version %s  %s\n", VERSION, __DATE__);
     exit(1);
   }
 

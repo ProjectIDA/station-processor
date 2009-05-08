@@ -36,7 +36,7 @@ mmddyy who Changes
 031208 fcs Creation
 ******************************************************************************/
 #define WHOAMI "dispstatus"
-#define VERSION_DATE  "12 March 2008"
+#define VERSION "1.2"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -132,6 +132,7 @@ void ShowUsage()
   fprintf(stderr, "Usage: %s <serial port> [debug]\n", WHOAMI);
   fprintf(stderr, "  <serial port> usually /dev/ttyS3 or /dev/ttyS0\n");
   fprintf(stderr, "  debug for output to screen, no daemonizing\n");
+  fprintf(stderr, "Version %s  %s\n", VERSION, __DATE__);
 }
 
 //////////////////////////////////////////////////////////////////////////////

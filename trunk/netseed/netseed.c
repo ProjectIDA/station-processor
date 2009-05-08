@@ -1,6 +1,8 @@
 /*
   Network server program to fill SEED data rerequests
  */
+#define RELEASE "1.1"
+
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1326,6 +1328,12 @@ void process__request()
  write_log_record() ;
 } // process__reqeust()
 
+void ShowUsage()
+{
+  fprintf(stderr,"Usage: netseed <port> [debug]\n");
+  fprintf(stderr, "Version %s  %s\n", RELEASE, __DATE__);
+} // ShowUsage()
+
 int main(argc,argv)
 char *argv[];
 int argc;
@@ -1337,13 +1345,13 @@ int argc;
 
  if (argc < 2 || argc > 3)
  {
-  fprintf(stderr,"Usage: %s <port> [debug]\n", argv[0]);
+  ShowUsage();
   exit(100);
  }
 
  if (argc == 3 && strcmp(argv[2], "debug") != 0)
  {
-  fprintf(stderr,"Usage: %s <port> [debug]\n", argv[0]);
+  ShowUsage();
   exit(100);
  }
  if (argc == 3)

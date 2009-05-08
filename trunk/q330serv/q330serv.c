@@ -29,9 +29,10 @@ mmddyy who Changes
 111907 fcs Convert to q330serv working with q330arch to merge multiple q330s
 041408 fcs Add status information to mapstatus shared memory region
 122208 fcs Give more time to shutdown server and flush data queues
+050809 fcs Add release number to ShowUsage
 ******************************************************************************/
 #define WHOAMI "q330serv"
-#define VERSION_DATE  "22 December 2008"
+#define RELEASE  "1.2"
 
 #include "globals.h"
 #include "libtypes.h"
@@ -121,6 +122,7 @@ void ShowUsage()
   fprintf(stderr, "Usage: %s <configdir> [debug]\n", WHOAMI);
   fprintf(stderr, "  <configdir> holds diskloop.config and seneca.config\n");
   fprintf(stderr, "  debug for output to screen, no daemonizing\n");
+  fprintf(stderr, "Version %s  %s\n", RELEASE, __DATE__);
 }
 
 int main (int argc, char **argv)

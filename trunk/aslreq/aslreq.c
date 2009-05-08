@@ -13,6 +13,9 @@
     RMSREQ <station>.[<location>-]<channel> <year>/<month>/<day> <hour>:<min>:<sec> <samples> [<loglocation>-]<logchannel>
 
  */
+
+#define VERSION "1.1"
+
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -977,6 +980,7 @@ int argc;
  if (argc < 2 || argc > 3 || (argc == 3 && strcmp(argv[2], "debug") != 0))
  {
   fprintf(stderr, "Usage:  %s <portnumber> [ debug ]\n", argv[0]);
+  fprintf(stderr, "Version %s  %s\n", VERSION, __DATE__);
   exit(100);
  }
  port_number = atol(argv[1]);

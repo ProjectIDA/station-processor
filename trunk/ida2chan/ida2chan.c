@@ -9,7 +9,7 @@ mmddyy who Changes
 080207 fcs Creation
 ******************************************************************************/
 #define WHOAMI "ida2chan"
-#define VERSION_DATE  "2 August 2007"
+#define RELEASE "1.1"
 
 #include <stdio.h>
 #include <string.h>
@@ -140,10 +140,15 @@ char          *loc          // return Location ID
 
 void ShowUsage()
 {
-  printf("Usage: %s <idadlname>\n", WHOAMI);
-  printf("  <idadlname> id of ida disk loop\n");
-  printf(" Appends seed records from ida disk loop into indivdual channel\n");
-  printf(" files in the working directory.\n");
+  fprintf(stderr,
+"Usage: %s <idadlname>\n", WHOAMI);
+  fprintf(stderr,
+"  <idadlname> id of ida disk loop\n");
+  fprintf(stderr,
+" Appends seed records from ida disk loop into indivdual channel\n");
+  fprintf(stderr,
+" files in the working directory.\n");
+  fprintf(stderr,"Version %s  %s\n", RELEASE, __DATE__);
 }
 
 
@@ -252,11 +257,13 @@ int main (int argc, char **argv)
     minute = (int)pheader->minute;
     second = (int)pheader->seconds;
     tmsec = ntohs(pheader->tenth_millisec);
+/*
     int *int2x32;
     int2x32 = (int *)&local.raw.hdr.seqno.counter;
     printf("%08x %08x %08x %s %s/%s %04d,%03d,%02d:%02d:%02d.%04d\n",
           local.raw.hdr.seqno.signature, int2x32[1], int2x32[0],
           station, loc, chan, year, doy, hour, minute, second, tmsec);
+*/
 
   } // for each disk loop record
 

@@ -9,7 +9,7 @@ mmddyy who Changes
 020509 fcs Creation
 ******************************************************************************/
 #define WHOAMI "isirstat"
-#define VERSION_DATE  "5 February 2009"
+#define RELEASE "1.1"
 
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include <stdio.h>
@@ -88,11 +88,12 @@ char          *loc          // return Location ID
 
 void ShowUsage()
 {
-  printf("Usage: %s isi=<host> [port=<port>] [<site>]\n", WHOAMI);
-  printf(" Displays status information about a remote isi disk loop\n");
-  printf(" port defaults to 39136\n");
-  printf(" site defaults to the name reported by the remote server\n");
-  printf(" Only works with 512 byte miniseed based isi disk loop\n");
+  fprintf(stderr,"Usage: %s isi=<host> [port=<port>] [<site>]\n", WHOAMI);
+  fprintf(stderr," Displays status information about a remote isi disk loop\n");
+  fprintf(stderr," port defaults to 39136\n");
+  fprintf(stderr," site defaults to the name reported by the remote server\n");
+  fprintf(stderr," Only works with 512 byte miniseed based isi disk loop\n");
+  fprintf(stderr,"Version %s  %s\n", RELEASE, __DATE__);
 }
 
 

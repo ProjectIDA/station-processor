@@ -11,6 +11,7 @@ Purpose: convert IDA isi sever feed to a LISS feed
            NOTE: Only supports single client.  If the client disconnects
              then it will pick up back where it left off when it reconnects
 ========================================================================*/
+#define RELEASE "1.1"
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include "isi.h"
 #include "util.h"
@@ -528,13 +529,14 @@ static char *VerboseHelp =
 "ida2liss raw=pfo beg=45b566150000000000a613a0 end=45b5661500000000009ea391\n"
 "\n";
 
-    fprintf(stderr,"usage: %s ", myname);
+    fprintf(stderr,"Usage: %s ", myname);
     fprintf(stderr, "[ -v server=string isiport=int log=string debug=int ] ");
     fprintf(stderr, "[ depth=int filter=string whitelist=string keepalive=int]");
     fprintf(stderr, "lissport=int raw[=spec] [beg=str end=str]\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "%s", VerboseHelp);
     fprintf(stderr, "default server is `%s'\n", DEFAULT_SERVER);
+    fprintf(stderr, "Version %s  %s\n", RELEASE, __DATE__);
     exit(1);
 
 } // help()

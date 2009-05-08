@@ -12,7 +12,7 @@ mmddyy who Changes
 041009 fcs Create skeleton
 ******************************************************************************/
 #define FILENAME "falcon"
-#define VERSION_DATE  "10 April 2009"
+#define RELEASE "1.0"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,9 +49,9 @@ void daemonize();
 //////////////////////////////////////////////////////////////////////////////
 void ShowUsage()
 {
-    printf(
+    fprintf(stderr,
 "Usage:\n");
-    printf(
+    fprintf(stderr,
 "  falcon <configfile> <falcon IP> <falcon port> [<debug>]\n"
 "         Retrieves status information from falcon and sends it via opaque\n"
 "         seed records.\n"
@@ -59,6 +59,7 @@ void ShowUsage()
 "    <falcon IP>     -- IP address of falcon controller\n"
 "    <falcon port>   -- Port on falcon to connect to\n"
     );
+    fprintf(stderr, "Version %s  %s\n", RELEASE, __DATE__);
 } // ShowUsage()
 
 //////////////////////////////////////////////////////////////////////////////

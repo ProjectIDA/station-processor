@@ -20,9 +20,10 @@ mmddyy who Changes
 ==============================================================================
 032607 fcs Creation
 053008 fcs Remove daemon run options, q330arch serves this funcition now
+050809 fcs Add release number to Usage help
 ******************************************************************************/
 #define FILENAME "log330"
-#define VERSION_DATE  "10 April 2007"
+#define RELEASE "1.1"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,6 +49,7 @@ void ShowUsage()
     printf(
 "  log330 <configfile> msg 'message'\n");
     printf("    Sends the message string to the seed log server\n");
+    printf("Version %s  %s\n", RELEASE, __DATE__);
 } // ShowUsage()
 
 //////////////////////////////////////////////////////////////////////////////

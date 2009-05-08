@@ -25,7 +25,7 @@ Purpose: convert IDA isi server feed to a ASL archive disk loop
 #define MAXCLIENT       1
 #define SEED_RECLEN     512
 
-char *VersionIdentString="ida2arch 1.0";
+#define RELEASE "1.1"
 const char *WHOAMI="ida2arch";
 int gDebug=0;
 
@@ -362,7 +362,7 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
       fprintf(stderr, "%llu packets received\n", count);
 } // raw()
 
-static void help(char *myname)
+static void ShowUsage(char *myname)
 {
 static char *VerboseHelp = 
 "Program to serve a single liss feed using IDA disk loop as a source.\n"
@@ -396,16 +396,17 @@ static char *VerboseHelp =
 "ida2arch raw=pfo beg=45b566150000000000a613a0 end=45b5661500000000009ea391\n"
 "\n";
 
-    fprintf(stderr,"usage: %s ", myname);
+    fprintf(stderr,"Usage: %s ", myname);
     fprintf(stderr, "[-v] [server=string] [isiport=int] [log=string]\n");
     fprintf(stderr, "  [configdir=string] [filter=string] [debug=int]\n");
     fprintf(stderr, "  raw[=spec] [beg=str] [end=str]\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "%s", VerboseHelp);
     fprintf(stderr, "default server is `%s'\n", DEFAULT_SERVER);
+    fprintf(stderr, "Version %s  %s\n", RELEASE, __DATE__);
     exit(1);
 
-} // help()
+} // ShowUsage()
 
 int main(int argc, char **argv)
 {
@@ -469,14 +470,14 @@ FILE *fp_seq;
            if (gDebug)
            {
               fprintf(stderr, "%s: unrecognized argument: '%s'\n", argv[0], argv[i]);
-              help(argv[0]);
+              ShowUsage(argv[0]);
            }
         }
     }
 
     if (req == NULL)
     {
-      help(argv[0]);
+      ShowUsage(argv[0]);
       exit(1);
     }
 
@@ -497,7 +498,7 @@ FILE *fp_seq;
     }
     LogSNCL(station, network, channel, location);
 
-    if (VERBOSE) fprintf(stderr, "%s %s\n", argv[0], VersionIdentString);
+    if (VERBOSE)  fprintf(stderr, "Version %s  %s\n", RELEASE, __DATE__);
 
     request = UNKNOWN;
     if (strcasecmp(req, "raw") == 0) {
@@ -508,7 +509,7 @@ FILE *fp_seq;
         SiteSpec = req + strlen("raw=");
         if (strlen(SiteSpec) == 0) SiteSpec = station;
     } else {
-        help(argv[0]);
+        ShowUsage(argv[0]);
     }
 
     // Check filter string for easy to find syntax errors
@@ -603,7 +604,7 @@ FILE *fp_seq;
         raw(server, &par, compress, &begseqno, &endseqno, SiteSpec);
         break;
       default:
-        help(argv[0]);
+        ShowUsage(argv[0]);
     } // switch request
 
     exit(0);

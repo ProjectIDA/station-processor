@@ -1,6 +1,7 @@
 /*
   Network server program to fill SEED data rerequests
  */
+#define RELEASE "1.1"
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -513,6 +514,14 @@ void process__request()
  write_log_record() ;
 } // process__reqeust()
 
+void ShowUsage()
+{
+  fprintf(stderr,
+"Usage: netreq <port>\n"
+"  Listens for rerequest packets on the specified port\n");
+  fprintf(stderr, "Version %s  %s\n", RELEASE, __DATE__);
+} // ShowUsage()
+
 int main(argc,argv)
 char *argv[];
 int argc;
@@ -527,7 +536,7 @@ int argc;
  char *retmsg ;
 
  if (argc!=2) {
-  fprintf(stderr,"Missing port argument\n");
+  ShowUsage();
   exit(100);
  }
  port_number = atol(argv[1]);

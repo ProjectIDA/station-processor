@@ -588,8 +588,6 @@ int main (int argc, char **argv)
   if (argc < 2 || argc > 3)
   {
     ShowUsage();
-    fprintf(stderr, "%s: line %d: %s: %s\n",
-        __FILE__, __LINE__, __DATE__, "test");
     exit(1);
   }
 

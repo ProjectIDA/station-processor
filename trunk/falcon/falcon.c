@@ -268,8 +268,15 @@ int main (int argc, char **argv)
       break;
 
     /* poll the Falcon for data */
-    alarm_poll(alarm_lines, url_str, &st_info);
-    csv_poll_channels(csv_buffers, url_str, &st_info);
+    // Due to how we plan on handling de-duplication of
+    // alarms and csv data we will need to turn this into
+    // a single call. The CSV data is going to tell us
+    // how to handle the alarm messages.
+    // 
+    // If there is NOT CSV data, we don't record alarm messages
+    // If there IS CSV data, we record only the alarm messages
+    // from the time period contained in the current CSV data.
+    poll_falcon(csv_buffers, alarm_lines, url_str, &st_info);
 
     unslept = sleep(interval);
     fprintf(stdout, "slept %u seconds %s\n", (interval - unslept),

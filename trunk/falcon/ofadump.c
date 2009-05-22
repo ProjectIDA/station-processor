@@ -9,6 +9,7 @@
  */
 
 #include <ctype.h>
+#include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -25,7 +26,8 @@
 #include <record.h>
 #include <tokens.h>
 
-void print_usage( char **args, char *msg );
+void print_usage( char **args, char *msg, ... );
+int verify_int( char* arg_str, int* value );
 
 int gDebug = 1;
 
@@ -62,8 +64,14 @@ int main ( int argc, char **argv )
     bool data_complete = false;
 
     // Arguments
+    bool display_info   = false;
     bool display_raw    = false;
     bool display_header = false;
+    bool limiting       = false;
+    int first_records   = 0;
+    int last_records    = 0;
+    int record_index    = 0;
+    int record_limit    = 0;
 
     csv_buffer_t* csv_buffer = NULL;
     csv_row_t* csv_row = NULL;
@@ -76,13 +84,40 @@ int main ( int argc, char **argv )
 
     file_name = argv[argc - 1];
 
-    while ((c = getopt( argc, argv, "hr" )) != -1) {
+    while ((c = getopt( argc, argv, "hi:l:rF:IL:" )) != -1) {
         switch (c) {
             case 'h':
                 display_header = true;
                 break;
+            case 'i':
+                if (!verify_int(optarg, &record_index)) {
+                    print_usage( argv, "E: record index: invalid value '%s'", optarg );
+                    goto clean;
+                }
+                break;
+            case 'l':
+                if (!verify_int(optarg, &record_limit)) {
+                    print_usage( argv, "E: record limit: invalid value '%s'", optarg );
+                    goto clean;
+                }
+                break;
             case 'r':
                 display_raw = true;
+                break;
+            case 'F':
+                if (!verify_int(optarg, &first_records)) {
+                    print_usage( argv, "E: first records: invalid value '%s'", optarg );
+                    goto clean;
+                }
+                break;
+            case 'I':
+                display_info = true;
+                break;
+            case 'L':
+                if (!verify_int(optarg, &last_records)) {
+                    print_usage( argv, "E: last records: invalid value '%s'", optarg );
+                    goto clean;
+                }
                 break;
             default:
                 fprintf( stderr, "Got Filename\n" );
@@ -90,12 +125,22 @@ int main ( int argc, char **argv )
         }
     }
 
-    get_seed_file_info( file_name, &file_info, 1 );
+    get_seed_file_info( file_name, &file_info, 0 );
     if (!file_info.good) {
         fprintf( stderr, "File '%s' is invalid.\n", file_name );
         goto clean;
     }
     record_size = file_info.record_size;
+
+    if ( display_info ) {
+        printf( "Summary for file '%s':\n", file_name );
+        print_seed_time( "  Start Time   : ", &(file_info.start_time), "\n" );
+        print_seed_time( "  End Time     : ", &(file_info.end_time), "\n" );
+        printf( "  File Length  : %lu\n", file_info.length );
+        printf( "  Record Size  : %lu\n", file_info.record_size );
+        printf( "  Num. Records : %lu\n", (file_info.length / file_info.record_size) );
+        goto clean;
+    }
 
     buffer = malloc( (size_t)(BUFFER_SIZE) );
     if ( !buffer ) {
@@ -108,8 +153,32 @@ int main ( int argc, char **argv )
         fprintf( stderr, "Unable to open file '%s' for reading.\n", file_name ); goto clean;
     }
 
+    if ( record_index ) {
+        if ( (record_index * file_info.record_size) >
+             (file_info.length - file_info.record_size) ) {
+            fprintf( stderr, "start record index is too large for this file\n" );
+        }
+        fseek( file_handle, record_index * record_size, SEEK_SET );
+    }
+
+    if ( first_records || last_records ) {
+        limiting = true;
+    }
+
     // Interpret header type, and break into opaque block types
     while ( !eof_reached ) {
+
+        if (limiting && !record_limit) {
+            if (first_records > 0) {
+                first_records--;
+            } else if (last_records > 0) {
+                fseek( file_handle, file_info.length - (last_records * record_size), SEEK_SET );
+                last_records--;
+            } else {
+                break;
+            }
+        }
+
         records_read = fread( buffer, record_size, 1, file_handle );
         file_position = ftell( file_handle );
 
@@ -222,6 +291,12 @@ int main ( int argc, char **argv )
                 }
             }
         }
+        if (record_limit) {
+            if (record_limit == 1) {
+                break;
+            }
+            record_limit--;
+        }
     } 
 
  clean:
@@ -237,12 +312,15 @@ int main ( int argc, char **argv )
     return 0;
 }
 
-void print_usage( char **args, char *msg ) 
+void print_usage( char **args, char *msg, ... ) 
 {
+    va_list arglist;
     const char *exec_name = "ofadump";
 
+    va_start(arglist, msg);
     if (msg) {
-        fprintf( stderr, "%s\n", msg );
+        vfprintf( stderr, msg, arglist );
+        fprintf( stderr, "\n" );
     }
     if (args && (*args)) {
         exec_name = *args;
@@ -250,8 +328,37 @@ void print_usage( char **args, char *msg )
 
     fprintf( stderr, "usage: %s [options] seed_file\n"
                      "      options:\n"
-                     "        -h  print opaque blockette headers \n"
-                     "        -r  print file contents as raw data\n",
+                     "        -h       -- print opaque blockette headers \n"
+                     "        -i INDEX -- start with record at INDEX\n"
+                     "        -l LIMIT -- display max of LIMIT records\n"
+                     "        -r       -- display file contents as raw data\n"
+                     "        -F COUNT -- display first COUNT records\n"
+                     "        -L COUNT -- display last COUNT records\n"
+                     "\n"
+                     "        -I       -- display file info then quit\n",
                      exec_name );
+}
+
+#define MAX_MATCHES 16
+int verify_int( char* arg_str, int* value ) {
+    int result = 0;
+    regex_t regex;
+    regmatch_t match_list[MAX_MATCHES];
+
+    if (!arg_str || !value) {
+        goto unclean;
+    }
+    if (regcomp(&regex, "^[+]?[0-9]+$", REG_EXTENDED | REG_NEWLINE)) {
+        goto unclean;
+    }
+    if (regexec(&regex, arg_str, (size_t)MAX_MATCHES, match_list, 0)) {
+        goto unclean;
+    }
+    *value = atoi(arg_str);
+    result = 1;
+
+ unclean:
+    regfree(&regex);
+    return result;
 }
 

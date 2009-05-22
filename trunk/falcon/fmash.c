@@ -25,11 +25,11 @@
  * Maximum size: 976 bytes
  */
 
-#define NO_CHANGE  0
-#define CHANGES_1  1
-#define CHANGES_2  2
-#define CHANGES_3  3
-#define NO_DATA    7
+#define NO_CHANGE   0x00  /* No deltas  */
+#define CHANGES_1   0x01  /* 1 delta    */
+#define CHANGES_2   0x02  /* 2 deltas   */
+#define CHANGES_3   0x03  /* 3 deltas   */
+#define NO_DATA     0x07  /* No data    */
 
 #define TYPE_AVERAGE  1
 #define TYPE_HIGH     2
@@ -158,47 +158,55 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
         {
             updated_rows  = NO_CHANGE;
 
-            // Calculate our delta values
-            delta_average = buffered_row->average - last_average;
-            delta_high    = buffered_row->high    - last_high;
-            delta_low     = buffered_row->low     - last_low;
+            if (buffered_row->empty)
+            {
+                updated_rows = NO_DATA;
+            }
+            else
+            {
+                // Calculate our delta values
+                delta_average = buffered_row->average - last_average;
+                delta_high    = buffered_row->high    - last_high;
+                delta_low     = buffered_row->low     - last_low;
 
-            // Only write the delta values to the compression buffer
-            // if they are different from the previous deltas
-            if (delta_average)
-            {
-                vint = int32_to_varint(delta_average);
-                vint.num[0] = (vint.num[0] & 0xfc) | TYPE_AVERAGE;
-                buffer_write(buf, vint.num, vint.bytes);
-                updated_rows++;
-                last_average = buffered_row->average;
-            }
-            if (delta_high)
-            {
-                vint = int32_to_varint(delta_high);
-                vint.num[0] = (vint.num[0] & 0xfc) | TYPE_HIGH;
-                buffer_write(buf, vint.num, vint.bytes);
-                updated_rows++;
-                last_high = buffered_row->high;
-            }
-            if (delta_low)
-            {
-                vint = int32_to_varint(delta_low);
-                vint.num[0] = (vint.num[0] & 0xfc) | TYPE_LOW;
-                buffer_write(buf, vint.num, vint.bytes);
-                updated_rows++;
-                last_low = buffered_row->low;
+                // Only write the delta values to the compression buffer
+                // if they are different from the previous deltas
+                if (delta_average)
+                {
+                    vint = int32_to_varint(delta_average);
+                    vint.num[0] = (vint.num[0] & 0xfc) | TYPE_AVERAGE;
+                    buffer_write(buf, vint.num, vint.bytes);
+                    updated_rows++;
+                    last_average = buffered_row->average;
+                }
+                if (delta_high)
+                {
+                    vint = int32_to_varint(delta_high);
+                    vint.num[0] = (vint.num[0] & 0xfc) | TYPE_HIGH;
+                    buffer_write(buf, vint.num, vint.bytes);
+                    updated_rows++;
+                    last_high = buffered_row->high;
+                }
+                if (delta_low)
+                {
+                    vint = int32_to_varint(delta_low);
+                    vint.num[0] = (vint.num[0] & 0xfc) | TYPE_LOW;
+                    buffer_write(buf, vint.num, vint.bytes);
+                    updated_rows++;
+                    last_low = buffered_row->low;
+                }
             }
             
-            // Update the bitmap with the number of deltas written
-            map_set(buf->content + 12, i, updated_rows);
+            // Update the bitmap
+            map_3_set(buf->content + 12, i, updated_rows);
             buffered_row = csv_row_destroy(buffered_row);
         }
         // If the timestamps do NOT match, note in the bitmap that 
         // we are missing a row at this minute
         else
         {
-            map_set(buf->content + 12, i, NO_DATA);
+            // Update the bitmap
+            map_3_set(buf->content + 12, i, (uint8_t)NO_DATA);
         }
         current_time += TM_MINUTE;
         element_count++;
@@ -288,7 +296,7 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
 
     size_t vint_bytes = 0;
 
-    uint8_t map;
+    uint8_t map = 0;
     uint8_t* p = NULL;
     uint8_t* rowmap = NULL;
 
@@ -298,7 +306,8 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
     uint16_t element_count = 0;
 
     p = raw_msh;
-    if (csv && raw_msh && length) {
+    if (csv && raw_msh && length)
+    {
         // Allocate csv_buffer and child structures
         p_csv = csv_buffer_init();
         if (!p_csv)
@@ -334,19 +343,21 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
         // Loop through the compressed buffer and re-construct 
         // the csv list
         current_time = start_time;
-        for (i = 0; i < (int)element_count; i++) {
-            map = map_get(rowmap, i);
+        for (i = 0; i < (int)element_count; i++)
+        {
+            map = map_3_get(rowmap, i);
             // If this is our first time through the loop or we have just
             // added a row to the list, then 'row' will be NULL, so
             // create a new row element
-            if (!row) {
+            if (!row)
+            {
                 row = csv_row_init();
-                if (!row) {
+                if (!row)
                     goto unclean;
-                }
             }
             // Handle the type of data we find in the map
-            switch (map) {
+            switch (map)
+            {
                 // If there are no deltas, the current row is the same
                 // as the previous row
                 case NO_CHANGE : 
@@ -366,8 +377,10 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
                     row->average = last_average;
                     row->high = last_high;
                     row->low = last_low;
-                    for (j = 0; j < map; j++) {
-                        switch(*p & 0x3) {
+                    for (j = 0; j < map; j++)
+                    {
+                        switch(*p & 0x3)
+                        {
                             case TYPE_AVERAGE :
                                 last_average += varint_to_int32(p, &vint_bytes);
                                 row->average = last_average;
@@ -400,21 +413,24 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
     p += vint_bytes;
 
     // Verify the final values
-    if (final_average != last_average) {
+    if (final_average != last_average)
+    {
         if (gDebug)
             fprintf(stderr, "falcon: mismatched start and end averages\n");
         else
             syslog(LOG_ERR, "falcon: mismatched start and end averages\n");
         goto unclean;
     }
-    if (final_high != last_high) {
+    if (final_high != last_high)
+    {
         if (gDebug)
             fprintf(stderr, "falcon: mismatched start and end highs\n");
         else
             syslog(LOG_ERR, "falcon: mismatched start and end highs\n");
         goto unclean;
     }
-    if (final_low != last_low) {
+    if (final_low != last_low)
+    {
         if (gDebug)
             fprintf(stderr, "falcon: mismatched start and end lows\n");
         else
@@ -665,19 +681,50 @@ int32_t varint_to_int32( uint8_t* integer, size_t* bytes )
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *
- *  The map_set() and map_get() functions store/recall 3-bit values
+ *  The map_4_set() and map_4_get() functions store/recall 4-bit values
+ *  to/from a buffer. The index determines where in the buffer the
+ *  4-bit value will be stored. The index is on 4-bit boundaries
+ *  within the buffer: 
+ *    index 0 points to bits 0-3, index 1 points to bits 4-7, etc.
+ * 
+ *  map_4_set() - stores the 4 least significant bits of 'value'
+ *              into 'map' at 'index'.
+ *  map_4_get() - returns the 4-bit value stored in 'map' at 'index'.
+ * 
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+void map_4_set( uint8_t* map, int index, uint8_t value )
+{
+    map += index / 2;
+    if (index % 2)
+        *(map) = (*(map) & 0x0f) | ((value & 0x0f) << 4);
+    else
+        *(map) = (*(map) & 0xf0) | (value & 0x0f);
+}
+
+uint8_t map_4_get( const uint8_t* map, int index )
+{
+    map += index / 2;
+    if (index % 2)
+        return ((*(map) >> 4) & 0x08);
+    else
+        return (*(map) & 0x08);
+}
+
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *
+ *  The map_3_set() and map_3_get() functions store/recall 3-bit values
  *  to/from a buffer. The index determines where in the buffer the
  *  3-bit value will be stored. The index is on 3-bit boundaries
  *  within the buffer: 
  *    index 0 points to bits 0-2, index 1 points to bits 3-5, etc.
  * 
- *  map_set() - stores the 3 least significant bits of 'value'
+ *  map_3_set() - stores the 3 least significant bits of 'value'
  *              into 'map' at 'index'.
- *  map_get() - returns the 3-bit value stored in 'map' at 'index'.
+ *  map_3_get() - returns the 3-bit value stored in 'map' at 'index'.
  * 
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-void map_set( uint8_t* map, int index, uint8_t value )
+void map_3_set( uint8_t* map, int index, uint8_t value )
 {
     int pos = 0;
     pos = (index / 8) * 3;
@@ -703,7 +750,7 @@ void map_set( uint8_t* map, int index, uint8_t value )
     }
 }
 
-uint8_t map_get( const uint8_t* map, int index )
+uint8_t map_3_get( const uint8_t* map, int index )
 {
     int pos = 0;
     pos = (index / 8) * 3;
@@ -730,4 +777,5 @@ uint8_t map_get( const uint8_t* map, int index )
             return 0;
     };
 }
+
 

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <syslog.h>
+#include <time.h>
 
 #include <alarm.h>
 #include <falcon.h>
@@ -54,6 +55,7 @@ alarm_context_t* alarm_context_init()
             alarm_list = NULL;
         } else {
             list_attributes_comparator(alarm_list, _alarm_list_comparator);
+            list_attributes_seeker(alarm_list, _alarm_list_seeker);
         }
     }
     return alarm_list;   
@@ -76,30 +78,13 @@ alarm_context_t* alarm_context_destroy( alarm_context_t* alarm_list )
 
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- *   Update the alarm list with the latest content from the
- *   Falcon. Make sure there are no duplicates, then write
- *   all new alarms to the diskloop.
+ *   Write all new alarms to the diskloop.
  */
-void alarm_poll( alarm_context_t* alarm_list, buffer_t* url_str, st_info_t* st_info )
+void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
+                    st_info_t* st_info )
 {
-    buffer_t* url = NULL;
-    buffer_t* buf = NULL;
     alarm_line_t* alarm = NULL;
-    const char* file_path = "/data/alarmhistory.txt";
     char* retmsg = NULL;
-
-    // Set up the csv directory url
-    url = buffer_init();
-    buffer_write(url, url_str->content, url_str->length);
-    buffer_write(url, (uint8_t*)file_path, strlen(file_path));
-    buffer_terminate(url);
-
-    // Get alarm file text
-    buf = buffer_init();
-    get_page((char*)url->content, buf);
-
-    // Getting alarm lines
-    alarm_filter_lines( alarm_list, buf );
 
     // Print each line in the filtered list
     list_iterator_stop(alarm_list);
@@ -137,25 +122,58 @@ void alarm_poll( alarm_context_t* alarm_list, buffer_t* url_str, st_info_t* st_i
         alarm = list_fetch(alarm_list);
         alarm = alarm_line_destroy(alarm);
     }
+}
+
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *   Update the alarm list with the latest content from the
+ *   Falcon. Make sure there are no duplicates.
+ */
+void alarm_poll( alarm_context_t* alarm_list, time_t start_time, time_t end_time,
+                 buffer_t* url_str, st_info_t* st_info )
+{
+    buffer_t* url = NULL;
+    buffer_t* buf = NULL;
+    const char* file_path = "/data/alarmhistory.txt";
+
+    // Set up the csv directory url
+    url = buffer_init();
+    buffer_write(url, url_str->content, url_str->length);
+    buffer_write(url, (uint8_t*)file_path, strlen(file_path));
+    buffer_terminate(url);
+
+    // Get alarm file text
+    buf = buffer_init();
+    get_page((char*)url->content, buf);
+
+    // Getting alarm lines
+    alarm_filter_lines( alarm_list, buf, start_time, end_time );
 
     url = buffer_destroy(url);
     buf = buffer_destroy(buf);
 }
 
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
  *  Strip out any lines that are internal Falcon issues, append
  *  the remaining lines to the alarm context list.
  */
-int alarm_filter_lines( alarm_context_t* alarm_list, buffer_t* buf )
+int alarm_filter_lines( alarm_context_t* alarm_list, buffer_t* buf,
+                        time_t start_time, time_t end_time )
 {
     int result = 1;
 
     regex_t regex;
     regmatch_t match_list[MAX_MATCHES];
     regmatch_t* match = NULL;
+    regmatch_t* time_match = NULL;
     buffer_t* line = NULL;
     alarm_line_t* line_element = NULL;
     char* content_string = NULL;
+    char tmp_char = '\0';
+    size_t time_si = 0;
+    size_t time_ei = 0;
+    struct tm time_struct;
 
     if (buffer_size(buf) && alarm_list) 
     {
@@ -171,10 +189,12 @@ int alarm_filter_lines( alarm_context_t* alarm_list, buffer_t* buf )
         while (!regexec(&regex, content_string, (size_t)MAX_MATCHES, match_list, 0)) 
         {
             match = match_list;
+            time_match = match_list + 4;
             if (match->rm_so && (match->rm_eo > match->rm_so)) 
             {
                 line_element = (alarm_line_t*)calloc(sizeof(alarm_line_t), 1);
-                if (!line_element) {
+                if (!line_element)
+                {
                     goto unclean;
                 }
                 line = buffer_init();
@@ -186,12 +206,28 @@ int alarm_filter_lines( alarm_context_t* alarm_list, buffer_t* buf )
                 line_element->hash = murmur_32(line_element->text, 
                                                strlen(line_element->text),
                                                HASH_SEED_32);
+                // Parse time
+                time_si = time_match->rm_so - match->rm_so;
+                time_ei = time_match->rm_eo - match->rm_so;
+                tmp_char = line_element->text[time_ei];
+                line_element->text[time_ei] = '\0'; // temporarily terminate at end of time
+                memset(&time_struct, 0, sizeof(struct tm));
+                strptime((const char*)(line_element->text + time_si),
+                         "%m/%d/%y %H:%M:%S", &time_struct);
+                line_element->timestamp = mktime(&time_struct);
+                line_element->text[time_ei] = tmp_char; // restore character
+
                 // If this is a duplicate message, throw it out
-                if (list_locate(alarm_list, line_element) > -1) {
+                if ((line_element->timestamp <  start_time)      ||
+                    (line_element->timestamp >= (end_time + 60)) ||
+                    (list_locate(alarm_list, line_element) > -1))
+                {
                     free(line_element->text);
                     free(line_element);
+                }
                 // Otherwise, add it to the list
-                } else {
+                else
+                {
                     list_append(alarm_list, line_element);
                     if ( list_size(alarm_list) > MAX_ALARMS )
                     {
@@ -224,5 +260,18 @@ int _alarm_list_comparator( const void* a, const void* b )
         return -1;
     }
     return 0;
+}
+
+int _alarm_list_seeker( const void* element, const void* indicator )
+{
+    if (!element || !indicator)
+        return 0;
+    if (((alarm_line_t*)element)->hash != ((alarm_line_t*)indicator)->hash)
+        return 0;
+    if (!((alarm_line_t*)indicator)->text || !((alarm_line_t*)element)->text)
+        return 0;
+    if (strcmp(((alarm_line_t*)indicator)->text, ((alarm_line_t*)element)->text))
+        return 0;
+    return 1;
 }
 

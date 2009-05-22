@@ -43,5 +43,8 @@ void get_seed_file_info( char *file_name,
                          seed_file_info* file_info, 
                          bool print_file_info );
 
+void print_seed_time( const char* prefix_msg, tseed_time* time, 
+                      const char* postfix_msg );
+
 #endif
 

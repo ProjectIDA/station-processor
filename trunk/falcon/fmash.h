@@ -7,11 +7,12 @@
 #include <stdint.h>
 #include <time.h>
 
-#define TM_MINUTE 60
-#define TM_HOUR 3600
+#define TM_MINUTE  60
+#define TM_HOUR  3600
 
-#define MAX_ROWS 60
+#define MAX_ROWS  60
 
+/* Variable Length Integer */
 typedef struct {
     size_t bytes;
     uint8_t num[5];
@@ -67,12 +68,21 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length );
 int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length );
 
 /* ==== Variable Length Integer Support ===================================== */
+// Because there is space reserved for information at the beginning of
+// the least significant byte the varint should be implemented with the
+// bytes in little-endian order. This makes it easy for the user to
+// check the reserved space without having to know the size of
+// the varint.
 int32_t varint_to_int32( uint8_t* integer, size_t* bytes );
 varint int32_to_varint( int32_t integer );
 
 /* ==== Store 3-bit values in a bitstream =================================== */
-void map_set( uint8_t* map, int index, uint8_t value );
-uint8_t map_get( const uint8_t* map, int index );
+void map_3_set( uint8_t* map, int index, uint8_t value );
+uint8_t map_3_get( const uint8_t* map, int index );
+
+/* ==== Store 4-bit values in a bitstream =================================== */
+void map_4_set( uint8_t* map, int index, uint8_t value );
+uint8_t map_4_get( const uint8_t* map, int index );
 
 #endif
 

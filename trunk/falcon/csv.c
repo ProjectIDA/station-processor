@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
+#include <syslog.h>
 
 #include <csv.h>
 #include <format_data.h>
@@ -44,12 +45,134 @@ csv_context_t* csv_context_destroy( csv_context_t* csv_buffer_list )
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *   Poll the Falcon for the latest data, and write it to 
+ *   the diskloop.
+ */
+void poll_falcon( csv_context_t* csv_buffer_list, alarm_context_t* alarm_lines,
+                  buffer_t* url_str, st_info_t* st_info)
+{
+    time_t start_time = 0x7fffffff;
+    time_t end_time   = 0x80000000;
+    csv_buffer_t* csv_buffer = NULL;
+
+    // Get the CSV data from the falcon
+    csv_poll(csv_buffer_list, url_str, st_info);
+    list_iterator_stop(csv_buffer_list);
+    list_iterator_start(csv_buffer_list);
+    while (list_iterator_hasnext(csv_buffer_list)) 
+    {
+        csv_buffer = list_iterator_next(csv_buffer_list);
+        if (csv_buffer->start_time < start_time)
+            start_time = csv_buffer->start_time;
+        if (csv_buffer->end_time > end_time)
+            end_time = csv_buffer->end_time;
+    }
+    if ( start_time >= end_time ) {
+        if (gDebug)
+            fprintf(stderr, "falcon: mismatched start and end timestamps\n");
+        else
+            syslog(LOG_ERR, "falcon: mismatched start and end timestamps\n");
+        return;
+    }
+
+    // Get the alarm history from the falcon
+    alarm_poll(alarm_lines, start_time, end_time, url_str, st_info);
+
+    // Archive the latest data
+    csv_archive(csv_buffer_list, url_str, st_info);
+    alarm_archive(alarm_lines, url_str, st_info);
+}
+
+void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
+                  st_info_t* st_info )
+{
+    csv_buffer_t* csv_buffer;
+    csv_row_t* csv_row;
+    uint8_t* msh_data;
+    size_t msh_length = 0;
+    csv_buffer_t* final_csv = NULL;
+
+    // Step through the csv buffers list
+    list_iterator_stop(csv_buffer_list);
+    list_iterator_start(csv_buffer_list);
+    while (list_iterator_hasnext(csv_buffer_list)) 
+    {
+        // Grab one buffer from the list
+        csv_buffer = list_iterator_next(csv_buffer_list);
+        while ((csv_buffer->end_time - csv_buffer->start_time) >= TM_HOUR) 
+        {
+            // Compress the csv data to FMash format
+            fmash_csv_to_msh(csv_buffer, &msh_data, &msh_length);
+            if (gDebug) {
+                // Brag about our accomplishments
+                fprintf(stdout, "compressed data size is %lu bytes\n", (unsigned long)msh_length);
+                format_data(msh_data, msh_length, 0, 0);
+
+                //* Verify the contents of the buffer are correct...
+                if (!fmash_msh_to_csv( &final_csv, msh_data, msh_length )) {
+                    fprintf(stdout, "FMash to CSV conversion failed\n");
+                    goto queue_it;
+                }
+                if (!final_csv) {
+                    fprintf(stdout, "final_csv not created\n");
+                    goto queue_it;
+                }
+                if (!final_csv->header) {
+                    fprintf(stdout, "final_csv->header not created\n");
+                    goto queue_it;
+                }
+                if (!final_csv->list) {
+                    fprintf(stdout, "final_csv->list not created\n");
+                    goto queue_it;
+                }
+                fprintf(stdout, "=== FMASH VERIFICATION =================================\n");
+                fprintf(stdout, "    file:         %s\n", csv_buffer->file_name);
+                fprintf(stdout, "    channel:      %d\n", csv_buffer->header->channel);
+                fprintf(stdout, "    description:  %s\n", csv_buffer->header->description);
+                fprintf(stdout, "    lines:        %d\n", list_size(final_csv->list));
+                list_iterator_stop(final_csv->list);
+                list_iterator_start(final_csv->list);
+                    fprintf(stdout, "        ------------- ----------- ----------- ----------- \n");
+                    fprintf(stdout, "       | Timestamp   | Average   | High      | Low       |\n");
+                    fprintf(stdout, "        ------------- ----------- ----------- ----------- \n");
+                while (list_iterator_hasnext(final_csv->list))
+                {
+                    csv_row = list_iterator_next(final_csv->list);
+                    fprintf(stdout, "       | % 10d | % 9d | % 9d | % 9d |\n", (int)csv_row->timestamp,
+                           csv_row->average, csv_row->high, csv_row->low );
+                }
+                printf("\n");
+                list_iterator_stop(final_csv->list);
+                final_csv = csv_buffer_destroy(final_csv);
+                fflush(stdout);
+                // */
+            }
+ queue_it:
+            // Add this as an opaque record
+            if (msh_data) {
+                QueueOpaque(msh_data, msh_length, st_info->station,
+                            st_info->network, st_info->channel,
+                            st_info->location, FALCON_IDSTRING);
+                free(msh_data);
+                msh_data = NULL;
+            }
+        }
+        csv_buffer = NULL;
+    }
+    list_iterator_stop(csv_buffer_list);
+
+    // Ensure all opaque blockettes have been sent
+    FlushOpaque();
+
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *   Update the csv context with the latest contents from the
  *   Falcon. For each buffer that has at least on hour worth of
  *   data, compress and write the data to the diskloop.
  */
-void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
-                        st_info_t* st_info )
+void csv_poll( csv_context_t* csv_buffer_list, buffer_t* url_str,
+               st_info_t* st_info )
 {
     list_t* file_list = NULL;
     buffer_t* buf = NULL;
@@ -58,14 +181,10 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
     const char* path = "/data/minute";
     csv_buffer_t csv_tmp;
     csv_buffer_t* csv_buffer;
-    csv_row_t* csv_row;
-    uint8_t* msh_data;
-    size_t msh_length = 0;
     int location = 0;
     uint64_t file_hash = 0LL;
 
     uint8_t buffer_found = 0;
-    csv_buffer_t* final_csv = NULL;
 
     int tally = 0;
 
@@ -144,78 +263,6 @@ void csv_poll_channels( csv_context_t* csv_buffer_list, buffer_t* url_str,
         file_name = NULL;
         csv_buffer = NULL;
     }
-
-    // Step through the csv buffers list
-    list_iterator_stop(csv_buffer_list);
-    list_iterator_start(csv_buffer_list);
-    while (list_iterator_hasnext(csv_buffer_list)) 
-    {
-        // Grab one buffer from the list
-        csv_buffer = list_iterator_next(csv_buffer_list);
-        while ((csv_buffer->end_time - csv_buffer->start_time) >= TM_HOUR) 
-        {
-            // Compress the csv data to FMash format
-            fmash_csv_to_msh(csv_buffer, &msh_data, &msh_length);
-            if (gDebug) {
-                // Brag about our accomplishments
-                fprintf(stdout, "compressed data size is %lu bytes\n", (unsigned long)msh_length);
-                format_data(msh_data, msh_length, 0, 0);
-
-                //* Verify the contents of the buffer are correct...
-                if (!fmash_msh_to_csv( &final_csv, msh_data, msh_length )) {
-                    fprintf(stdout, "FMash to CSV conversion failed\n");
-                    goto queue_it;
-                }
-                if (!final_csv) {
-                    fprintf(stdout, "final_csv not created\n");
-                    goto queue_it;
-                }
-                if (!final_csv->header) {
-                    fprintf(stdout, "final_csv->header not created\n");
-                    goto queue_it;
-                }
-                if (!final_csv->list) {
-                    fprintf(stdout, "final_csv->list not created\n");
-                    goto queue_it;
-                }
-                fprintf(stdout, "=== FMASH VERIFICATION =================================\n");
-                fprintf(stdout, "    file:         %s\n", csv_buffer->file_name);
-                fprintf(stdout, "    channel:      %d\n", csv_buffer->header->channel);
-                fprintf(stdout, "    description:  %s\n", csv_buffer->header->description);
-                fprintf(stdout, "    lines:        %d\n", list_size(final_csv->list));
-                list_iterator_stop(final_csv->list);
-                list_iterator_start(final_csv->list);
-                    fprintf(stdout, "        ------------- ----------- ----------- ----------- \n");
-                    fprintf(stdout, "       | Timestamp   | Average   | High      | Low       |\n");
-                    fprintf(stdout, "        ------------- ----------- ----------- ----------- \n");
-                while (list_iterator_hasnext(final_csv->list))
-                {
-                    csv_row = list_iterator_next(final_csv->list);
-                    fprintf(stdout, "       | % 10d | % 9d | % 9d | % 9d |\n", (int)csv_row->timestamp,
-                           csv_row->average, csv_row->high, csv_row->low );
-                }
-                printf("\n");
-                list_iterator_stop(final_csv->list);
-                final_csv = csv_buffer_destroy(final_csv);
-                fflush(stdout);
-                // */
-            }
- queue_it:
-            // Add this as an opaque record
-            if (msh_data) {
-                QueueOpaque(msh_data, msh_length, st_info->station,
-                            st_info->network, st_info->channel,
-                            st_info->location, FALCON_IDSTRING);
-                free(msh_data);
-                msh_data = NULL;
-            }
-        }
-        csv_buffer = NULL;
-    }
-    list_iterator_stop(csv_buffer_list);
-
-    // Ensure all opaque blockettes have been sent
-    FlushOpaque();
 
 // Clean up all temporary resources
 clean:

@@ -528,10 +528,10 @@ int list_locate(const list_t *l, const void *data) {
     struct list_entry_s *el;
     int pos = 0;
     
-    if (l->attrs.comparator != NULL) {
-        /* use comparator */
+    if (l->attrs.seeker != NULL) {
+        /* use seeker */
         for (el = l->head_sentinel->next; el != l->tail_sentinel; el = el->next, pos++) {
-            if (l->attrs.comparator(data, el->data) == 0) break;
+            if (l->attrs.seeker(data, el->data) == 0) break;
         }
     } else {
         /* compare references */

@@ -170,7 +170,7 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
     list_iterator_stop(csv_buffer_list);
 
     // Ensure all opaque blockettes have been sent
-    //FlushOpaque();
+    FlushOpaque();
 
 }
 

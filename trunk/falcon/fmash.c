@@ -125,14 +125,10 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
                 current_time = buffered_row->timestamp;
 
                 // Insert the channel
-                buf->content[0] = (csv->header->channel     ) & 0xff;
-                buf->content[1] = (csv->header->channel >> 8) & 0xff;
+                *((uint16_t*)(buf->content)) = htons(csv->header->channel);
 
                 // Insert the start time
-                buf->content[4] = (start_time      ) & 0xff;
-                buf->content[5] = (start_time >>  8) & 0xff;
-                buf->content[6] = (start_time >> 16) & 0xff;
-                buf->content[7] = (start_time >> 24) & 0xff;
+                *((uint32_t*)(buf->content + 4)) = htonl(start_time);
 
                 // Insert the first average
                 vint = int32_to_varint(first_average);
@@ -232,14 +228,10 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
     buffered_row = NULL;
 
     // Store the element count
-    buf->content[2] = (element_count     ) & 0xff;
-    buf->content[3] = (element_count >> 8) & 0xff;
+    *((uint16_t*)(buf->content + 2)) = htons(element_count);
 
     // Store the end time
-    buf->content[8]  = (end_time      ) & 0xff;
-    buf->content[9]  = (end_time >>  8) & 0xff;
-    buf->content[10] = (end_time >> 16) & 0xff;
-    buf->content[11] = (end_time >> 24) & 0xff;
+    *((uint32_t*)(buf->content + 8)) = htonl(end_time);
 
     // Add the final average
     vint = int32_to_varint(last_average);
@@ -319,14 +311,14 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
             goto unclean;
 
         // Extract the header information
-        p_csv->header->channel = *p | *(p+1) << 8;
+        p_csv->header->channel = ntohs(*((uint16_t*)p));
         p += sizeof(uint16_t);
-        element_count = *p | *(p+1) << 8;
+        element_count = ntohs(*((uint16_t*)p));
         p += sizeof(uint16_t);
-        start_time = *p | *(p+1) << 8 | *(p+2) << 16 | *(p+3) << 24;
-        p += sizeof(time_t);
-        end_time = *p | *(p+1) << 8 | *(p+2) << 16 | *(p+3) << 24;
-        p += sizeof(time_t);
+        start_time = (time_t)ntohl(*((uint32_t*)p));
+        p += sizeof(uint32_t);
+        end_time = (time_t)ntohl(*((uint32_t*)p));
+        p += sizeof(uint32_t);
         rowmap = p;
         p += ROW_MAP_SIZE;
         description_length = *p;

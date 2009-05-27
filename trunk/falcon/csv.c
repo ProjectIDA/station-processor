@@ -49,14 +49,21 @@ csv_context_t* csv_context_destroy( csv_context_t* csv_buffer_list )
  *   the diskloop.
  */
 void poll_falcon( csv_context_t* csv_buffer_list, alarm_context_t* alarm_lines,
-                  buffer_t* url_str, st_info_t* st_info)
+                  buffer_t* url_str, st_info_t* st_info, time_t initial_time)
 {
     time_t start_time = 0x7fffffff;
     time_t end_time   = 0x80000000;
     csv_buffer_t* csv_buffer = NULL;
 
+    if (initial_time) {
+        start_time = initial_time;
+        end_time = initial_time;
+    }
+
     // Get the CSV data from the falcon
-    csv_poll(csv_buffer_list, url_str, st_info);
+    csv_poll(csv_buffer_list, url_str, st_info, initial_time);
+
+    // Set the time constraints for the alarm history
     list_iterator_stop(csv_buffer_list);
     list_iterator_start(csv_buffer_list);
     while (list_iterator_hasnext(csv_buffer_list)) 
@@ -67,7 +74,8 @@ void poll_falcon( csv_context_t* csv_buffer_list, alarm_context_t* alarm_lines,
         if (csv_buffer->end_time > end_time)
             end_time = csv_buffer->end_time;
     }
-    if ( start_time >= end_time ) {
+    list_iterator_stop(csv_buffer_list);
+    if ( start_time > end_time ) {
         if (gDebug)
             fprintf(stderr, "falcon: mismatched start and end timestamps\n");
         else
@@ -162,7 +170,7 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
     list_iterator_stop(csv_buffer_list);
 
     // Ensure all opaque blockettes have been sent
-    FlushOpaque();
+    //FlushOpaque();
 
 }
 
@@ -172,7 +180,7 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
  *   data, compress and write the data to the diskloop.
  */
 void csv_poll( csv_context_t* csv_buffer_list, buffer_t* url_str,
-               st_info_t* st_info )
+               st_info_t* st_info, time_t initial_time )
 {
     list_t* file_list = NULL;
     buffer_t* buf = NULL;
@@ -253,7 +261,10 @@ void csv_poll( csv_context_t* csv_buffer_list, buffer_t* url_str,
                    (unsigned long)buf->length);
         }
         // Populate a csv_buffer with the contents of the file
-        csv_parse_file(csv_buffer, buf);
+        csv_parse_file(csv_buffer, buf, initial_time);
+        if (gDebug) {
+            printf("The CSV buffer contains %lu rows\n", csv_buffer->list->numels);
+        }
         // Empty our temporary buffers
         buffer_reset(buf);
         buffer_reset(url);
@@ -287,7 +298,7 @@ clean:
  *  Given the contents of a CSV file, populate/update a
  *  csv_buffer_t structure.
  */
-int csv_parse_file( csv_buffer_t* csv_buffer, buffer_t* buf )
+int csv_parse_file( csv_buffer_t* csv_buffer, buffer_t* buf, time_t initial_time )
 {
     int result = 1;
     regex_t regex;
@@ -393,7 +404,8 @@ int csv_parse_file( csv_buffer_t* csv_buffer, buffer_t* buf )
         csv_row->empty     = 0;
 
         // Make sure we don't duplicate lines
-        if (csv_buffer->end_time < csv_row->timestamp) 
+        if ( (csv_buffer->end_time < csv_row->timestamp) &&
+             ((!initial_time) || (csv_row->timestamp > initial_time)) )
         {
             if (csv_buffer->start_time == 0) 
             {

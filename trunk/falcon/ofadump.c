@@ -179,6 +179,8 @@ int main ( int argc, char **argv )
             }
         }
 
+        file_position = ftell( file_handle );
+        printf( "File position: %lu\n", file_position );
         records_read = fread( buffer, record_size, 1, file_handle );
         file_position = ftell( file_handle );
 
@@ -315,7 +317,7 @@ int main ( int argc, char **argv )
 void print_usage( char **args, char *msg, ... ) 
 {
     va_list arglist;
-    const char *exec_name = "ofadump";
+    const char *exec_name = args[0];
 
     va_start(arglist, msg);
     if (msg) {

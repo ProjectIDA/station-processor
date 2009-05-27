@@ -531,7 +531,7 @@ int list_locate(const list_t *l, const void *data) {
     if (l->attrs.seeker != NULL) {
         /* use seeker */
         for (el = l->head_sentinel->next; el != l->tail_sentinel; el = el->next, pos++) {
-            if (l->attrs.seeker(data, el->data) == 0) break;
+            if (l->attrs.seeker(data, el->data) != 0) break;
         }
     } else {
         /* compare references */

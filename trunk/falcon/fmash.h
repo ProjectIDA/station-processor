@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <time.h>
 
+#include <arpa/inet.h>
+
 #define TM_MINUTE  60
 #define TM_HOUR  3600
 

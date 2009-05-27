@@ -18,9 +18,11 @@ const char *VersionIdentString = "Release 1.0";
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <stdint.h>
 #include <syslog.h>
 #include <sys/resource.h>
 #include <sys/shm.h>
+#include <time.h>
 
 #include "alarm.h"
 #include "buffer.h"
@@ -173,6 +175,12 @@ int main (int argc, char **argv)
   unsigned int interval = 0;
   unsigned int unslept  = 0;
 
+  char seed[512];
+  csv_buffer_t* csv_buffer = NULL;
+  size_t offset = 0;
+  time_t first_time = 0;
+  char time_str[32];
+
   //char  msg[8192];
 
   // Url string for accessing falcon
@@ -231,7 +239,7 @@ int main (int argc, char **argv)
 
   user = station;
   pass = station;
-  // XXX: Comment the following out before releasing
+  // TODO: XXX: Comment the following out before releasing
   //* We are currently working on the ANMO Falcon
   user = name;
   pass = name;
@@ -259,6 +267,30 @@ int main (int argc, char **argv)
     interval = DEBUG_INTERVAL;
   }
 
+  // Read the last SEED record to initialize our csv context
+  memset(seed, 0, sizeof(seed));
+  if ((retmsg=ReadLast(st_info.station, st_info.channel, st_info.location, seed)) != NULL) {
+    fprintf(stderr, "%s: %s\n", FILENAME, retmsg);
+    exit(1);
+  }
+
+  csv_buffer = csv_buffer_init();
+
+  printf("Last SEED record (raw):\n");
+  format_data((uint8_t*)seed, 512, 0, 0);
+
+  // Find first blockette (1000)
+  offset = (size_t)ntohs(*(uint16_t*)(seed + offset + 46));
+  // Find next blockette (2000)
+  offset = (size_t)ntohs(*(uint16_t*)(seed + offset + 2));
+  // Beginning of data
+  offset += (size_t)ntohs(*(uint16_t*)(seed + offset + 6));
+  // Get the first time
+  first_time = (time_t)ntohl(*(uint32_t*)(seed + offset + 8));
+
+  strftime(time_str, 32, "%Y/%m/%d %H:%M:%S", localtime(&first_time));
+  printf("First time is [%li] %s\n", first_time, time_str);
+
   // Polling loop, which checks the Falcon for new data
   // every 'interval' seconds after the completion of
   // the previous check.
@@ -276,11 +308,15 @@ int main (int argc, char **argv)
     // If there is NOT CSV data, we don't record alarm messages
     // If there IS CSV data, we record only the alarm messages
     // from the time period contained in the current CSV data.
-    poll_falcon(csv_buffers, alarm_lines, url_str, &st_info);
+    poll_falcon(csv_buffers, alarm_lines, url_str, &st_info, first_time);
 
     unslept = sleep(interval);
     fprintf(stdout, "slept %u seconds %s\n", (interval - unslept),
             unslept ? "(sleep interrupted)" : "" );
+
+    if (first_time) {
+      first_time = 0;
+    }
   }
 
 clean:

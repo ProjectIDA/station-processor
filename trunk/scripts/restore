@@ -1,0 +1,110 @@
+#!/bin/bash
+USR="/usr/local/sbin"
+OPT="/opt/bin"
+
+
+# These functions accept a path to an executable
+# and return the version of that program. Multiple
+# functions are required, because different programs
+# have different ways of printing version information
+
+find_release () {
+
+   version=`strings $1 |egrep "^Release" | awk '{print $2}'`
+
+   if [ -z $version ]
+   then
+      # If no version, assume 1.0
+      version=1.0
+   fi
+
+   echo $version
+
+}
+
+find_version_dumpseed () {
+
+   version=`$1 2>&1 |head -1 | awk '{ gsub(/V/,""); print $2 }'`
+ 
+   if [ -z $version ]
+   then
+      # If no version, assume 1.0
+      version=1.0
+   fi
+   
+   echo $version
+}
+
+find_version_Seneca () {
+   echo "q" | /usr/local/sbin/Seneca > /tmp/Seneca 2>&1
+   version=`grep "Version " /tmp/Seneca | awk '{ print $3 }'`
+   echo "$version"
+}
+
+#
+# MAIN - program begins here
+#
+########################################
+
+echo 
+echo
+echo "Please enter name of executable you wish to restore: "
+echo "   Seneca, dispstatus, dlutil, dumpseed, ida2arch, ida2chan, "
+echo "   ida2liss, isid, isildl, isimkdl, isirstat, log330, netreq,"
+echo "   netreq, netseed, q330arch, or q330serv"
+echo
+
+read EXE 
+
+# Make sure binary exists
+echo "test -x $USR/$EXE || exit 0"
+
+echo
+echo "Please select the binary you would like to restore: "
+
+n=1
+for i in `ls $OPT/$EXE*`
+do
+   echo "    $n) $i"
+   EXES[$n]=$i
+   let "n +=1"
+done
+
+echo 
+echo -n "Enter a number: "
+read n 
+
+if  [ $n -gt ${#EXES[*]} -o  $n -le 0 ]
+then
+   echo "You must select a valid integer."
+   echo "Aborting."
+   exit
+fi
+ 
+echo 
+echo "Restoring ${EXES[$n]}...to /usr/local/sbin"
+echo 
+
+
+# Different programs have different methods for version strings
+case "$EXE" in
+Seneca)
+   USR_LOCAL_SBIN_VERS=`find_version_Seneca $USR/$EXE` 
+   ;;
+dumpseed)
+   USR_LOCAL_SBIN_VERS=`find_version_dumpseed $USR/$EXE` 
+   ;; 
+*)
+   USR_LOCAL_SBIN_VERS=`find_release $USR/$EXE`
+  ;; 
+esac
+
+
+# Copy the executable from /usr/local/sbin to /opt/bin
+echo "cp -pf $USR/$EXE $OPT/$EXE"_"$USR_LOCAL_SBIN_VERS "
+`cp -pf $USR/$EXE $OPT/$EXE"_"$USR_LOCAL_SBIN_VERS` 
+
+# Copy the executable from /opt/bin to /usr/local/sbin
+echo "cp -pf ${EXES[$n]} $USR/$EXE "
+`cp -pf ${EXES[$n]} $USR/$EXE `
+

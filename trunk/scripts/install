@@ -1,0 +1,69 @@
+HOME=/home/maint
+DEST=/usr/local/sbin
+#SRC=`ls -t /home/maint | head -1`
+
+do_install () { 
+# Make sure binary exists
+if [ ! -x $SRC_PATH ]
+then
+    echo "Error: Executable missing! Exiting..."
+    exit 0
+else 
+    echo "Okay..."
+    echo "Installing $SRC_PATH into $DEST."
+    cp -p $SRC_PATH $DEST
+fi
+}
+
+echo "Enter name of executable: "
+read SRC
+SRC_PATH="$HOME/$SRC"
+
+case "$SRC" in
+Seneca)
+   do_install
+   ;;
+dispstatus)
+   do_install
+   ;;
+dlutil)
+   do_install
+   ;;
+dumpseed)
+   do_install
+   ;;
+ida2chan)
+   do_install
+   ;;
+ida2liss)
+   do_install
+   ;;
+isid)
+   do_install
+   ;;
+isidl)
+   do_install
+   ;;
+isimkdl)
+   do_install
+   ;;
+log330)
+   do_install
+   ;;
+netreq)
+   do_install
+   ;;
+netseed)
+   do_install
+   ;;
+q330arch)
+   do_install
+   ;;
+q330serv)
+   do_install
+   ;;
+*)
+   echo "$SRC is not an authorized executable. Exiting..."
+  ;; 
+esac
+

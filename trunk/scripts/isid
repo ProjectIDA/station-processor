@@ -63,7 +63,25 @@ if [[ $# > 0 ]] ; then
     # Done processing current argument, get next one
     shift
   done
+
   kill -15 $best
+  echo "First attempt at killing pid: $best"
+
+  for i in 1 2 3
+  do  
+     # Per Frank wait two seconds,
+     # check if it's still running
+     # then send a second kill
+     sleep 2;
+     exe=`ps -p $best -o comm --no-header`
+     if [ "${exe}" != "" ] ; then
+         kill -15 $exe 
+         echo "Trying again... Killing pid $best"
+     else
+        exit
+     fi
+  done
+
 fi
 }
 

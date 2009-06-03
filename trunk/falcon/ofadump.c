@@ -75,6 +75,8 @@ int main ( int argc, char **argv )
 
     csv_buffer_t* csv_buffer = NULL;
     csv_row_t* csv_row = NULL;
+    
+    char time_string[32];
 
     // Ensure we received the file argument
     if ( argc < 2 ) {
@@ -271,6 +273,9 @@ int main ( int argc, char **argv )
                 if (msh_data && data_complete) {
                     data_complete = 0;
 
+                    fprintf(stdout, "\ncompressed data size is %lu bytes\n", (unsigned long)data_length);
+                    format_data(msh_data, data_length, 0, 0);
+
                     fmash_msh_to_csv(&csv_buffer, msh_data->content, msh_data->length);
                     printf("=== POST EXPANSION ======================================\n");
                     printf("    file:         %s\n", csv_buffer->file_name);
@@ -279,12 +284,13 @@ int main ( int argc, char **argv )
                     printf("    lines:        %d\n", list_size(csv_buffer->list));
                     list_iterator_stop(csv_buffer->list);
                     list_iterator_start(csv_buffer->list);
-                        printf("        ------------- ----------- ----------- ----------- \n");
-                        printf("       | Timestamp   | Average   | High      | Low       |\n");
-                        printf("        ------------- ----------- ----------- ----------- \n");
+                        printf("        ---------------------- ----------- ----------- ----------- \n");
+                        printf("       | Timestamp            | Average   | High      | Low       |\n");
+                        printf("        ---------------------- ----------- ----------- ----------- \n");
                     while (list_iterator_hasnext(csv_buffer->list)) {
                         csv_row = list_iterator_next(csv_buffer->list);
-                        printf("       | % 10d | % 9d | % 9d | % 9d |\n", (int)csv_row->timestamp,
+                        strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", localtime(&(csv_row->timestamp)));
+                        printf("       | %s | % 9d | % 9d | % 9d |\n", time_string,
                                csv_row->average, csv_row->high, csv_row->low );
                     }
                     list_iterator_stop(csv_buffer->list);

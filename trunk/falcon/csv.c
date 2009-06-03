@@ -100,6 +100,8 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
     size_t msh_length = 0;
     csv_buffer_t* final_csv = NULL;
 
+    char time_string[32];
+
     // Step through the csv buffers list
     list_iterator_stop(csv_buffer_list);
     list_iterator_start(csv_buffer_list);
@@ -140,13 +142,14 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
                 fprintf(stdout, "    lines:        %d\n", list_size(final_csv->list));
                 list_iterator_stop(final_csv->list);
                 list_iterator_start(final_csv->list);
-                    fprintf(stdout, "        ------------- ----------- ----------- ----------- \n");
-                    fprintf(stdout, "       | Timestamp   | Average   | High      | Low       |\n");
-                    fprintf(stdout, "        ------------- ----------- ----------- ----------- \n");
+                    fprintf(stdout, "        ---------------------- ----------- ----------- ----------- \n");
+                    fprintf(stdout, "       | Timestamp            | Average   | High      | Low       |\n");
+                    fprintf(stdout, "        ---------------------- ----------- ----------- ----------- \n");
                 while (list_iterator_hasnext(final_csv->list))
                 {
                     csv_row = list_iterator_next(final_csv->list);
-                    fprintf(stdout, "       | % 10d | % 9d | % 9d | % 9d |\n", (int)csv_row->timestamp,
+                    strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", localtime(&(csv_row->timestamp)));
+                    printf("       | %s | % 9d | % 9d | % 9d |\n", time_string,
                            csv_row->average, csv_row->high, csv_row->low );
                 }
                 printf("\n");

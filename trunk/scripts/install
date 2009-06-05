@@ -1,19 +1,94 @@
 HOME=/home/maint
 DEST=/usr/local/sbin
 #SRC=`ls -t /home/maint | head -1`
+OPT="/opt/bin"
+
 
 do_install () { 
 # Make sure binary exists
 if [ ! -x $SRC_PATH ]
 then
-    echo "Error: Executable missing! Exiting..."
+    echo "Error: Executable missing from $SRC_PATH! Exiting..."
     exit 0
 else 
+    # If a version of this exe already exists
+    # find the version and copy it to /opt/bin
+    if [ -x $DEST/$SRC ]
+    then
+        # Find version of existing binary
+        # Different programs have different methods for version strings
+        case "$SRC" in
+        Seneca)
+           USR_LOCAL_SBIN_VERS=`find_version_Seneca $DEST/$SRC` 
+           ;;
+        dumpseed)
+           USR_LOCAL_SBIN_VERS=`find_version_dumpseed $DEST/$SRC` 
+           ;; 
+        *)
+           USR_LOCAL_SBIN_VERS=`find_release $DEST/$SRC`
+          ;; 
+        esac
+        echo "User local sbin version: $USR_LOCAL_SBIN_VERS" 
+        if [ -n $USR_LOCAL_SBIN_VERS ] 
+        then
+            echo "cp -pf $DEST/$SRC $OPT/$SRC"_"$USR_LOCAL_SBIN_VERS"
+            `cp -pf $DEST/$SRC $OPT/$SRC"_"$USR_LOCAL_SBIN_VERS`
+        fi
+    else
+        echo "WARNING: could not find version info for $DEST/$SRC." 
+        ecoh "Overwriting..."
+    fi
+
     echo "Okay..."
     echo "Installing $SRC_PATH into $DEST."
     cp -p $SRC_PATH $DEST
 fi
 }
+
+# These functions accept a path to an executable
+# and return the version of that program. Multiple
+# functions are required, because different programs
+# have different ways of printing version information
+
+find_release () {
+
+   version=`strings $1 |egrep "^Release" | awk '{print $2}'`
+
+   if [ -z $version ]
+   then
+      # If no version, assume 1.0
+      version=1.0
+   fi
+
+   echo $version
+
+}
+
+find_version_dumpseed () {
+
+   version=`$1 2>&1 |head -1 | awk '{ gsub(/V/,""); print $2 }'`
+ 
+   if [ -z $version ]
+   then
+      # If no version, assume 1.0
+      version=1.0
+   fi
+   
+   echo $version
+}
+
+find_version_Seneca () {
+   echo "q" | /usr/local/sbin/Seneca > /tmp/Seneca 2>&1
+   version=`grep "Version " /tmp/Seneca | awk '{ print $3 }'`
+   echo "$version"
+}
+
+#
+# MAIN - program begins here
+#
+########################################
+
+
 
 echo "Enter name of executable: "
 read SRC
@@ -41,10 +116,13 @@ ida2liss)
 isid)
    do_install
    ;;
-isidl)
+isildl)
    do_install
    ;;
 isimkdl)
+   do_install
+   ;;
+isirstat)
    do_install
    ;;
 log330)

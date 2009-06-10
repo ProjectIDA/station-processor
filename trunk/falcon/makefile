@@ -15,9 +15,10 @@ OFADUMP_LIBS = $(LIBS)
 SRCS = falcon.c logclient.c seedmsg.c daemonize.c \
        alarm.c buffer.c csv.c fmash.c format_data.c \
        get.c herror.c http.c llist.c murmur.c \
-       options.c simclist.c url.c util.c
+       options.c simclist.c url.c util.c \
+       falcon_structures.c
 OFADUMP_SRCS = ofadump.c record.c format_data.c jio.c fmash.c \
-               buffer.c simclist.c
+               falcon_structures.c buffer.c simclist.c
 
 OBJS = $(SRCS:%.c=%.o)
 OFADUMP_OBJS = $(OFADUMP_SRCS:%.c=%.o)

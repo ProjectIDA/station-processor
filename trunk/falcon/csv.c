@@ -12,38 +12,6 @@
 #include <get.h>
 #include <murmur.h>
 
-/* ===== CSV Context Handlers =========================== */
-csv_context_t* csv_context_init()
-{
-    csv_context_t* csv_buffer_list = NULL;
-    csv_buffer_list = (csv_context_t*)malloc(sizeof(csv_context_t));
-    if (csv_buffer_list) {
-        if (list_init(csv_buffer_list) == -1) {
-            free(csv_buffer_list);
-            csv_buffer_list = NULL;
-        } else {
-            list_attributes_seeker( csv_buffer_list,  _buffer_list_seeker );
-            list_attributes_comparator( csv_buffer_list,  _buffer_list_comparator );
-        }
-    }
-    return csv_buffer_list;   
-}
-
-csv_context_t* csv_context_destroy( csv_context_t* csv_buffer_list )
-{
-    csv_buffer_t* csv_buffer = NULL;
-    if (csv_buffer_list) {
-        while (!list_empty(csv_buffer_list)) {
-            csv_buffer = list_fetch(csv_buffer_list);
-            csv_buffer = csv_buffer_destroy(csv_buffer);
-        }
-        list_destroy(csv_buffer_list);
-        free(csv_buffer_list);
-        csv_buffer_list = NULL;
-    }
-    return csv_buffer_list;
-}
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *   Poll the Falcon for the latest data, and write it to 
  *   the diskloop.
@@ -86,9 +54,15 @@ void poll_falcon( csv_context_t* csv_buffer_list, alarm_context_t* alarm_lines,
     // Get the alarm history from the falcon
     alarm_poll(alarm_lines, start_time, end_time, url_str, st_info);
 
+    // Re-order alarms from earliest to latest
+    list_sort(alarm_lines, 1);
+
     // Archive the latest data
     csv_archive(csv_buffer_list, url_str, st_info);
-    alarm_archive(alarm_lines, url_str, st_info);
+    alarm_archive(alarm_lines, url_str, st_info, start_time);
+
+    // Ensure all opaque blockettes have been sent
+    FlushOpaque();
 }
 
 void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
@@ -160,7 +134,7 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
             }
  queue_it:
             // Add this as an opaque record
-            if (msh_data) {
+            if (msh_data && msh_length) {
                 QueueOpaque(msh_data, msh_length, st_info->station,
                             st_info->network, st_info->channel,
                             st_info->location, FALCON_IDSTRING);
@@ -171,10 +145,6 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
         csv_buffer = NULL;
     }
     list_iterator_stop(csv_buffer_list);
-
-    // Ensure all opaque blockettes have been sent
-    FlushOpaque();
-
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -266,7 +236,7 @@ void csv_poll( csv_context_t* csv_buffer_list, buffer_t* url_str,
         // Populate a csv_buffer with the contents of the file
         csv_parse_file(csv_buffer, buf, initial_time);
         if (gDebug) {
-            printf("The CSV buffer contains %lu rows\n", csv_buffer->list->numels);
+            printf("The CSV buffer contains %u rows\n", csv_buffer->list->numels);
         }
         // Empty our temporary buffers
         buffer_reset(buf);
@@ -518,26 +488,6 @@ int _file_list_comparator( const void* a, const void* b )
     else if ( !a && b )
         return 1;
     return 0;
-}
-
-int _buffer_list_seeker( const void* element, const void* indicator )
-{
-    if ( element && indicator &&
-         !strcmp(((csv_buffer_t*)element)->file_name,
-                 ((csv_buffer_t*)indicator)->file_name) )
-        return 1;
-    return 0;
-}
-
-int _buffer_list_comparator( const void* a, const void* b )
-{
-    if ( !a && !b )
-        return 0;
-    else if ( a && !b ) 
-        return -1;
-    else if ( !a && b )
-        return 1;
-    return strcmp( ((csv_buffer_t*)b)->file_name, ((csv_buffer_t*)a)->file_name );
 }
 
 int _csv_list_seeker( const void* element, const void* indicator )

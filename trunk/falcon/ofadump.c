@@ -20,6 +20,7 @@
 #include <sys/resource.h>
 
 #include <fmash.h>
+#include <falcon_structures.h>
 #include <format_data.h>
 #include <lib330.h>
 #include <jio.h>
@@ -42,6 +43,12 @@ int main ( int argc, char **argv )
     size_t records_read = 0;
     size_t data_length = 0;
     size_t i = 0;
+
+    alarm_line_t *alarm = NULL;
+    uint8_t *alarm_data = NULL;
+    time_t   alarm_start_time = 0;
+    uint16_t alarm_count = 0;
+    uint8_t  desc_len = 0;
 
     uint8_t *current_record = NULL; // The selected SEED record
     uint8_t *current_blockette = NULL; // The selected blockette
@@ -203,7 +210,7 @@ int main ( int argc, char **argv )
 
         // Populate the header structs
         messy_pointer = current_record = buffer;
-        loadseedhdr( (pbyte *)&messy_pointer, &header_seed, false );
+        loadseedhdr( (pbyte *)(&messy_pointer), &header_seed, false );
         next_blockette = header_seed.first_blockette_byte;
         blockette_type = 0;
 
@@ -214,7 +221,7 @@ int main ( int argc, char **argv )
             if (blockette_type == 2000) {
                 blockette_length = ntohs(*(int16_t *)(current_blockette + 4));
                 messy_pointer = current_blockette;
-                loadopaquehdr( (pbyte *)&messy_pointer, &header_opaque );
+                loadopaquehdr( (pbyte *)(&messy_pointer), &header_opaque );
 
                 if ( display_header ) {
                     printf( "Found an opaque blockette:\n" );
@@ -271,30 +278,74 @@ int main ( int argc, char **argv )
                 buffer_write(msh_data, current_data, data_length);
 
                 if (msh_data && data_complete) {
-                    data_complete = 0;
+                    if (*((uint32_t*)(msh_data->content)) == 0xffffffff)
+                    { // This is Alarm data
+                        alarm = alarm_line_init();
+                        alarm_data = msh_data->content + sizeof(uint32_t);
+                        alarm_start_time = ntohl(*(uint32_t*)(alarm_data));
+                        alarm_data += sizeof(uint32_t);
+                        alarm_count = ntohs(*(uint16_t*)(alarm_data));
+                        alarm_data += sizeof(uint16_t);
 
-                    fprintf(stdout, "\ncompressed data size is %lu bytes\n", (unsigned long)data_length);
-                    format_data(msh_data, data_length, 0, 0);
+                        fprintf(stdout, "\ncompacted alarms size is %lu bytes\n", (unsigned long)msh_data->length);
+                        format_data(msh_data->content, msh_data->length, 0, 0);
+                        printf("=== ALARMS (%d) =========================================\n", alarm_count);
 
-                    fmash_msh_to_csv(&csv_buffer, msh_data->content, msh_data->length);
-                    printf("=== POST EXPANSION ======================================\n");
-                    printf("    file:         %s\n", csv_buffer->file_name);
-                    printf("    channel:      %d\n", csv_buffer->header->channel);
-                    printf("    description:  %s\n", csv_buffer->header->description);
-                    printf("    lines:        %d\n", list_size(csv_buffer->list));
-                    list_iterator_stop(csv_buffer->list);
-                    list_iterator_start(csv_buffer->list);
-                        printf("        ---------------------- ----------- ----------- ----------- \n");
-                        printf("       | Timestamp            | Average   | High      | Low       |\n");
-                        printf("        ---------------------- ----------- ----------- ----------- \n");
-                    while (list_iterator_hasnext(csv_buffer->list)) {
-                        csv_row = list_iterator_next(csv_buffer->list);
-                        strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", localtime(&(csv_row->timestamp)));
-                        printf("       | %s | % 9d | % 9d | % 9d |\n", time_string,
-                               csv_row->average, csv_row->high, csv_row->low );
+                        for (i = 0; i < (int)alarm_count; i++) {
+                            alarm->channel = ntohs(*(uint16_t*)(alarm_data));
+                            alarm_data += sizeof(uint16_t);
+                            alarm->timestamp = alarm_start_time + ntohs(*(uint16_t*)(alarm_data));
+                            alarm_data += sizeof(uint16_t);
+                            alarm->event = *(uint8_t*)(alarm_data);
+                            alarm_data += sizeof(uint8_t);
+                            desc_len = *(uint8_t*)(alarm_data);
+                            alarm_data += sizeof(uint8_t);
+                            strncpy(alarm->description, (char*)alarm_data, (size_t)desc_len);
+                            alarm_data += desc_len + 1;
+                            alarm->description[8] = '\0';
+
+                            strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", localtime(&(alarm->timestamp)));
+
+                            printf( "    [%s]> %s (%u): Alarm event %s %s\n",
+                                    time_string,
+                                    alarm->description, alarm->channel,
+                                    (alarm->event & 0x7f) == 0 ? "'On'"    :
+                                    (alarm->event & 0x7f) == 1 ? "'High1'" :
+                                    (alarm->event & 0x7f) == 2 ? "'Low1'"  :
+                                    (alarm->event & 0x7f) == 3 ? "'High2'" :
+                                    (alarm->event & 0x7f) == 4 ? "'Low2'"  :
+                                                                 "'Unknown'",
+                                    alarm->event & 0x80 ? "restored" : "triggered" );
+                        }
+                        alarm = alarm_line_destroy(alarm);
                     }
-                    list_iterator_stop(csv_buffer->list);
-                    csv_buffer = csv_buffer_destroy(csv_buffer);
+                    else
+                    { // This is FMash data
+                        data_complete = 0;
+
+                        fprintf(stdout, "\ncompressed (fmash) data size is %lu bytes\n", (unsigned long)msh_data->length);
+                        format_data(msh_data->content, msh_data->length, 0, 0);
+
+                        fmash_msh_to_csv(&csv_buffer, msh_data->content, msh_data->length);
+                        printf("=== POST EXPANSION ======================================\n");
+                        printf("    file:         %s\n", csv_buffer->file_name);
+                        printf("    channel:      %d\n", csv_buffer->header->channel);
+                        printf("    description:  %s\n", csv_buffer->header->description);
+                        printf("    lines:        %d\n", list_size(csv_buffer->list));
+                        list_iterator_stop(csv_buffer->list);
+                        list_iterator_start(csv_buffer->list);
+                            printf("        ---------------------- ----------- ----------- ----------- \n");
+                            printf("       | Timestamp            | Average   | High      | Low       |\n");
+                            printf("        ---------------------- ----------- ----------- ----------- \n");
+                        while (list_iterator_hasnext(csv_buffer->list)) {
+                            csv_row = list_iterator_next(csv_buffer->list);
+                            strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", localtime(&(csv_row->timestamp)));
+                            printf("       | %s | % 9d | % 9d | % 9d |\n", time_string,
+                                   csv_row->average, csv_row->high, csv_row->low );
+                        }
+                        list_iterator_stop(csv_buffer->list);
+                        csv_buffer = csv_buffer_destroy(csv_buffer);
+                    }
                     msh_data = buffer_destroy(msh_data);
                 }
             }
@@ -347,7 +398,6 @@ void print_usage( char **args, char *msg, ... )
                      exec_name );
 }
 
-#define MAX_MATCHES 16
 int verify_int( char* arg_str, int* value ) {
     int result = 0;
     regex_t regex;

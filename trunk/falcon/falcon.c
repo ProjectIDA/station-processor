@@ -164,8 +164,6 @@ int main (int argc, char **argv)
   char  host[16];
   char  port[6];
 
-  const char *name = "ANMO";
-
   const char *user = NULL;
   const char *pass = NULL;
 

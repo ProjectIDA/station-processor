@@ -18,17 +18,17 @@
  * 
  * HEADER
  * ------
- * Version/Type   : uint16_t ---- (2 bytes)
- * Start Time     : time_t ------ (4 bytes)
- * End Time       : time_t ------ (4 bytes)
- * Alarm Count    : uint16_t ---- (2 bytes)
+ * Version/Type : uint16_t ---- (2 bytes)
+ * Start Time   : time_t ------ (4 bytes)
+ * End Time     : time_t ------ (4 bytes)
+ * Alarm Count  : uint16_t ---- (2 bytes)
  *
  * RECORD
  * ------
- * Channel ID     : uint16_t ---- (2 bytes)
- * Seconds Offset : uint16_t ---- (2 bytes)
- * Event Type     : uint8_t ----- (1 byte)
- * Description    : pascal str. - (3-10 bytes)
+ * Channel ID   : uint16_t ---- (2 bytes)
+ * Timestamp    : uint16_t ---- (2 bytes)
+ * Event Type   : uint8_t ----- (1 byte)
+ * Description  : pascal str. - (3-10 bytes)
  * 
  */
 
@@ -39,6 +39,7 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
                     st_info_t* st_info )
 {
     time_t   start_time = 0;
+    time_t   end_time   = 0;
     uint8_t  buf_byte   = 0;
     uint16_t buf_word   = 0;
     uint32_t buf_dword  = 0L;
@@ -46,8 +47,6 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
 
     uint16_t  version_type   = 0x8000 | FALCON_VERSION;
     uint16_t  alarm_count    = 0;
-    uint16_t  current_second = 0;
-    uint16_t  max_seconds    = 0;
     char*     retmsg     = NULL;
     buffer_t* alarm_data = NULL;
     alarm_line_t* alarm  = NULL;
@@ -71,12 +70,10 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
         if (alarm->sent)
             continue;
 
-        // We can normally depend on the CSV data to populate this
-        // value for us. However, in the event that a Falcon
-        // contains no CSV data, there must be a method for
-        // determining the start time for alarms.
         if (!start_time)
-            start_time = alarm->timestamp;
+          start_time = alarm->timestamp;
+        if (!end_time)
+          end_time = alarm->timestamp;
 
         if (gDebug)
             fprintf(stdout, "DEBUG %s, line %d, date %s: %s\n", 
@@ -104,23 +101,11 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
             fprintf(stdout, "    Text       : %s\n", alarm->text);
         }
 
-        if (alarm->timestamp < start_time)
-        {
-            if (gDebug)
-                fprintf(stderr, "falcon: an old alarm was found\n");
-            else
-                syslog(LOG_ERR, "falcon: an old alarm was found\n");
-            continue;
-        }
-        current_second = (uint16_t)(alarm->timestamp - start_time);
-        if (max_seconds < current_second)
-            max_seconds = current_second;
-        if (current_second > 3660)
-        {
-            if (gDebug)
-                fprintf(stderr, "falcon: future alarm included\n");
-            continue;
-        }
+        if (start_time > alarm->timestamp)
+            start_time = alarm->timestamp;
+        if (end_time < alarm->timestamp)
+            end_time = alarm->timestamp;
+
         if (!alarm->description[0])
         {
             if (gDebug)
@@ -134,14 +119,13 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
         // If there isn't, queue this buffer's contents, and reset it.
         // This should prevent us from ever fragmenting alarm data
         // across opaque blockettes.
-        if (alarm_count && (alarm_data->length > 405))
+        if (alarm_count && (alarm_data->length > 400))
         {
             if (gDebug)
                 fprintf(stdout, "falcon: alarms were found\n");
 
-            // Record the end time
-            *(uint32_t*)(alarm_data->content + 6)  = htonl(start_time + max_seconds);
-            // Record the alarm count
+            *(uint32_t*)(alarm_data->content + 2)  = htonl(start_time);
+            *(uint32_t*)(alarm_data->content + 6)  = htonl(end_time);
             *(uint16_t*)(alarm_data->content + 10) = htons(alarm_count);
             QueueOpaque(alarm_data->content, (int)alarm_data->length,
                         st_info->station, st_info->network,
@@ -149,8 +133,8 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
                         FALCON_IDSTRING);
             alarm_data  = buffer_destroy(alarm_data);
             alarm_count = 0;
-            max_seconds = current_second;
             start_time  = alarm->timestamp;
+            end_time    = alarm->timestamp;
             alarm_data  = buffer_init();
             if (!alarm_data) {
                 if (gDebug)
@@ -166,12 +150,11 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
             // Write alarm header info
             buf_word = htons(version_type);
             buffer_write(alarm_data, (uint8_t*)(&buf_word), sizeof(buf_word));
-            buf_dword = htonl(start_time);
-            buffer_write(alarm_data, (uint8_t*)(&buf_dword), sizeof(buf_dword));
-
             // Reserve space for elements that will be assigned just 
             // prior to queueing data
-            buf_dword = htonl(start_time); // End Time
+            buf_dword = htonl(start_time);
+            buffer_write(alarm_data, (uint8_t*)(&buf_dword), sizeof(buf_dword));
+            buf_dword = htonl(end_time);
             buffer_write(alarm_data, (uint8_t*)(&buf_dword), sizeof(buf_dword));
             buf_word = htons(alarm_count);
             buffer_write(alarm_data, (uint8_t*)(&buf_word), sizeof(buf_word));
@@ -180,8 +163,8 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
         // Add an alarm
         buf_word = htons(alarm->channel);
         buffer_write(alarm_data, (uint8_t*)(&buf_word), sizeof(buf_word));
-        buf_word = htons(current_second);
-        buffer_write(alarm_data, (uint8_t*)(&buf_word), sizeof(buf_word));
+        buf_word = htonl(alarm->timestamp);
+        buffer_write(alarm_data, (uint8_t*)(&buf_dword), sizeof(buf_dword));
         buffer_write(alarm_data, &(alarm->event), sizeof(alarm->event));
         buf_byte = (uint8_t)strlen(alarm->description);
         buffer_write(alarm_data, &buf_byte, sizeof(buf_byte));
@@ -197,9 +180,8 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
     {
         if (gDebug)
             fprintf(stdout, "falcon: alarms were found\n");
-        // Record the end time
-        *(uint32_t*)(alarm_data->content + 6)  = htonl(start_time + max_seconds);
-        // Record the alarm count
+        *(uint32_t*)(alarm_data->content + 2)  = htonl(start_time);
+        *(uint32_t*)(alarm_data->content + 6)  = htonl(end_time);
         *(uint16_t*)(alarm_data->content + 10) = htons(alarm_count);
     }
 

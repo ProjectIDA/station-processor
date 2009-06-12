@@ -46,7 +46,6 @@ int main ( int argc, char **argv )
 
     alarm_line_t *alarm = NULL;
     uint8_t *alarm_data = NULL;
-    time_t   alarm_start_time = 0;
     uint16_t alarm_count = 0;
     uint8_t  desc_len = 0;
 
@@ -282,8 +281,7 @@ int main ( int argc, char **argv )
                     { // This is Alarm data
                         alarm = alarm_line_init();
                         alarm_data = msh_data->content + sizeof(uint16_t);
-                        alarm_start_time = (time_t)ntohl(*(uint32_t*)(alarm_data));
-                        alarm_data += sizeof(uint32_t);
+                        alarm_data += sizeof(uint32_t); // Skip start time
                         alarm_data += sizeof(uint32_t); // Skip end time
                         alarm_count = ntohs(*(uint16_t*)(alarm_data));
                         alarm_data += sizeof(uint16_t);
@@ -295,8 +293,8 @@ int main ( int argc, char **argv )
                         for (i = 0; i < (int)alarm_count; i++) {
                             alarm->channel = ntohs(*(uint16_t*)(alarm_data));
                             alarm_data += sizeof(uint16_t);
-                            alarm->timestamp = alarm_start_time + ntohs(*(uint16_t*)(alarm_data));
-                            alarm_data += sizeof(uint16_t);
+                            alarm->timestamp = (time_t)ntohl(*(uint32_t*)(alarm_data));
+                            alarm_data += sizeof(uint32_t);
                             alarm->event = *(uint8_t*)(alarm_data);
                             alarm_data += sizeof(uint8_t);
                             desc_len = *(uint8_t*)(alarm_data);

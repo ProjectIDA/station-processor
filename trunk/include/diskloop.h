@@ -91,6 +91,18 @@ char *ReadLast(
   char        *databuf    // Seed record pointer
   );                      // returns NULL or an error string pointer
 
+// Reads the seed record at the specified index location
+// Nominal index is 0 .. iLoopSize-1, but code will wrap index to legal value
+// Return NULL if no errors
+// Returns error string if something bad happened.
+char *ReadIndex(
+  const char  *station,   // station name
+  const char  *chan,      // Channel ID
+  const char  *loc,       // Location ID
+  int         index,      // Index of record to read, will wrap index if needed
+  char        *databuf    // Seed record pointer
+  );                      // returns NULL or an error string pointer
+
 char *GetRecordRange(
   const char  *station,   // station name
   const char  *chan,      // Channel ID

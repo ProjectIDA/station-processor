@@ -906,6 +906,126 @@ char *WriteChan(
 } // WriteChan()
 
 //////////////////////////////////////////////////////////////////////////////
+// Reads the seed record at the specified index location
+// Nominal index is 0 .. iLoopSize-1, but code will wrap index to legal value
+// Return NULL if no errors
+// If no data exists , the first byte of databuf will be null
+// Returns error string if something bad happened.
+char *ReadIndex(
+  const char  *station,   // station name
+  const char  *chan,      // Channel ID
+  const char  *loc,       // Location ID
+  int         index,      // Index of record to read, will wrap index if needed
+  char        *databuf    // Seed record pointer
+  )                       // returns NULL or an error string pointer
+{
+  char  buf_filename[2*MAXCONFIGLINELEN+2];
+  char  idx_filename[2*MAXCONFIGLINELEN+2];
+  FILE  *fp_buf;
+  FILE  *fp_idx;
+  int   iRecord;
+  int   iMaxRecord;
+  int   iSeek;
+
+  // The configuration file must be parsed before this routine can work
+  if (parse_state == 0)
+  {
+    sprintf(looperrstr, "ReadLast: ParseDiskLoopConfig not run yet");
+    return looperrstr;
+  }
+
+  // Get names of buffer and index files
+  // If blank location code, leave off leading location code in filename
+  if (loc[0] == ' ' || loc[0] == 0)
+  {
+    sprintf(buf_filename, "%s/%s/%s.buf",
+        loopDir, StripNetworkID(station), chan);
+    sprintf(idx_filename, "%s/%s/%s.idx",
+        loopDir, StripNetworkID(station), chan);
+  }
+  else
+  {
+    sprintf(buf_filename, "%s/%s/%s_%s.buf",
+        loopDir, StripNetworkID(station), loc, chan);
+    sprintf(idx_filename, "%s/%s/%s_%s.idx",
+        loopDir, StripNetworkID(station), loc, chan);
+  }
+
+  // Make sure that buffer file exists
+  if ((fp_buf=fopen(buf_filename, "r")) == NULL)
+  {
+    // Buffer file does not exist so no records to return
+    databuf[0] = 0;
+    return NULL;
+  }
+
+  // Make sure that index file exists
+  if ((fp_idx=fopen(idx_filename, "r")) == NULL)
+  {
+    // Index file does not exist so no last record to return
+    fclose(fp_buf);
+    databuf[0] = 0;
+    return NULL;
+  }
+
+  // Load index info
+  if (ParseIndexInfo(fp_idx, &iRecord, &iMaxRecord) != NULL)
+  {
+    sprintf(looperrstr, "ReadLast: Data format error in %s",
+             idx_filename);
+    databuf[0] = 0;
+    fclose(fp_buf);
+    fclose(fp_idx);
+    return looperrstr;
+  } // error reading index and max record value
+
+  if (iRecord < 0 || iRecord >= iMaxRecord)
+  {
+    sprintf(looperrstr, "ReadLast: Invalid index 0 <= %d < %d in %s",
+            iRecord, iMaxRecord, idx_filename);
+    databuf[0] = 0;
+    fclose(fp_buf);
+    fclose(fp_idx);
+    return looperrstr;
+  } // error reading index and max record value
+
+  // Normalize user requested index
+  if (index < 0)
+    index += (1+index/iMaxRecord)*iMaxRecord;
+  if (index >= iMaxRecord)
+    index = index % iMaxRecord;
+
+  // Get data at the specified index
+  iSeek = index * iLoopRecordSize;
+  fseek(fp_buf, iSeek, SEEK_SET);
+  if (iSeek != ftell(fp_buf))
+  {
+    sprintf(looperrstr, "ReadLast: Unable to seek to record %d in %s",
+            index, buf_filename);
+    databuf[0] = 0;
+    fclose(fp_buf);
+    fclose(fp_idx);
+    return looperrstr;
+  } // Failed to seek to required file buffer position
+
+  if (fread(databuf, iLoopRecordSize, 1, fp_buf) != 1)
+  {
+    sprintf(looperrstr, "ReadLast: Unable to read record %d in %s",
+            iRecord, buf_filename);
+    databuf[0] = 0;
+    fclose(fp_buf);
+    fclose(fp_idx);
+    return looperrstr;
+  } // Failed to read record
+
+//fprintf(stdout,"DEBUG ReadLast(%s,%s,%s) return %d/%d\n",
+//station, chan, loc, iRecord, iMaxRecord);
+  fclose(fp_buf);
+  fclose(fp_idx);
+  return NULL;
+} // ReadIndex()
+
+//////////////////////////////////////////////////////////////////////////////
 // Read the last record of data written to this channel
 // Required to implement the MSA_GETARC callback from q330lib
 char *ReadLast(

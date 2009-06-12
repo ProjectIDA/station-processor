@@ -278,12 +278,13 @@ int main ( int argc, char **argv )
                 buffer_write(msh_data, current_data, data_length);
 
                 if (msh_data && data_complete) {
-                    if (*((uint32_t*)(msh_data->content)) == 0xffffffff)
+                    if ((uint16_t)ntohs((*(uint16_t*)(msh_data->content)) & 0x8000))
                     { // This is Alarm data
                         alarm = alarm_line_init();
-                        alarm_data = msh_data->content + sizeof(uint32_t);
-                        alarm_start_time = ntohl(*(uint32_t*)(alarm_data));
+                        alarm_data = msh_data->content + sizeof(uint16_t);
+                        alarm_start_time = (time_t)ntohl(*(uint32_t*)(alarm_data));
                         alarm_data += sizeof(uint32_t);
+                        alarm_data += sizeof(uint32_t); // Skip end time
                         alarm_count = ntohs(*(uint16_t*)(alarm_data));
                         alarm_data += sizeof(uint16_t);
 
@@ -338,7 +339,7 @@ int main ( int argc, char **argv )
                             printf("       | Timestamp            | Average   | High      | Low       |\n");
                             printf("        ---------------------- ----------- ----------- ----------- \n");
                         while (list_iterator_hasnext(csv_buffer->list)) {
-                            csv_row = list_iterator_next(csv_buffer->list);
+                            csv_row = (csv_row_t*)list_iterator_next(csv_buffer->list);
                             strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", localtime(&(csv_row->timestamp)));
                             printf("       | %s | % 9d | % 9d | % 9d |\n", time_string,
                                    csv_row->average, csv_row->high, csv_row->low );

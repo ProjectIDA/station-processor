@@ -12,6 +12,8 @@
 
 #include <simclist.h>
 
+#define FALCON_VERSION 1
+
 #define MAX_CONTEXT_ALARMS 100
 #define MAX_ALARMS 256
 

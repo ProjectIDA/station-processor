@@ -8,9 +8,6 @@
 #include <fmash.h>
 #include <simclist.h>
 
-void poll_falcon( csv_context_t* csv_buffer_list, alarm_context_t* alarm_lines,
-                  buffer_t* url_str, st_info_t* st_info, time_t initial_time);
-
 void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
                   st_info_t* st_info );
 void csv_poll( csv_context_t* csv_buffer_list, buffer_t* url_str,

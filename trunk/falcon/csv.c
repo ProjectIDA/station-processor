@@ -12,59 +12,6 @@
 #include <get.h>
 #include <murmur.h>
 
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- *   Poll the Falcon for the latest data, and write it to 
- *   the diskloop.
- */
-void poll_falcon( csv_context_t* csv_buffer_list, alarm_context_t* alarm_lines,
-                  buffer_t* url_str, st_info_t* st_info, time_t initial_time)
-{
-    time_t start_time = 0x7fffffff;
-    time_t end_time   = 0x80000000;
-    csv_buffer_t* csv_buffer = NULL;
-
-    if (initial_time) {
-        start_time = initial_time;
-        end_time = initial_time;
-    }
-
-    // Get the CSV data from the falcon
-    csv_poll(csv_buffer_list, url_str, st_info, initial_time);
-
-    // Set the time constraints for the alarm history
-    list_iterator_stop(csv_buffer_list);
-    list_iterator_start(csv_buffer_list);
-    while (list_iterator_hasnext(csv_buffer_list)) 
-    {
-        csv_buffer = list_iterator_next(csv_buffer_list);
-        if (csv_buffer->start_time < start_time)
-            start_time = csv_buffer->start_time;
-        if (csv_buffer->end_time > end_time)
-            end_time = csv_buffer->end_time;
-    }
-    list_iterator_stop(csv_buffer_list);
-    if ( start_time > end_time ) {
-        if (gDebug)
-            fprintf(stderr, "falcon: mismatched start and end timestamps\n");
-        else
-            syslog(LOG_ERR, "falcon: mismatched start and end timestamps\n");
-        return;
-    }
-
-    // Get the alarm history from the falcon
-    alarm_poll(alarm_lines, start_time, end_time, url_str, st_info);
-
-    // Re-order alarms from earliest to latest
-    list_sort(alarm_lines, 1);
-
-    // Archive the latest data
-    csv_archive(csv_buffer_list, url_str, st_info);
-    alarm_archive(alarm_lines, url_str, st_info, start_time);
-
-    // Ensure all opaque blockettes have been sent
-    FlushOpaque();
-}
-
 void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
                   st_info_t* st_info )
 {
@@ -82,7 +29,7 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
     while (list_iterator_hasnext(csv_buffer_list)) 
     {
         // Grab one buffer from the list
-        csv_buffer = list_iterator_next(csv_buffer_list);
+        csv_buffer = (csv_buffer_t*)list_iterator_next(csv_buffer_list);
         while ((csv_buffer->end_time - csv_buffer->start_time) >= TM_HOUR) 
         {
             // Compress the csv data to FMash format
@@ -121,7 +68,7 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
                     fprintf(stdout, "        ---------------------- ----------- ----------- ----------- \n");
                 while (list_iterator_hasnext(final_csv->list))
                 {
-                    csv_row = list_iterator_next(final_csv->list);
+                    csv_row = (csv_row_t*)list_iterator_next(final_csv->list);
                     strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", localtime(&(csv_row->timestamp)));
                     printf("       | %s | % 9d | % 9d | % 9d |\n", time_string,
                            csv_row->average, csv_row->high, csv_row->low );

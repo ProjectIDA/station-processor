@@ -15,6 +15,7 @@
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 RETVAL=0
 PROG=`basename $0`
+SCRIPTPID=$$
 numargs=$#
 
 # source configuration file 
@@ -34,10 +35,34 @@ start () {
 stop ()
 {
     echo "Killing $PROG" 
-    while pidof $PROG > /dev/null
+    #while pidof $PROG > /dev/null
+    #do
+    #    pids=`pidof $PROG`
+    #    killparent $pids
+    #done
+    pid=`ps -C isid --no-header |grep -v $SCRIPTPID | awk '{ print $1 }'`
+    
+    if [ "${pid}" != "" ]; then
+       echo "First attempt at killing isid pid: $pid"
+       kill -15 $pid
+    else
+       echo "No active pid...exiting"
+       exit 
+    fi
+
+    for i in 1 2 3
     do
-        pids=`pidof $PROG`
-        killparent $pids
+       # Per Frank wait two seconds,
+       # check if it's still running
+       # then send a second kill
+       sleep 2;
+       exe=`ps -p $pid -o comm --no-header`
+       if [ "${exe}" != "" ] ; then
+           kill -15 $pid
+           echo "Trying again... Killing pid $pid"
+       else
+         continue 3 
+       fi
     done
 
     logger "END isid"

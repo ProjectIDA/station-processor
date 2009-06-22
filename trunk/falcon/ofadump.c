@@ -83,6 +83,7 @@ int main ( int argc, char **argv )
     csv_row_t* csv_row = NULL;
     
     char time_string[32];
+    uint16_t version_type = 0;
 
     // Ensure we received the file argument
     if ( argc < 2 ) {
@@ -277,22 +278,31 @@ int main ( int argc, char **argv )
                 buffer_write(msh_data, current_data, data_length);
 
                 if (msh_data && data_complete) {
-                    if ((uint16_t)ntohs((*(uint16_t*)(msh_data->content)) & 0x8000))
+                    version_type = (uint16_t)ntohs((*(uint16_t*)(msh_data->content)));
+                    if ((version_type & 0x7fff) > FALCON_VERSION) {
+                        fprintf(stderr, "Falcon data is too new!\n");
+                        continue;
+                    }
+                    if (version_type & 0x8000)
                     { // This is Alarm data
                         alarm = alarm_line_init();
-                        alarm_data = msh_data->content + sizeof(uint16_t);
+                        alarm_data = msh_data->content;
+                        fprintf(stdout, "\ncompacted alarms size is %lu bytes\n", (unsigned long)msh_data->length);
+                        format_data(alarm_data, msh_data->length, 0, 0);
+
+                        alarm_data += sizeof(uint16_t);
                         alarm_data += sizeof(uint32_t); // Skip start time
                         alarm_data += sizeof(uint32_t); // Skip end time
                         alarm_count = ntohs(*(uint16_t*)(alarm_data));
                         alarm_data += sizeof(uint16_t);
 
-                        fprintf(stdout, "\ncompacted alarms size is %lu bytes\n", (unsigned long)msh_data->length);
-                        format_data(msh_data->content, msh_data->length, 0, 0);
                         printf("=== ALARMS (%d) =========================================\n", alarm_count);
 
                         for (i = 0; i < (int)alarm_count; i++) {
                             alarm->channel = ntohs(*(uint16_t*)(alarm_data));
                             alarm_data += sizeof(uint16_t);
+                            printf("current alarm_data pointer : 0x%08lx\n", alarm_data);
+                            printf("current alarm_time value   : 0x%08lx\n", ntohl(*(uint32_t*)(alarm_data)));
                             alarm->timestamp = (time_t)ntohl(*(uint32_t*)(alarm_data));
                             alarm_data += sizeof(uint32_t);
                             alarm->event = *(uint8_t*)(alarm_data);
@@ -305,8 +315,8 @@ int main ( int argc, char **argv )
 
                             strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", localtime(&(alarm->timestamp)));
 
-                            printf( "    [%s]> %s (%u): Alarm event %s %s\n",
-                                    time_string,
+                            printf( "    (%s)[%li]> %s (%u): Alarm event %s %s\n",
+                                    time_string, (long)(alarm->timestamp),
                                     alarm->description, alarm->channel,
                                     (alarm->event & 0x7f) == 0 ? "'On'"    :
                                     (alarm->event & 0x7f) == 1 ? "'High1'" :

@@ -10,6 +10,7 @@
 #include <get.h>
 #include <murmur.h>
 #include <jio.h>
+#include <format_data.h>
 
 #include <include/q330arch.h>
 
@@ -26,7 +27,7 @@
  * RECORD
  * ------
  * Channel ID   : uint16_t ---- (2 bytes)
- * Timestamp    : uint16_t ---- (2 bytes)
+ * Timestamp    : uint32_t ---- (4 bytes)
  * Event Type   : uint8_t ----- (1 byte)
  * Description  : pascal str. - (3-10 bytes)
  * 
@@ -45,8 +46,8 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
     uint32_t buf_dword  = 0L;
     //uint64_t buf_qword  = 0LL;
 
-    uint16_t  version_type   = 0x8000 | FALCON_VERSION;
-    uint16_t  alarm_count    = 0;
+    uint16_t  version_type = 0x8000 | FALCON_VERSION;
+    uint16_t  alarm_count  = 0;
     char*     retmsg     = NULL;
     buffer_t* alarm_data = NULL;
     alarm_line_t* alarm  = NULL;
@@ -84,9 +85,9 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
                                  st_info->location)) != NULL)
         { // error trying to log the message
             if (gDebug)
-                fprintf(stderr, "falcon: %s\n", retmsg);
+                fprintf(stderr, "falcon: failed to write alarms to log: %s\n", retmsg);
             else
-                syslog(LOG_ERR, "falcon: %s\n", retmsg);
+                syslog(LOG_ERR, "falcon: failed to write alarms to log: %s\n", retmsg);
             exit(1);
         }
 
@@ -121,12 +122,20 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
         // across opaque blockettes.
         if (alarm_count && (alarm_data->length > 400))
         {
-            if (gDebug)
-                fprintf(stdout, "falcon: alarms were found\n");
+            buffer_seek(alarm_data, 2);
+            buf_dword = htonl(start_time);
+            buffer_write(alarm_data, (uint8_t*)(&buf_dword), sizeof(buf_dword));
+            buf_dword = htonl(end_time);
+            buffer_write(alarm_data, (uint8_t*)(&buf_dword), sizeof(buf_dword));
+            buf_word = htons(alarm_count);
+            buffer_write(alarm_data, (uint8_t*)(&buf_word), sizeof(buf_word));
 
-            *(uint32_t*)(alarm_data->content + 2)  = htonl(start_time);
-            *(uint32_t*)(alarm_data->content + 6)  = htonl(end_time);
-            *(uint16_t*)(alarm_data->content + 10) = htons(alarm_count);
+            if (gDebug) {
+                fprintf(stdout, "falcon: [MID] alarms were found\n");
+                fprintf(stdout, "[MID] raw buffer:\n");
+                format_data(alarm_data->content, alarm_data->length, 0, 0);
+            }
+
             QueueOpaque(alarm_data->content, (int)alarm_data->length,
                         st_info->station, st_info->network,
                         st_info->channel, st_info->location,
@@ -163,7 +172,7 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
         // Add an alarm
         buf_word = htons(alarm->channel);
         buffer_write(alarm_data, (uint8_t*)(&buf_word), sizeof(buf_word));
-        buf_word = htonl(alarm->timestamp);
+        buf_dword = htonl(alarm->timestamp);
         buffer_write(alarm_data, (uint8_t*)(&buf_dword), sizeof(buf_dword));
         buffer_write(alarm_data, &(alarm->event), sizeof(alarm->event));
         buf_byte = (uint8_t)strlen(alarm->description);
@@ -176,17 +185,22 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
     }
     list_iterator_stop(alarm_list);
 
-    if (alarm_count)
-    {
-        if (gDebug)
-            fprintf(stdout, "falcon: alarms were found\n");
-        *(uint32_t*)(alarm_data->content + 2)  = htonl(start_time);
-        *(uint32_t*)(alarm_data->content + 6)  = htonl(end_time);
-        *(uint16_t*)(alarm_data->content + 10) = htons(alarm_count);
-    }
-
     if (alarm_count && alarm_data && alarm_data->content && alarm_data->length)
     {
+        buffer_seek(alarm_data, 2);
+        buf_dword = htonl(start_time);
+        buffer_write(alarm_data, (uint8_t*)(&buf_dword), sizeof(buf_dword));
+        buf_dword = htonl(end_time);
+        buffer_write(alarm_data, (uint8_t*)(&buf_dword), sizeof(buf_dword));
+        buf_word = htons(alarm_count);
+        buffer_write(alarm_data, (uint8_t*)(&buf_word), sizeof(buf_word));
+
+        if (gDebug) {
+            fprintf(stderr, "falcon: [END] alarms were found\n");
+            fprintf(stderr, "[END] raw buffer:\n");
+            format_data(alarm_data->content, alarm_data->length, 0, 0);
+        }
+
         QueueOpaque(alarm_data->content, (int)alarm_data->length,
                     st_info->station, st_info->network,
                     st_info->channel, st_info->location,
@@ -227,6 +241,10 @@ void alarm_poll( alarm_context_t* alarm_list, buffer_t* url_str,
     // Getting alarm lines
     alarm_filter_lines( alarm_list, buf, last_alarm_time );
 
+    // Re-order alarms from oldest to youngest
+    list_sort(alarm_list, 1);
+
+    // Cleanup
     url = buffer_destroy(url);
     buf = buffer_destroy(buf);
 }

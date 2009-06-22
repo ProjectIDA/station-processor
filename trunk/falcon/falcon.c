@@ -156,24 +156,33 @@ void QueueOpaque(
 // PollFalcon -- Poll the Falcon for the latest data, and write it to
 //                the diskloop.
 void PollFalcon( csv_context_t* csv_buffer_list, alarm_context_t* alarm_lines,
-                  buffer_t* url_str, st_info_t* st_info,
-                  time_t last_csv_time, time_t last_alarm_time)
+                 buffer_t* url_str, st_info_t* st_info,
+                 time_t last_csv_time, time_t last_alarm_time)
 {
-    // Get the CSV data from the falcon
-    csv_poll(csv_buffer_list, url_str, st_info, last_csv_time);
-
-    // Get the alarm history from the falcon
-    alarm_poll(alarm_lines, url_str, st_info, last_alarm_time);
-
-    // Re-order alarms from earliest to latest
+  alarm_line_t* alarm;
+  
+  if (!last_alarm_time && !list_empty(alarm_lines)) {
     list_sort(alarm_lines, 1);
+    alarm = (alarm_line_t*)list_get_at(alarm_lines, list_size(alarm_lines));
+    if (alarm) {
+      last_alarm_time = alarm->timestamp;
+    }
+  }
 
-    // Archive the latest data
-    alarm_archive(alarm_lines, url_str, st_info);
-    csv_archive(csv_buffer_list, url_str, st_info);
+  // Get the CSV data from the falcon
+  csv_poll(csv_buffer_list, url_str, st_info, last_csv_time);
 
-    // Ensure all opaque blockettes have been sent
-    FlushOpaque();
+  // Get the alarm history from the falcon
+  alarm_poll(alarm_lines, url_str, st_info, last_alarm_time);
+
+  // Archive the latest data
+  alarm_archive(alarm_lines, url_str, st_info);
+  if (gDebug) fprintf(stderr,"Alarms Archived.\n");
+  csv_archive(csv_buffer_list, url_str, st_info);
+  if (gDebug) fprintf(stderr,"CSV Data Archived.\n");
+
+  // Ensure all opaque blockettes have been sent
+  FlushOpaque();
 }
 
 
@@ -211,7 +220,7 @@ void GetLastTimes( time_t* last_csv_time, time_t* last_alarm_time,
 
   if ((retmsg=GetRecordRange(st_info->station, st_info->channel, st_info->location,
                             time_begin, time_end, &first_record, &last_record,
-                            &record_count, &loop_size)) == NULL)
+                            &record_count, &loop_size)) != NULL)
   {
     fprintf(stderr, "%s: %s\n", FILENAME, retmsg);
     exit(1);
@@ -235,7 +244,7 @@ void GetLastTimes( time_t* last_csv_time, time_t* last_alarm_time,
 
     memset(seed_record, 0, iSeedRecordSize);
     if ((retmsg=ReadIndex(st_info->station, st_info->channel, st_info->location,
-                         index, (char*)seed_record)) == NULL)
+                         index, (char*)seed_record)) != NULL)
     {
       fprintf(stderr, "%s: %s\n", FILENAME, retmsg);
       exit(1);
@@ -288,13 +297,28 @@ void GetLastTimes( time_t* last_csv_time, time_t* last_alarm_time,
       if (gDebug) printf("  This is not a continuation blockette.\n"); // TODO XXX Remove 
 
       opaque_data = blockette + (size_t)ntohs(*(uint16_t*)(blockette + 6));
+      if ((ntohs(*(uint16_t*)(opaque_data)) & 0x7fff) > FALCON_VERSION) {
+        if (gDebug) printf("  Falcon data in this blockette is too new\n"); // TODO XXX Remove 
+        continue;
+      }
+      if (gDebug) printf("  Found a valid version.\n"); // TODO XXX Remove 
+
+
       if (ntohs(*(uint16_t*)(opaque_data)) & 0x8000) {
-        *last_alarm_time = (time_t)ntohl(*(uint32_t*)(opaque_data + 6));
-        if (gDebug) printf("  Got Alarm time data.\n"); // TODO XXX Remove 
+        if (!(*last_alarm_time)) {
+          *last_alarm_time = (time_t)ntohl(*(uint32_t*)(opaque_data + 6));
+          if (gDebug) printf("  Got Alarm time data.\n"); // TODO XXX Remove 
+        } else {
+          if (gDebug) printf("  Already have Alarm time data.\n"); // TODO XXX Remove 
+        }
       }
       else {
-        *last_csv_time = (time_t)ntohl(*(uint32_t*)(opaque_data + 6));
-        if (gDebug) printf("  Got FMash (CSV) time data.\n"); // TODO XXX Remove 
+        if (!(*last_csv_time)) {
+          *last_csv_time = (time_t)ntohl(*(uint32_t*)(opaque_data + 6));
+          if (gDebug) printf("  Got FMash (CSV) time data.\n"); // TODO XXX Remove 
+        } else {
+          if (gDebug) printf("  Already have FMash (CSV) time data.\n"); // TODO XXX Remove 
+        }
       }
 
       // If we have what we need, bail
@@ -400,6 +424,10 @@ int main (int argc, char **argv)
 
   user = station;
   pass = station;
+
+  // TODO XXX XXX XXX XXX XXX XXX XXX XXX REMOVE!!!!
+  user = "ANMO";
+  pass = "ANMO";
 
   // Populate the station information struct
   st_info.station  = station;

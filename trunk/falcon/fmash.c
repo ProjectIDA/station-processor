@@ -93,14 +93,14 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
 
     // Add the version/type
     buf_word = htons(version_type);
-    buffer_write(buf, buf_word, sizeof(buf_word)); // Version + Type
+    buffer_write(buf, (uint8_t*)(&buf_word), sizeof(buf_word)); // Version + Type
 
     // Reserve space for elements that will be written during/after
     // the compression loop
-    buffer_write(buf, rowmap_buffer, sizeof(start_time)); // Start Time
-    buffer_write(buf, rowmap_buffer, sizeof(end_time)); // End Time
-    buffer_write(buf, rowmap_buffer, sizeof(csv->header->channel)); // Channel ID
-    buffer_write(buf, rowmap_buffer, sizeof(row_count)); // Row Count
+    buffer_write(buf, (uint8_t*)(&buf_dword), sizeof(buf_dword)); // Start Time
+    buffer_write(buf, (uint8_t*)(&buf_dword), sizeof(buf_dword)); // End Time
+    buffer_write(buf, (uint8_t*)(&buf_word), sizeof(buf_word)); // Channel ID
+    buffer_write(buf, (uint8_t*)(&buf_word), sizeof(buf_word)); // Row Count
     buffer_write(buf, rowmap_buffer, sizeof(rowmap_buffer)); // Row Map
 
     // Add the description string in Pascal string format
@@ -135,12 +135,6 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
                 last_low = first_low = buffered_row->low;
                 current_time = buffered_row->timestamp;
 
-                // Insert the channel
-                *((uint16_t*)(buf->content + 10)) = htons(csv->header->channel);
-
-                // Insert the start time
-                *((uint32_t*)(buf->content + 2)) = htonl(start_time);
-
                 // Insert the first average
                 vint = int32_to_varint(first_average);
                 vint.num[0] = (vint.num[0] & 0xfc) | TYPE_AVERAGE;
@@ -157,6 +151,10 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
                 buffer_write(buf, vint.num, vint.bytes);
 
                 first_time = 0;
+
+                printf("first average : %d\n", first_average);
+                printf("first high    : %d\n", first_high);
+                printf("first low     : %d\n", first_low);
             }
         }
 
@@ -238,12 +236,6 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
     }
     buffered_row = NULL;
 
-    // Store the end time
-    *((uint32_t*)(buf->content + 6)) = htonl(end_time);
-
-    // Store the element count
-    *((uint16_t*)(buf->content + 12)) = htons(row_count);
-
     // Add the final average
     vint = int32_to_varint(last_average);
     vint.num[0] = (vint.num[0] & 0xfc) | TYPE_AVERAGE;
@@ -258,6 +250,19 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
     vint = int32_to_varint(last_low);
     vint.num[0] = (vint.num[0] & 0xfc) | TYPE_LOW;
     buffer_write(buf, vint.num, vint.bytes);
+    printf("last average : %d\n", last_average);
+    printf("last high    : %d\n", last_high);
+    printf("last low     : %d\n", last_low);
+
+    buffer_seek(buf, 2);
+    buf_dword = htonl(start_time);
+    buffer_write(buf, (uint8_t*)(&buf_dword), sizeof(buf_dword));
+    buf_dword = htonl(end_time);
+    buffer_write(buf, (uint8_t*)(&buf_dword), sizeof(buf_dword));
+    buf_word = htons(csv->header->channel);
+    buffer_write(buf, (uint8_t*)(&buf_word), sizeof(buf_word));
+    buf_word = htons(row_count);
+    buffer_write(buf, (uint8_t*)(&buf_word), sizeof(buf_word));
 
     // Populated the elements whose pointers the user supplied
     *length  = buffer_size(buf);
@@ -325,6 +330,10 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
         // Extract the header information
         version_type = ntohs(*((uint16_t*)p)); // Version + Type
         p += sizeof(uint16_t);
+        if ((version_type & 0x7fff) > FALCON_VERSION) {
+            fprintf(stderr, "Falcon data version is too new.\n");
+            exit(1);
+        }
         start_time = (time_t)ntohl(*((uint32_t*)p)); // Start Time
         p += sizeof(uint32_t);
         end_time = (time_t)ntohl(*((uint32_t*)p)); // End Time
@@ -349,6 +358,9 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
         p += vint_bytes;
         first_low = last_low = varint_to_int32(p, &vint_bytes);
         p += vint_bytes;
+        printf("first average : %d\n", first_average);
+        printf("first high    : %d\n", first_high);
+        printf("first low     : %d\n", first_low);
 
         // Loop through the compressed buffer and re-construct 
         // the csv list
@@ -422,29 +434,37 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
     final_low = varint_to_int32(p, &vint_bytes);
     p += vint_bytes;
 
+    printf("last average : %d\n", last_average);
+    printf("last high    : %d\n", last_high);
+    printf("last low     : %d\n", last_low);
+
+    printf("final average : %d\n", final_average);
+    printf("final high    : %d\n", final_high);
+    printf("final low     : %d\n", final_low);
+
     // Verify the final values
     if (final_average != last_average)
     {
         if (gDebug)
-            fprintf(stderr, "falcon: mismatched start and end averages\n");
+            fprintf(stderr, "falcon: mismatched start and end averages (%d != %d)\n", final_average, last_average);
         else
-            syslog(LOG_ERR, "falcon: mismatched start and end averages\n");
+            syslog(LOG_ERR, "falcon: mismatched start and end averages (%d != %d)\n", final_average, last_average);
         goto unclean;
     }
     if (final_high != last_high)
     {
         if (gDebug)
-            fprintf(stderr, "falcon: mismatched start and end highs\n");
+            fprintf(stderr, "falcon: mismatched start and end highs (%d != %d)\n", final_high, last_high);
         else
-            syslog(LOG_ERR, "falcon: mismatched start and end highs\n");
+            syslog(LOG_ERR, "falcon: mismatched start and end highs (%d != %d)\n", final_high, last_high);
         goto unclean;
     }
     if (final_low != last_low)
     {
         if (gDebug)
-            fprintf(stderr, "falcon: mismatched start and end lows\n");
+            fprintf(stderr, "falcon: mismatched start and end lows (%d != %d)\n", final_low, last_low);
         else
-            syslog(LOG_ERR, "falcon: mismatched start and end lows\n");
+            syslog(LOG_ERR, "falcon: mismatched start and end lows (%d != %d)\n", final_low, last_low);
         goto unclean;
     }
 

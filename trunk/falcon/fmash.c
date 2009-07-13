@@ -48,7 +48,6 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
     int i = 0;
     int first_time = 1;
 
-    uint8_t  buf_byte  = 0;
     uint16_t buf_word  = 0;
     uint32_t buf_dword = 0L;
     //uint64_t buf_qword = 0LL;
@@ -79,6 +78,7 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
     uint8_t rowmap_buffer[ROW_MAP_SIZE];
     buffer_t* buf = NULL;
     csv_row_t* buffered_row = NULL;
+    int rowmap_offset = 0;
 
     // Confirm that all required data structures are populated
     if ((!csv) || (!csv->list) || (!csv->header) || (!raw_msh) || (!length))
@@ -101,6 +101,13 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
     buffer_write(buf, (uint8_t*)(&buf_dword), sizeof(buf_dword)); // End Time
     buffer_write(buf, (uint8_t*)(&buf_word), sizeof(buf_word)); // Channel ID
     buffer_write(buf, (uint8_t*)(&buf_word), sizeof(buf_word)); // Row Count
+    rowmap_offset = buf->offset;
+    if (gDebug && csv->header->channel == 1)
+    {
+         printf("csv_to_msh %s[%d]: row[%d], rowmap offset=0x%x\n",
+             csv->header->description, csv->header->channel, i,
+             (unsigned int)rowmap_offset);
+    }
     buffer_write(buf, rowmap_buffer, sizeof(rowmap_buffer)); // Row Map
 
     // Add the description string in Pascal string format
@@ -114,6 +121,13 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
     // Generate the compressed buffer
     for (i = 0; i < MAX_ROWS; i++)
     {
+        if (gDebug && csv->header->channel == 1)
+        {
+             printf("csv_to_msh %s[%d]: row[%d], buffered_row=0x%x, offset=0x%x\n",
+                 csv->header->description, csv->header->channel, i,
+                 (unsigned int)buffered_row, buf->offset);
+        }
+
         // We don't have a row buffered
         if (!buffered_row)
         {
@@ -155,9 +169,15 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
                 printf("first average : %d\n", first_average);
                 printf("first high    : %d\n", first_high);
                 printf("first low     : %d\n", first_low);
-            }
-        }
+            } // first_time was true
+        } // there was no buffered_row
 
+        if (gDebug && csv->header->channel == 1)
+        {
+             printf("csv_to_msh %s[%d]: %d == %d\n",
+                 csv->header->description, csv->header->channel,
+                 (int)current_time, (int)buffered_row->timestamp);
+        }
         // If the timestamps match, add the current row
         if (current_time == buffered_row->timestamp)
         {
@@ -166,6 +186,12 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
             if (buffered_row->empty)
             {
                 updated_rows = NO_DATA;
+                if (gDebug && csv->header->channel == 1)
+                {
+                    printf("csv_to_msh %s[%d]: NO_DATA, offset 0x%x\n",
+                        csv->header->description, csv->header->channel,
+                        buf->offset);
+                }
             }
             else
             {
@@ -200,22 +226,45 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
                     updated_rows++;
                     last_low = buffered_row->low;
                 }
+                if (gDebug && csv->header->channel == 1)
+                {
+                    printf("csv_to_msh %s[%d]: updated_rows %d, offset 0x%x\n",
+                        csv->header->description, csv->header->channel,
+                        updated_rows, buf->offset);
+                }
             }
             
             // Update the bitmap
-            map_3_set(buf->content + 12, i, updated_rows);
+            map_3_set(buf->content + rowmap_offset, i, updated_rows);
+            if (gDebug && csv->header->channel == 1)
+            {
+                 printf("map_3_set %s[%d]: row[%d], 0x%x\n",
+                     csv->header->description, csv->header->channel, i,
+                     updated_rows);
+            }
             buffered_row = csv_row_destroy(buffered_row);
         }
         // If the timestamps do NOT match, note in the bitmap that 
         // we are missing a row at this minute
         else
         {
+            if (gDebug && csv->header->channel == 1)
+            {
+                 printf("csv_to_msh %s[%d]: Missing row\n",
+                     csv->header->description, csv->header->channel);
+            }
             // Update the bitmap
-            map_3_set(buf->content + 12, i, (uint8_t)NO_DATA);
+            map_3_set(buf->content + rowmap_offset, i, (uint8_t)NO_DATA);
+            if (gDebug && csv->header->channel == 1)
+            {
+                 printf("map_3_set %s[%d]: row[%d], NO_DATA 0x%x\n",
+                     csv->header->description, csv->header->channel, i,
+                     NO_DATA);
+            }
         }
         current_time += TM_MINUTE;
         row_count++;
-    }
+    } // Loop through all rows
     end_time = current_time - TM_MINUTE;
 
     // If we didn't use this element, restore it to the list
@@ -263,6 +312,10 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
     buffer_write(buf, (uint8_t*)(&buf_word), sizeof(buf_word));
     buf_word = htons(row_count);
     buffer_write(buf, (uint8_t*)(&buf_word), sizeof(buf_word));
+    if (gDebug)
+    {
+      printf("row_count %d, buffer_size %d\n", row_count, buffer_size(buf));
+    }
 
     // Populated the elements whose pointers the user supplied
     *length  = buffer_size(buf);
@@ -275,7 +328,7 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
  clean:
     buf = buffer_destroy(buf);
     return result;
-}
+} // fmash_csv_to_msh()
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Decompress FMash formatted data into a csv buffer
@@ -302,10 +355,14 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
     uint8_t final_high = 0;
     uint8_t final_low = 0;
 
+    uint32_t temp_uint32 = 0;
+    uint16_t temp_uint16 = 0;
+
     size_t vint_bytes = 0;
 
     uint8_t map = 0;
     uint8_t* p = NULL;
+    uint8_t* p_begin = NULL;
     uint8_t* rowmap = NULL;
 
     csv_row_t* row = NULL;
@@ -315,6 +372,7 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
     uint16_t version_type = 0;
 
     p = raw_msh;
+    p_begin = p;
     if (csv && raw_msh && length)
     {
         // Allocate csv_buffer and child structures
@@ -328,21 +386,31 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
             goto unclean;
 
         // Extract the header information
-        version_type = ntohs(*((uint16_t*)p)); // Version + Type
+        memcpy(&temp_uint16, p, 2);
+        version_type = ntohs(temp_uint16); // Version + Type
         p += sizeof(uint16_t);
         if ((version_type & 0x7fff) > FALCON_VERSION) {
             fprintf(stderr, "Falcon data version is too new.\n");
             exit(1);
         }
-        start_time = (time_t)ntohl(*((uint32_t*)p)); // Start Time
+        memcpy(&temp_uint32, p, sizeof(temp_uint32));
+        start_time = (time_t)ntohl(temp_uint32); // Start Time
         p += sizeof(uint32_t);
-        end_time = (time_t)ntohl(*((uint32_t*)p)); // End Time
+        memcpy(&temp_uint32, p, sizeof(temp_uint32));
+        end_time = (time_t)ntohl(temp_uint32); // End Time
         p += sizeof(uint32_t);
-        p_csv->header->channel = ntohs(*((uint16_t*)p)); // Channel ID
+        memcpy(&temp_uint16, p, 2);
+        p_csv->header->channel = ntohs(temp_uint16); // Channel ID
         p += sizeof(uint16_t);
-        row_count = ntohs(*((uint16_t*)p)); // Row Count
+        memcpy(&temp_uint16, p, 2);
+        row_count = ntohs(temp_uint16); // Row Count
         p += sizeof(uint16_t);
         rowmap = p; // Row Map
+        if (gDebug)
+        {
+          printf("rowmap offset %02x, row_count %d, length %d\n",
+             rowmap - p_begin, row_count, length);
+        }
         p += ROW_MAP_SIZE;
 
         // Description
@@ -368,6 +436,12 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
         for (i = 0; i < (int)row_count; i++)
         {
             map = map_3_get(rowmap, i);
+            if (gDebug && p_csv->header->channel == 1)
+            {
+                 printf("map_3_get %s[%d]: row[%d], 0x%x\n",
+                     p_csv->header->description, p_csv->header->channel, i,
+                     map);
+            }
             // If this is our first time through the loop or we have just
             // added a row to the list, then 'row' will be NULL, so
             // create a new row element
@@ -424,7 +498,7 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
             current_time += TM_MINUTE;
         }
         row = csv_row_destroy(row);
-    }
+    } // if there is data to convert
 
     // Recover the final values
     final_average = varint_to_int32(p, &vint_bytes);
@@ -433,6 +507,13 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
     p += vint_bytes;
     final_low = varint_to_int32(p, &vint_bytes);
     p += vint_bytes;
+
+    // Verify that length matches how much data we parsed
+    if (p-p_begin != length && gDebug)
+    {
+      printf("Parsed %d bytes which does not match buffer length of %d\n",
+             (unsigned int)(p-p_begin), length);
+    }
 
     printf("last average : %d\n", last_average);
     printf("last high    : %d\n", last_high);
@@ -479,5 +560,5 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
  clean:
     *csv = p_csv;
     return result;
-}
+} // fmash_msh_to_csv()
 

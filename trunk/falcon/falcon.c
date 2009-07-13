@@ -108,6 +108,14 @@ void QueueOpaque(
   const char *idstring)    // '~' Terminated ascii id string (keep this short)
 {
   char *retmsg;
+  static char *last_chan="";
+
+  // If the channel name is not the same as the last one then flush any data
+  if (strcmp(last_chan, channel) != 0)
+  {
+    last_chan = (char *)channel;
+    FlushOpaque();
+  }
 
   // See if we have a seed record ready to buffer this message
   if (seedRecordBuf != NULL)
@@ -151,7 +159,6 @@ void QueueOpaque(
 
 } // QueueOpaque()
 
-
 //////////////////////////////////////////////////////////////////////////////
 // PollFalcon -- Poll the Falcon for the latest data, and write it to
 //                the diskloop.
@@ -161,8 +168,11 @@ void PollFalcon( csv_context_t* csv_buffer_list, alarm_context_t* alarm_lines,
 {
   alarm_line_t* alarm;
   
-  if (!last_alarm_time && !list_empty(alarm_lines)) {
-    list_sort(alarm_lines, 1);
+  // Keep last_alarm_time up to date
+  if (!list_empty(alarm_lines))
+  {
+// This sort appears to be redundant Frank, done after alarm_filter_lines
+//    list_sort(alarm_lines, 1);
     alarm = (alarm_line_t*)list_get_at(alarm_lines, list_size(alarm_lines));
     if (alarm) {
       last_alarm_time = alarm->timestamp;
@@ -183,11 +193,11 @@ void PollFalcon( csv_context_t* csv_buffer_list, alarm_context_t* alarm_lines,
 
   // Ensure all opaque blockettes have been sent
   FlushOpaque();
-}
+} // PollFalcon()
 
 
-void GetLastTimes( time_t* last_csv_time, time_t* last_alarm_time,
-                   st_info_t* st_info)
+//////////////////////////////////////////////////////////////////////////////
+void GetLastTimeCSV( time_t* last_csv_time, st_info_t* st_info)
 {
   char *retmsg;
 
@@ -198,6 +208,7 @@ void GetLastTimes( time_t* last_csv_time, time_t* last_alarm_time,
   char time_str[32];
   int max_to_check = 8;
   int index        = 0;
+  uint32_t netuint32;
 
   int first_record = 0;
   int last_record  = 0;
@@ -208,7 +219,6 @@ void GetLastTimes( time_t* last_csv_time, time_t* last_alarm_time,
   STDTIME2 time_end;
 
   *last_csv_time = 0;
-  *last_alarm_time = 0;
 
   memset(&time_begin, 0, sizeof(STDTIME2));
   memset(&time_end, 0, sizeof(STDTIME2));
@@ -218,7 +228,8 @@ void GetLastTimes( time_t* last_csv_time, time_t* last_alarm_time,
   time_end.year   = 3000;
   time_end.day    = 1;
 
-  if ((retmsg=GetRecordRange(st_info->station, st_info->channel, st_info->location,
+  if ((retmsg=GetRecordRange(st_info->station, st_info->csv_chan, 
+                            st_info->location,
                             time_begin, time_end, &first_record, &last_record,
                             &record_count, &loop_size)) != NULL)
   {
@@ -240,11 +251,158 @@ void GetLastTimes( time_t* last_csv_time, time_t* last_alarm_time,
     printf("  max to check : %d\n", max_to_check);
   }
 
-  while (max_to_check--) {
+  while (max_to_check-- > 0) {
 
     memset(seed_record, 0, iSeedRecordSize);
-    if ((retmsg=ReadIndex(st_info->station, st_info->channel, st_info->location,
+    if ((retmsg=ReadIndex(st_info->station,st_info->csv_chan,st_info->location,
                          index, (char*)seed_record)) != NULL)
+    {
+      fprintf(stderr, "%s: %s\n", FILENAME, retmsg);
+      exit(1);
+    }
+    index--;
+
+    if (gDebug)
+    {
+      printf("Last SEED record (raw):\n");
+      format_data((uint8_t*)seed_record, iSeedRecordSize, 0, 0);
+    }
+
+    offset = (size_t)ntohs(*(uint16_t*)(seed_record + 46));
+    // There must be at least one blockette within this record
+    if (!offset) {
+      if (gDebug) printf("No data in SEED record\n"); // TODO XXX Remove 
+      goto next;
+    }
+    if (gDebug) printf("Found SEED record with data\n"); // TODO XXX Remove 
+    blockette = seed_record + offset;
+    // Make sure the first blockette is a blockette 1000
+    if (ntohs(*(uint16_t*)(blockette)) != 1000) {
+      if (gDebug) printf("First blockette is not a blockette 1000\n"); // TODO XXX Remove 
+      goto next;
+    }
+    if (gDebug) printf("Found a blockette 1000\n"); // TODO XXX Remove 
+    offset = (size_t)ntohs(*(uint16_t*)(blockette + 2));
+    // Make sure there is a blockette following this one
+    if (!offset) {
+      if (gDebug) printf("No data after blockette 1000\n"); // TODO XXX Remove 
+      goto next;
+    }
+    if (gDebug) printf("There is more data :)\n"); // TODO XXX Remove 
+
+    do {
+      blockette = seed_record + offset;
+      offset = (size_t)ntohs(*(uint16_t*)(blockette + 2));
+      // Make sure this is a blockette 2000
+      if (ntohs(*(uint16_t*)(blockette)) != 2000) {
+        if (gDebug) printf("  Founds an unexpected blockette!!\n"); // TODO XXX Remove 
+        continue;
+      }
+      if (gDebug) printf("  Found a blockette 2000\n"); // TODO XXX Remove 
+      // Make sure this opaque blocketter contains either a complete
+      // record or the first piece of a fragmented record
+      if (((*(uint8_t*)(blockette + 13) & 0x0c) >> 2) > 1 ) {
+        if (gDebug) printf("  Ran into a continuation blockette\n"); // TODO XXX Remove 
+        continue;
+      }
+      if (gDebug) printf("  This is not a continuation blockette.\n"); // TODO XXX Remove 
+
+      opaque_data = blockette + (size_t)ntohs(*(uint16_t*)(blockette + 6));
+      if ((ntohs(*(uint16_t*)(opaque_data)) & 0x7fff) > FALCON_VERSION) {
+        if (gDebug) printf("  Falcon data in this blockette is too new\n"); // TODO XXX Remove 
+        continue;
+      }
+      if (gDebug) printf("  Found a valid version.\n"); // TODO XXX Remove 
+
+
+      // Verify csv opaque data
+      if (!(ntohs(*(uint16_t*)(opaque_data)) & 0x8000))
+      {
+        if (!(*last_csv_time)) {
+          memcpy(&netuint32, opaque_data+6, 4);
+          *last_csv_time = (time_t)ntohl(netuint32);
+          if (gDebug) printf("  Got FMash (CSV) time data.\n"); // TODO XXX Remove 
+        } else {
+          if (gDebug) printf("  Already have FMash (CSV) time data.\n"); // TODO XXX Remove 
+        }
+      }
+
+      // If we have what we need, bail
+      if (*last_csv_time)
+        break;
+    } while (offset);
+
+next:
+    // If we have what we need, bail
+    if (*last_csv_time)
+      break;
+  }
+  if (gDebug)
+  {
+    strftime(time_str, 32, "%Y/%m/%d %H:%M:%S", gmtime(last_csv_time));
+    printf("Last CSV time is [%li] %s\n", *last_csv_time, time_str);
+  }
+} // GetLastTimeCSV
+
+//////////////////////////////////////////////////////////////////////////////
+void GetLastTimeAlarm( time_t* last_alarm_time, st_info_t* st_info)
+{
+  char *retmsg;
+
+  uint8_t  seed_record[iSeedRecordSize];
+  uint8_t* blockette = NULL;
+  uint8_t* opaque_data = NULL;
+  size_t offset = 0;
+  char time_str[32];
+  int max_to_check = 8;
+  int index        = 0;
+  uint32_t netuint32;
+
+  int first_record = 0;
+  int last_record  = 0;
+  int record_count = 0;
+  int loop_size    = 0;
+
+  STDTIME2 time_begin;
+  STDTIME2 time_end;
+
+  *last_alarm_time = 0;
+
+  memset(&time_begin, 0, sizeof(STDTIME2));
+  memset(&time_end, 0, sizeof(STDTIME2));
+
+  time_begin.year = 1972;
+  time_begin.day  = 1;
+  time_end.year   = 3000;
+  time_end.day    = 1;
+
+  if ((retmsg=GetRecordRange(st_info->station, st_info->alarm_chan, st_info->location,
+                            time_begin, time_end, &first_record, &last_record,
+                            &record_count, &loop_size)) != NULL)
+  {
+    fprintf(stderr, "%s: %s\n", FILENAME, retmsg);
+    exit(1);
+  }
+
+  if (max_to_check > record_count)
+    max_to_check = record_count;
+  index = last_record;
+
+  if (gDebug)
+  {
+    printf("Record Range Info:\n");
+    printf("  first record : %d\n", first_record);
+    printf("  last record  : %d\n", last_record);
+    printf("  record count : %d\n", record_count);
+    printf("  loop size    : %d\n", loop_size);
+    printf("  max to check : %d\n", max_to_check);
+  }
+
+  while (max_to_check-- > 0) {
+
+    memset(seed_record, 0, iSeedRecordSize);
+    if ((retmsg=ReadIndex(st_info->station,st_info->alarm_chan,
+                     st_info->location, index, (char*)seed_record)) != NULL)
     {
       fprintf(stderr, "%s: %s\n", FILENAME, retmsg);
       exit(1);
@@ -306,39 +464,30 @@ void GetLastTimes( time_t* last_csv_time, time_t* last_alarm_time,
 
       if (ntohs(*(uint16_t*)(opaque_data)) & 0x8000) {
         if (!(*last_alarm_time)) {
-          *last_alarm_time = (time_t)ntohl(*(uint32_t*)(opaque_data + 6));
+          memcpy(&netuint32, opaque_data+6, 4);
+          *last_alarm_time = (time_t)ntohl(netuint32);
           if (gDebug) printf("  Got Alarm time data.\n"); // TODO XXX Remove 
         } else {
           if (gDebug) printf("  Already have Alarm time data.\n"); // TODO XXX Remove 
         }
       }
-      else {
-        if (!(*last_csv_time)) {
-          *last_csv_time = (time_t)ntohl(*(uint32_t*)(opaque_data + 6));
-          if (gDebug) printf("  Got FMash (CSV) time data.\n"); // TODO XXX Remove 
-        } else {
-          if (gDebug) printf("  Already have FMash (CSV) time data.\n"); // TODO XXX Remove 
-        }
-      }
 
       // If we have what we need, bail
-      if (*last_alarm_time && *last_csv_time)
+      if (*last_alarm_time)
         break;
     } while (offset);
 
 next:
     // If we have what we need, bail
-    if (*last_alarm_time && *last_csv_time)
+    if (*last_alarm_time)
       break;
   }
   if (gDebug)
   {
-    strftime(time_str, 32, "%Y/%m/%d %H:%M:%S", localtime(last_csv_time));
-    printf("Last CSV time is [%li] %s\n", *last_csv_time, time_str);
-    strftime(time_str, 32, "%Y/%m/%d %H:%M:%S", localtime(last_alarm_time));
+    strftime(time_str, 32, "%Y/%m/%d %H:%M:%S", gmtime(last_alarm_time));
     printf("Last Alarm time is [%li] %s\n", *last_alarm_time, time_str);
   }
-}
+} // GetLastTimeAlarm
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -347,8 +496,8 @@ int main (int argc, char **argv)
   char  *retmsg;
 
   char  station[8];
-  char  loc[4];
   char  chan[4];
+  char  loc[4];
   char  network[4];
 
   char  host[16];
@@ -416,7 +565,6 @@ int main (int argc, char **argv)
   LogSNCL(station, network, chan, loc);
 
   // Set the channel name for our opaque blocks
-  strcpy(chan, FALCON_CHAN);
   strcpy(loc, FALCON_LOC);
 
   strcpy(host, argv[2]);
@@ -432,7 +580,8 @@ int main (int argc, char **argv)
   // Populate the station information struct
   st_info.station  = station;
   st_info.network  = network;
-  st_info.channel  = chan;
+  st_info.alarm_chan  = FALCON_ALARM_CHAN;
+  st_info.csv_chan  = FALCON_CSV_CHAN;
   st_info.location = loc;
 
   // Contstruct the base URL
@@ -451,7 +600,8 @@ int main (int argc, char **argv)
     interval = DEBUG_INTERVAL;
   }
 
-  GetLastTimes(&last_csv_time, &last_alarm_time, &st_info);
+  GetLastTimeCSV(&last_csv_time, &st_info);
+  GetLastTimeAlarm(&last_alarm_time, &st_info);
 
   // Polling loop, which checks the Falcon for new data
   // every 'interval' seconds after the completion of
@@ -473,8 +623,8 @@ int main (int argc, char **argv)
 
     if (last_csv_time)
       last_csv_time = 0;
-    if (last_alarm_time)
-      last_alarm_time = 0;
+//    if (last_alarm_time && !list_empty(alarm_lines))
+//      last_alarm_time = 0;
   }
 
 clean:

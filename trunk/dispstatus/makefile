@@ -18,10 +18,8 @@ SRCS+= statusutil.c
 OBJS = $(SRCS:%.c=%.o)
 
 dispstatus : $(LIB330_DIR)/lib330.a $(OBJS) \
-		../lib/libapi.a  \
 		../lib/dalib.a ../lib/dcctime2lib.a
 	$(CC) $(OBJS) $(LIBS) -o dispstatus -lz -lm -lpthread \
-		../lib/libapi.a \
 		../lib/dalib.a ../lib/dcctime2lib.a
 
 dispstatus.o: ../include/diskloop.h ../include/shmstatus.h

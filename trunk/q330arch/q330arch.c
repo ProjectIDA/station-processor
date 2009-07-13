@@ -23,9 +23,10 @@ mmddyy who Changes
 020808 fcs Converted fork calls to pthread_create calls
 031709 fcs Add pthread_detach calls to free up thread memory after halting
 050809 fcs Add Release number to ShowUsage
+071309 fcs logapi lowered log message threshold Release 1.3
 ******************************************************************************/
 #define WHOAMI "q330arch"
-const char *VersionIdentString = "Release 1.2";
+const char *VersionIdentString = "Release 1.3";
 
 #define _REENTRANT
 #include <pthread.h>

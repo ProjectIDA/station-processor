@@ -1,9 +1,10 @@
 #ifndef FALCON_H
 #define FALCON_H
 
-#define FALCON_IDSTRING  "FALC~"
-#define FALCON_CHAN      "OFA"
-#define FALCON_LOC       "90"
+#define FALCON_IDSTRING   "FALC~"
+#define FALCON_ALARM_CHAN "OFA"
+#define FALCON_CSV_CHAN   "OFC"
+#define FALCON_LOC        "90"
 
 #define DEBUG_ITERATIONS 6
 #define DEBUG_INTERVAL 5 
@@ -26,7 +27,8 @@ void FlushOpaque();
 typedef struct {
   const char *station;
   const char *network;
-  const char *channel;
+  const char *alarm_chan;  // Channel name for alarm records
+  const char *csv_chan;    // Channel name for csv records
   const char *location;
 } st_info_t;
 

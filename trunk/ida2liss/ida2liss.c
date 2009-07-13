@@ -10,10 +10,14 @@ Purpose: convert IDA isi sever feed to a LISS feed
            Number of LISS threads is #define MAXCLIENT limited, usually 1
            NOTE: Only supports single client.  If the client disconnects
              then it will pick up back where it left off when it reconnects
+Update History:
+mmddyy who Changes
+==============================================================================
+071309 fcs Change idaapi to log errors only Release 1.2
 ========================================================================*/
 
 const char *WHOAMI="ida2liss";
-const char *VersionIdentString = "Release 1.1";
+const char *VersionIdentString = "Release 1.2";
 
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include "isi.h"

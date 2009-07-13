@@ -17,10 +17,8 @@ SRCS+= logclient.c seedmsg.c ../dispstatus/statusutil.c
 OBJS = $(SRCS:%.c=%.o)
 
 q330serv : $(LIB330_DIR)/lib330.a $(OBJS) \
-		../lib/libapi.a \
 		../lib/dalib.a ../lib/dcctime2lib.a
 	$(CC) $(OBJS) $(LIBS) -o q330serv -lz -lm -lpthread \
-		../lib/libapi.a \
 		../lib/dalib.a ../lib/dcctime2lib.a
 
 q330serv.o: ../include/diskloop.h ../include/shmstatus.h

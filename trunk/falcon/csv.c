@@ -30,6 +30,12 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
     {
         // Grab one buffer from the list
         csv_buffer = (csv_buffer_t*)list_iterator_next(csv_buffer_list);
+        if (gDebug)
+        {
+          printf("%s[%d]: elapsed time %d <> %d TM_HOUR\n",
+            csv_buffer->header->description, csv_buffer->header->channel,
+            (int)(csv_buffer->end_time - csv_buffer->start_time), TM_HOUR);
+        }
         while ((csv_buffer->end_time - csv_buffer->start_time) >= TM_HOUR) 
         {
             // Compress the csv data to FMash format
@@ -69,7 +75,7 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
                 while (list_iterator_hasnext(final_csv->list))
                 {
                     csv_row = (csv_row_t*)list_iterator_next(final_csv->list);
-                    strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", localtime(&(csv_row->timestamp)));
+                    strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", gmtime(&(csv_row->timestamp)));
                     printf("       | %s | % 9d | % 9d | % 9d |\n", time_string,
                            csv_row->average, csv_row->high, csv_row->low );
                 }
@@ -83,7 +89,7 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
             // Add this as an opaque record
             if (msh_data && msh_length) {
                 QueueOpaque(msh_data, msh_length, st_info->station,
-                            st_info->network, st_info->channel,
+                            st_info->network, st_info->csv_chan,
                             st_info->location, FALCON_IDSTRING);
                 free(msh_data);
                 msh_data = NULL;
@@ -179,6 +185,8 @@ void csv_poll( csv_context_t* csv_buffer_list, buffer_t* url_str,
             printf("file '%s' [0x%016llx] uncompressed size is %lu bytes\n",
                    csv_buffer->file_name, (unsigned long long)file_hash,
                    (unsigned long)buf->length);
+            if (strcmp("/data/minute/logm1.csv", csv_buffer->file_name) == 0)
+              printf("'%s'\n", buf->content);
         }
         // Populate a csv_buffer with the contents of the file
         csv_parse_file(csv_buffer, buf, initial_time);
@@ -212,7 +220,7 @@ clean:
         list_destroy(file_list);
         free(file_list);
     }
-}
+} // csv_poll()
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *  Given the contents of a CSV file, populate/update a

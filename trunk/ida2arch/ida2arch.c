@@ -3,9 +3,14 @@ Author:  Frank Shelly  USGS Albuquerque Seismological Laboratory
 Date:    2 January 2008
 Purpose: convert IDA isi server feed to a ASL archive disk loop
          Modified from isi general purpose client
-========================================================================*/
+Update History:
+mmddyy who Changes
+==============================================================================
+071309 fcs idaapi changed to only log errors or worse Release 1.2
+******************************************************************************/
+
 const char *WHOAMI="ida2arch";
-const char *VersionIdentString = "Release 1.1";
+const char *VersionIdentString = "Release 1.2";
 
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include <stdio.h>

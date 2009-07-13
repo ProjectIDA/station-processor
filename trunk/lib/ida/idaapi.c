@@ -13,6 +13,7 @@ Update History:
 mmddyy who Changes
 ==============================================================================
 061207 fcs Creation
+071809 fcs Make Log threshold LOG_ERR instead of LOG_DEBUG
 ******************************************************************************/
 
 #include <stdio.h>
@@ -78,7 +79,7 @@ char *idaInit(const char *dlname
   logioInit(&logio, logFileName, NULL, dlname);
   lp = &logio;
   // Optional debug level
-  logioSetThreshold(&logio, LOG_DEBUG);
+  logioSetThreshold(&logio, LOG_ERR);
 
   if ((local.dl = isidlOpenDiskLoop(&glob, par.site, lp, ISI_RDWR)) == NULL)
   {

@@ -138,7 +138,7 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
 
             QueueOpaque(alarm_data->content, (int)alarm_data->length,
                         st_info->station, st_info->network,
-                        st_info->channel, st_info->location,
+                        st_info->alarm_chan, st_info->location,
                         FALCON_IDSTRING);
             alarm_data  = buffer_destroy(alarm_data);
             alarm_count = 0;
@@ -152,11 +152,15 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
                     syslog(LOG_ERR, "falcon: unable to allocate space for alarm data\n");
                 return;
             }
-        }
+        } // If we've built up a records worth of alarm data
 
         if (!alarm_count)
         {
             // Write alarm header info
+            if (gDebug)
+            {
+                fprintf(stderr, "falcon: Writing alarm header info.\n");
+            }
             buf_word = htons(version_type);
             buffer_write(alarm_data, (uint8_t*)(&buf_word), sizeof(buf_word));
             // Reserve space for elements that will be assigned just 
@@ -203,7 +207,7 @@ void alarm_archive( alarm_context_t* alarm_list, buffer_t* url_str,
 
         QueueOpaque(alarm_data->content, (int)alarm_data->length,
                     st_info->station, st_info->network,
-                    st_info->channel, st_info->location,
+                    st_info->alarm_chan, st_info->location,
                     FALCON_IDSTRING);
     }
     alarm_data = buffer_destroy(alarm_data);
@@ -228,7 +232,6 @@ void alarm_poll( alarm_context_t* alarm_list, buffer_t* url_str,
     buffer_t* buf = NULL;
     const char* file_path = "/data/alarmhistory.txt";
 
-    // Set up the csv directory url
     url = buffer_init();
     buffer_write(url, url_str->content, url_str->length);
     buffer_write(url, (uint8_t*)file_path, strlen(file_path));
@@ -281,6 +284,7 @@ int alarm_filter_lines( alarm_context_t* alarm_list, buffer_t* buf,
     struct tm time_struct;
     uint16_t code = 0;
 
+    // Set up the csv directory url
     if (buffer_size(buf) && alarm_list) 
     {
         // Construct the regular expression for filtering alarm messages
@@ -398,5 +402,5 @@ int alarm_filter_lines( alarm_context_t* alarm_list, buffer_t* buf,
     regfree(&regex);
 
     return result;
-}
+} // alarm_filter_lines()
 

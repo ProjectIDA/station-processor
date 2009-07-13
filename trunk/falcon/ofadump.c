@@ -66,6 +66,7 @@ int main ( int argc, char **argv )
     int16_t blockette_type;
     int16_t blockette_length;
 
+    uint32_t netuint32;
     int c;
     bool data_complete = false;
 
@@ -301,9 +302,11 @@ int main ( int argc, char **argv )
                         for (i = 0; i < (int)alarm_count; i++) {
                             alarm->channel = ntohs(*(uint16_t*)(alarm_data));
                             alarm_data += sizeof(uint16_t);
-                            printf("current alarm_data pointer : 0x%08lx\n", alarm_data);
-                            printf("current alarm_time value   : 0x%08lx\n", ntohl(*(uint32_t*)(alarm_data)));
-                            alarm->timestamp = (time_t)ntohl(*(uint32_t*)(alarm_data));
+                            printf("current alarm_data pointer : 0x%08x\n", (uint32_t)alarm_data);
+                            memcpy(&netuint32, alarm_data, 4);
+                            printf("current alarm_time value   : 0x%08x\n",
+                               ntohl(netuint32));
+                            alarm->timestamp = (time_t)ntohl(netuint32);
                             alarm_data += sizeof(uint32_t);
                             alarm->event = *(uint8_t*)(alarm_data);
                             alarm_data += sizeof(uint8_t);
@@ -311,9 +314,10 @@ int main ( int argc, char **argv )
                             alarm_data += sizeof(uint8_t);
                             strncpy(alarm->description, (char*)alarm_data, (size_t)desc_len);
                             alarm_data += desc_len + 1;
-                            alarm->description[8] = '\0';
+//                            alarm->description[8] = '\0';
+                            alarm->description[desc_len] = '\0';
 
-                            strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", localtime(&(alarm->timestamp)));
+                            strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", gmtime(&(alarm->timestamp)));
 
                             printf( "    (%s)[%li]> %s (%u): Alarm event %s %s\n",
                                     time_string, (long)(alarm->timestamp),
@@ -348,7 +352,7 @@ int main ( int argc, char **argv )
                             printf("        ---------------------- ----------- ----------- ----------- \n");
                         while (list_iterator_hasnext(csv_buffer->list)) {
                             csv_row = (csv_row_t*)list_iterator_next(csv_buffer->list);
-                            strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", localtime(&(csv_row->timestamp)));
+                            strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", gmtime(&(csv_row->timestamp)));
                             printf("       | %s | % 9d | % 9d | % 9d |\n", time_string,
                                    csv_row->average, csv_row->high, csv_row->low );
                         }

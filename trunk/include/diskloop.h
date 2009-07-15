@@ -115,6 +115,13 @@ char *GetRecordRange(
   int         *iLoopSize  // Returns size of circular buffer in records
   );                      // returns NULL or an error string pointer
                           // iFirst == -1 if no records were found
+//////////////////////////////////////////////////////////////////////////////
+// Returns the number of records for the given channel                       
+char *NumChanRecords(             
+  const char  *chan,      // Channel ID
+  const char  *loc,       // Location ID
+  int         *records
+  );                      // returns NULL or an error string pointer
 
 //////////////////////////////////////////////////////////////////////////////
 // Parses str_header to get station, channel, location, time start/end
@@ -128,6 +135,15 @@ STDTIME2      *ptRecEnd,    // Returns end time for record
 int           *piSeqNum,    // Returns the sequence number for the record
 int           *piSamples    // Returns the number of samples
   );                        // returns NULL or an error string pointer
+
+//////////////////////////////////////////////////////////////////////////////
+// The index info is repeated 3 times.  So even if we read it during the
+// middle of a write, either the first two, or second two lines should agree.
+char *ParseIndexInfo(             
+  FILE *fp_idx,       // opened file pointer to index file
+  int  *iFlipRecord,  // Returns current position within circular buffer
+  int  *iMaxRecord    // Maximum size of circular buffer
+  );                  // NULL okay, error string otherwise
 
 //////////////////////////////////////////////////////////////////////////////
 // Print a list of all the spans for the given channel

@@ -574,8 +574,8 @@ int main (int argc, char **argv)
   pass = station;
 
   // TODO XXX XXX XXX XXX XXX XXX XXX XXX REMOVE!!!!
-  user = "ANMO";
-  pass = "ANMO";
+//  user = "ANMO";
+//  pass = "ANMO";
 
   // Populate the station information struct
   st_info.station  = station;

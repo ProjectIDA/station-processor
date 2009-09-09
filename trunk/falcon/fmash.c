@@ -351,9 +351,9 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
     int32_t last_high = 0;
     int32_t last_low = 0;
 
-    uint8_t final_average = 0;
-    uint8_t final_high = 0;
-    uint8_t final_low = 0;
+    int32_t final_average = 0;
+    int32_t final_high = 0;
+    int32_t final_low = 0;
 
     uint32_t temp_uint32 = 0;
     uint16_t temp_uint16 = 0;

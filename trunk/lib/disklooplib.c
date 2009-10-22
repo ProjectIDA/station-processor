@@ -90,10 +90,19 @@ static char loopDir[MAXCONFIGLINELEN+2];
 static char looperrstr[MAXCONFIGLINELEN+2];
 
 // Default Station, Network, Channel, Location to use for log messages
-static char log_station[8] = "CRLY";
-static char log_network[4] = "IU";
+static char log_station[8] = "ZZZZ";
+static char log_network[4] = "XX";
 static char log_channel[4] = "LOG";
-static char log_location[4] = "00";
+static char log_location[4] = "90";
+
+// Username and Password option for Falcon
+// If character pointers are null then use station name
+static char *falcon_username=NULL;
+static char *falcon_password=NULL;
+
+// Falcon IP and port number
+static char falcon_IP[MAXCONFIGLINELEN+2] = "0.0.0.0";
+static int  falcon_port    = 5080;
 
 //////////////////////////////////////////////////////////////////////////////
 // Reads the configuration file.  Stores the values in static local
@@ -328,6 +337,35 @@ char *ParseDiskLoopConfig(
       continue;
     }
 
+    if ((iArgs=sscanf(linestr, "Falcon Username: %s", argstr)) == 1)
+    {
+      falcon_username = malloc(sizeof(argstr)+1);
+      strcpy(falcon_username, argstr);
+      bParsed = 1;
+      continue;
+    }
+
+    if ((iArgs=sscanf(linestr, "Falcon Password: %s", argstr)) == 1)
+    {
+      falcon_password = malloc(sizeof(argstr)+1);
+      strcpy(falcon_password, argstr);
+      bParsed = 1;
+      continue;
+    }
+
+    if ((iArgs=sscanf(linestr, "Falcon IP: %s", argstr)) == 1)
+    {
+      strcpy(falcon_IP, argstr);
+      bParsed = 1;
+      continue;
+    }
+
+    if ((iArgs=sscanf(linestr, "Falcon Port: %d", &count)) == 1)
+    {
+      falcon_port = count;
+      bParsed = 1;
+      continue;
+    }
 
     // If line not recognized then return an error
     if (!bParsed)
@@ -543,6 +581,71 @@ char *LogServerPort(
   *port = iLogServerPort;
   return NULL;
 } // LoopServerPort()
+
+//////////////////////////////////////////////////////////////////////////////
+// Returns username to log into falcon, NULL means use station name
+char *FalconUsername(char *username)
+{
+  if (parse_state == 0)
+  {
+    sprintf(looperrstr, "FalconUsername: ParseDiskLoopConfig not run yet");
+    return looperrstr;
+  }
+
+  if (falcon_username != NULL)
+    strcpy(username, falcon_username);
+  else
+    username[0] = 0;
+
+  return NULL;
+} // FalconUsername()
+
+//////////////////////////////////////////////////////////////////////////////
+// Returns password to log into falcon, NULL means use station name
+char *FalconPassword(char *password)
+{
+  if (parse_state == 0)
+  {
+    sprintf(looperrstr, "FalconPassword: ParseDiskLoopConfig not run yet");
+    return looperrstr;
+  }
+
+  if (falcon_password != NULL)
+    strcpy(password, falcon_password);
+  else
+    password[0] = 0;
+
+  return NULL;
+} // FalconPassword()
+
+//////////////////////////////////////////////////////////////////////////////
+// Returns Falcon IP address
+char *FalconIP(char *ip)
+{
+  if (parse_state == 0)
+  {
+    sprintf(looperrstr, "FalconIP: ParseDiskLoopConfig not run yet");
+    return looperrstr;
+  }
+
+  strcpy(ip, falcon_IP);
+
+  return NULL;
+} // FalconIP()
+
+//////////////////////////////////////////////////////////////////////////////
+// Returns Falcon port number
+char *FalconPort(int *port)
+{
+  if (parse_state == 0)
+  {
+    sprintf(looperrstr, "FalconPort: ParseDiskLoopConfig not run yet");
+    return looperrstr;
+  }
+
+  *port = falcon_port;
+  return NULL;
+} // FalconPort()
 
 //////////////////////////////////////////////////////////////////////////////
 // Station name from 330 contains Network ID, this code strips off network

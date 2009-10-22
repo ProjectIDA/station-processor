@@ -31,6 +31,7 @@ void print_usage( char **args, char *msg, ... );
 int verify_int( char* arg_str, int* value );
 
 int gDebug = 1;
+int gReport = 0;
 
 int main ( int argc, char **argv )
 {
@@ -94,7 +95,7 @@ int main ( int argc, char **argv )
 
     file_name = argv[argc - 1];
 
-    while ((c = getopt( argc, argv, "hi:l:rF:IL:" )) != -1) {
+    while ((c = getopt( argc, argv, "fhi:l:rF:IL:" )) != -1) {
         switch (c) {
             case 'h':
                 display_header = true;
@@ -128,6 +129,9 @@ int main ( int argc, char **argv )
                     print_usage( argv, "E: last records: invalid value '%s'", optarg );
                     goto clean;
                 }
+                break;
+            case 'f':
+                gReport = 1;
                 break;
             default:
                 fprintf( stderr, "Got Filename\n" );
@@ -190,15 +194,18 @@ int main ( int argc, char **argv )
         }
 
         file_position = ftell( file_handle );
-        printf( "File position: %lu\n", file_position );
+        if (!gReport)
+          printf( "File position: %lu\n", file_position );
         records_read = fread( buffer, record_size, 1, file_handle );
         file_position = ftell( file_handle );
 
         if ( feof(file_handle) || ferror(file_handle) ) {
-            fprintf( stdout, "EOF reached\n" );
+            if (!gReport)
+              fprintf( stdout, "EOF reached\n" );
             eof_reached = true;
             if ( !records_read ) {
-                fprintf( stdout, "No records left\n" );
+                if (!gReport)
+                  fprintf( stdout, "No records left\n" );
                 break;
             }
         }
@@ -288,24 +295,31 @@ int main ( int argc, char **argv )
                     { // This is Alarm data
                         alarm = alarm_line_init();
                         alarm_data = msh_data->content;
-                        fprintf(stdout, "\ncompacted alarms size is %lu bytes\n", (unsigned long)msh_data->length);
-                        format_data(alarm_data, msh_data->length, 0, 0);
+                        if (!gReport)
+                        {
+                          fprintf(stdout, "\ncompacted alarms size is %lu bytes\n", (unsigned long)msh_data->length);
+                          format_data(alarm_data, msh_data->length, 0, 0);
+                        }
 
                         alarm_data += sizeof(uint16_t);
                         alarm_data += sizeof(uint32_t); // Skip start time
                         alarm_data += sizeof(uint32_t); // Skip end time
                         alarm_count = ntohs(*(uint16_t*)(alarm_data));
                         alarm_data += sizeof(uint16_t);
-
-                        printf("=== ALARMS (%d) =========================================\n", alarm_count);
+                        if (!gReport)
+                          printf(
+"=== ALARMS (%d) =========================================\n", alarm_count);
 
                         for (i = 0; i < (int)alarm_count; i++) {
                             alarm->channel = ntohs(*(uint16_t*)(alarm_data));
                             alarm_data += sizeof(uint16_t);
-                            printf("current alarm_data pointer : 0x%08x\n", (uint32_t)alarm_data);
+                            if (!gReport)
+                              printf("current alarm_data pointer : 0x%08x\n",
+                                 (uint32_t)alarm_data);
                             memcpy(&netuint32, alarm_data, 4);
-                            printf("current alarm_time value   : 0x%08x\n",
-                               ntohl(netuint32));
+                            if (!gReport)
+                              printf("current alarm_time value   : 0x%08x\n",
+                                 ntohl(netuint32));
                             alarm->timestamp = (time_t)ntohl(netuint32);
                             alarm_data += sizeof(uint32_t);
                             alarm->event = *(uint8_t*)(alarm_data);
@@ -319,7 +333,19 @@ int main ( int argc, char **argv )
 
                             strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", gmtime(&(alarm->timestamp)));
 
-                            printf( "    (%s)[%li]> %s (%u): Alarm event %s %s\n",
+                            if (gReport)
+                              printf( "%s <%s> (%u): Alarm event %s %s\n",
+                                    time_string,
+                                    alarm->description, alarm->channel,
+                                    (alarm->event & 0x7f) == 0 ? "'On'"    :
+                                    (alarm->event & 0x7f) == 1 ? "'High1'" :
+                                    (alarm->event & 0x7f) == 2 ? "'Low1'"  :
+                                    (alarm->event & 0x7f) == 3 ? "'High2'" :
+                                    (alarm->event & 0x7f) == 4 ? "'Low2'"  :
+                                                                 "'Unknown'",
+                                    alarm->event & 0x80 ? "restored" : "triggered" );
+                            else
+                              printf( "    (%s)[%li]> %s (%u): Alarm event %s %s\n",
                                     time_string, (long)(alarm->timestamp),
                                     alarm->description, alarm->channel,
                                     (alarm->event & 0x7f) == 0 ? "'On'"    :
@@ -406,6 +432,7 @@ void print_usage( char **args, char *msg, ... )
                      "        -r       -- display file contents as raw data\n"
                      "        -F COUNT -- display first COUNT records\n"
                      "        -L COUNT -- display last COUNT records\n"
+                     "        -f       -- falcon report format\n"
                      "\n"
                      "        -I       -- display file info then quit\n",
                      exec_name );

@@ -54,12 +54,11 @@ void ShowUsage()
     fprintf(stderr,
 "Usage:\n");
     fprintf(stderr,
-"  falcon <configfile> <falcon IP> <falcon port> [<debug>]\n"
+"  falcon <configfile> [debug]\n"
 "         Retrieves status information from falcon and sends it via opaque\n"
 "         seed records.\n"
 "    <configfile>    -- Usually /etc/q330/DLG1/diskloop.config\n"
-"    <falcon IP>     -- IP address of falcon controller\n"
-"    <falcon port>   -- Port on falcon to connect to\n"
+"    debug           -- Turn on debug messages\n"
     );
     fprintf(stderr, "%s  %s\n", VersionIdentString, __DATE__);
 } // ShowUsage()
@@ -501,10 +500,11 @@ int main (int argc, char **argv)
   char  network[4];
 
   char  host[16];
-  char  port[6];
+  char  portstr[8];
+  int   port;
 
-  const char *user = NULL;
-  const char *pass = NULL;
+  char username[MAXCONFIGLINELEN+2];
+  char password[MAXCONFIGLINELEN+2];
 
   st_info_t st_info;
 
@@ -540,11 +540,11 @@ int main (int argc, char **argv)
     goto clean;
 
   // Check for debug mode verses daemon mode
-  if (argc == 5 && strcmp("debug", argv[4]) == 0)
+  if (argc == 3 && strcmp("debug", argv[2]) == 0)
   {
     gDebug = 1;
   }
-  else if (argc == 4)
+  else if (argc == 2)
   {
     gDebug = 0;
     daemonize();
@@ -567,15 +567,33 @@ int main (int argc, char **argv)
   // Set the channel name for our opaque blocks
   strcpy(loc, FALCON_LOC);
 
-  strcpy(host, argv[2]);
-  strcpy(port, argv[3]);
+  FalconIP(host);
+  FalconPort(&port);
+  sprintf(portstr, "%d", port);
 
-  user = station;
-  pass = station;
+  FalconUsername(username);
+  FalconPassword(password);
+  if (!strlen(username))
+    strcpy(username, station);
+  if (!strlen(password))
+    strcpy(password, station);
 
-  // TODO XXX XXX XXX XXX XXX XXX XXX XXX REMOVE!!!!
-//  user = "ANMO";
-//  pass = "ANMO";
+  // If FalconIP returns "0.0.0.0" exit and complain that no IP was set
+  // in the configurtion file.  We do this so that a standard release
+  // can have the falcon program self exit if a falcon is not part of
+  // the hardware configuration.
+  if (strcmp(host, "0.0.0.0") == 0)
+  {
+    if (gDebug)
+      fprintf(stderr,
+          "falcon:  No 'Falcon IP: <address>' specified in %s, exiting!\n",
+          argv[1]);
+    else
+      syslog(LOG_NOTICE,
+          "falcon:  No 'Falcon IP: <address>' specified in %s, exiting!\n",
+          argv[1]);
+    exit(0);
+  }
 
   // Populate the station information struct
   st_info.station  = station;
@@ -586,13 +604,13 @@ int main (int argc, char **argv)
 
   // Contstruct the base URL
   buffer_write(url_str, (uint8_t*)"http://", 7);
-  buffer_write(url_str, (uint8_t*)user, strlen(user));
+  buffer_write(url_str, (uint8_t*)username, strlen(username));
   buffer_write(url_str, (uint8_t*)":", 1);
-  buffer_write(url_str, (uint8_t*)pass, strlen(pass));
+  buffer_write(url_str, (uint8_t*)password, strlen(password));
   buffer_write(url_str, (uint8_t*)"@", 1);
   buffer_write(url_str, (uint8_t*)host, strlen(host));
   buffer_write(url_str, (uint8_t*)":", 1);
-  buffer_write(url_str, (uint8_t*)port, strlen(port));
+  buffer_write(url_str, (uint8_t*)portstr, strlen(portstr));
 
   // How long we wait between polling events
   interval = SLEEP_INTERVAL;

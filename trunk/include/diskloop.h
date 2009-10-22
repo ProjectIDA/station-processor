@@ -52,6 +52,7 @@ char *LoopDirectory(
   char *dir               // Should have MAXCONFIGLINELEN+1 chars allocated
   );                      // returns NULL or an error string pointer
 
+//////////////////////////////////////////////////////////////////////////////
 char *NetBufferSize(
   int *size               // return value for buffer size in bytes
   );
@@ -70,6 +71,24 @@ char *LogSNCL(char *station, char *network, char *channel, char *location);
 // Used to change the defaults returned by LogSNCL
 char *SetLogSNCL(const char *station, const char *network,
                  const char *channel, const char *location);
+
+//////////////////////////////////////////////////////////////////////////////
+// Returns username to log into falcon, empty means use station name
+char *FalconUsername(char *username);
+
+//////////////////////////////////////////////////////////////////////////////
+// Returns password to log into falcon, empty means use station name
+char *FalconPassword(char *password);
+
+//////////////////////////////////////////////////////////////////////////////
+// Returns Falcon IP address
+// An IP return of "0.0.0.0" should be interpretted as no IP was set
+//   in the diskloop.config file
+char *FalconIP(char *ip);
+
+//////////////////////////////////////////////////////////////////////////////
+// Returns Falcon port number
+char *FalconPort(int *port);
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns the TCP port where log messages are sent to
@@ -162,6 +181,7 @@ char *RangeSpans(
   int         firstRecord, // First record in range
   int         lastRecord   // Last record in range
   );                       // returns NULL or an error string pointer
+
 
 #endif // _DISKLOOP_H_ defined
 

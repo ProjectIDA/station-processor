@@ -107,7 +107,7 @@ char *MakeOpaqueSeed(
     time(&now);
     gmtime_r(&now, &utc);
     seedrec->yr = htons(utc.tm_year + 1900);
-    seedrec->jday = htons(utc.tm_yday) + 1;
+    seedrec->jday = htons(utc.tm_yday + 1);
     seedrec->hr = utc.tm_hour;
     seedrec->minute = utc.tm_min;
     seedrec->seconds = utc.tm_sec;
@@ -338,7 +338,7 @@ char *MakeSeedMsg(const char *msg, int seqno,
   time(&now);
   gmtime_r(&now, &utc);
   seedrec->yr = htons(utc.tm_year + 1900);
-  seedrec->jday = htons(utc.tm_yday) + 1;
+  seedrec->jday = htons(utc.tm_yday + 1);
   seedrec->hr = utc.tm_hour;
   seedrec->minute = utc.tm_min;
   seedrec->seconds = utc.tm_sec;

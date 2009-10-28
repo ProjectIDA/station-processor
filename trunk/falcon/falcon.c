@@ -10,6 +10,7 @@ Update History:
 mmddyy who Changes
 ==============================================================================
 041009 fcs Create skeleton
+102809 fcs Add lock file to allow only one invocation
 ******************************************************************************/
 #define FILENAME "falcon"
 const char *VersionIdentString = "Release 1.0";

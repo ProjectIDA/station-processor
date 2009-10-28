@@ -19,9 +19,12 @@
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 
+static char *lockfile = "/var/tmp/lock." DAEMON_NAME;
+
 static void sigterm_handler()
 {
   syslog(LOG_INFO, "Exiting daemon " DAEMON_NAME);
+  unlink (lockfile);
   closelog();
   exit(EXIT_SUCCESS);
 } // sigterm_handler()
@@ -35,32 +38,85 @@ static void child_handler(int signum)
     }
 } // child_handler()
 
+// exit if there is already a daemon running with this name
+static int lock_daemon()
+{
+    int lfp=-1;
+    int lpid = 0;
+    int iTry = 0;
+    char pidstr[80];
+    int readcnt;
+
+    while (lfp < 0 && iTry++ < 2)
+    {
+        // Create the lock file
+        if ( lockfile && lockfile[0] )
+        {
+            lfp = open(lockfile,O_RDWR|O_CREAT|O_EXCL|O_TRUNC,0660);
+            if ( lfp < 0 )
+            {
+                // Failed to create a lock file, so see if the creator
+                // is still a valid process
+                lfp = open(lockfile,O_RDONLY);
+                if (lfp < 0)
+                {
+                    //Failed to open the lock file for reading
+                    syslog(LOG_ERR, "Unable to read existing lock file %s\n",
+                         lockfile);
+                    return 0;
+                }
+
+                // Existing lockfile found, see if creator is still around
+                memset(pidstr, 0, sizeof(pidstr));
+                readcnt = read(lfp, pidstr, sizeof(pidstr)-1);
+                close(lfp);
+                lfp = -1;
+                lpid = atoi(pidstr);
+ 
+                sprintf(pidstr, "/proc/%d/cmdline", lpid);
+                lfp = open(pidstr,O_RDONLY);
+                if (lfp < 0)
+                {
+                  // process is not valid, we can delete the lock file
+                  unlink(lockfile);
+                  syslog(LOG_INFO, "Ignoring defunct lockfile %s\n", lockfile);
+                  continue;
+                }
+                else
+                {
+                  // another valid daemon of this name exists
+                  syslog(LOG_INFO, "%s daemon pid %d already running\n",
+                         DAEMON_NAME, lpid);
+                  close(lfp);
+                  return 0;
+                }
+            } //  Unable to create a new lock file
+            else
+            {
+              // We created this file, write our pid to it
+              sprintf(pidstr, "%d\n", getpid()); 
+              write(lfp, pidstr, strlen(pidstr));
+            } // we created a new lock file
+        } // lockfile name is defined
+        else
+        {
+            return 1;
+        }
+    } // While we still want to try and create a lock file
+
+    close(lfp);
+    return 1;
+} // lock_daemon()
+
 void daemonize()
 {
     pid_t pid, sid, parent;
-
-    char *lockfile;
-
-    lockfile = "/var/lock/subsys/" DAEMON_NAME;
 
     openlog(DAEMON_NAME, LOG_PID, LOG_LOCAL5);
     syslog(LOG_INFO, "Starting daemon");
 
     /* already a daemon */
     if ( getppid() == 1 ) return;
-
-    /* Create the lock file as the current user */
-/*
-    if ( lockfile && lockfile[0] ) {
-        lfp = open(lockfile,O_RDWR|O_CREAT,0660);
-        if ( lfp < 0 ) {
-            fprintf(stderr,"Unable to create lock file %s\n", lockfile);
-            syslog( LOG_ERR, "unable to create lock file %s, code=%d (%s)",
-                    lockfile, errno, strerror(errno) );
-            exit(EXIT_FAILURE);
-        }
-    }
-*/
 
     /* Drop user if there is one, and we were run as root */
     if ( getuid() == 0 || geteuid() == 0 ) {
@@ -91,6 +147,14 @@ void daemonize()
         alarm(2);
         pause();
 
+        exit(EXIT_FAILURE);
+    }
+
+    // only one daemon of this type allowed at once
+    if (!lock_daemon())
+    {
+        syslog(LOG_ERR, "Another %s daemon is already running, aborting!\n",
+               DAEMON_NAME);
         exit(EXIT_FAILURE);
     }
 

@@ -311,7 +311,9 @@ int main ( int argc, char **argv )
 "=== ALARMS (%d) =========================================\n", alarm_count);
 
                         for (i = 0; i < (int)alarm_count; i++) {
-                            alarm->channel = ntohs(*(uint16_t*)(alarm_data));
+													  uint16_t val_uint16;
+                            memcpy(&val_uint16, alarm_data, 2);
+                            alarm->channel = ntohs(val_uint16);
                             alarm_data += sizeof(uint16_t);
                             if (!gReport)
                               printf("current alarm_data pointer : 0x%08x\n",

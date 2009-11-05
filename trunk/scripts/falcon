@@ -1,0 +1,86 @@
+#! /bin/bash
+#
+#  Bring up/down falcon  
+#
+#  description:
+#  The falcon program retrieves state of health information
+#  from the falcon and sends it via opaque seed.
+#
+#  syntax: falcon {start|stop|restart} </path/to/config>
+
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+RETVAL=0
+PROG=falcon
+NUMARGS=$#
+COMMAND=$1
+MYPID=$$
+
+
+# Make sure binary exists
+if [ ! -x /usr/local/sbin/$PROG  ]
+then
+    echo "`date` ERROR: $PROG executable missing! Exiting... " | tee -a /var/log/messages
+    exit 0
+fi
+
+# Check to for command line args
+if [ $NUMARGS -lt 2 ]
+then
+    arg=/etc/q330/falcon.config
+else
+    arg=$2
+fi
+
+
+stop () {
+    echo "Killing $PROG $arg"
+    PIDS=`ps axo pid,command | grep $PROG | grep $arg | grep -v grep | grep -v stop | awk '{print $1}'`
+     
+    for PID in $PIDS
+    do 
+        if test -z "$PID"
+        then
+            echo "No active process."
+            exit
+        else
+            echo "Killing pid: $PID"
+            kill -15 $PID
+        fi
+    done
+}
+
+start () {
+    echo "Starting $PROG ..." 
+    falcon $arg
+    if [ $? -ne 0 ]
+    then
+        echo "`date` ERROR: $PROG did not launch! " | tee -a /var/log/messages
+    fi
+}
+
+
+case "$COMMAND" in 
+
+    start)
+        start
+        ;;
+    
+    stop)
+        stop
+        ;;
+
+    restart|reload)
+        stop
+        sleep 2
+        start
+        ;;
+
+    *)
+        echo "Usage /etc/init.d/$PROG {start|stop|restart|reload} </path/to/config>"
+        ;;
+
+esac
+
+exit 0
+
+

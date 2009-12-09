@@ -39,7 +39,8 @@ const char *VersionIdentString = "Release 1.0";
 #include "include/q330arch.h"
 
 // Global debug mode flag
-int gDebug;
+int gDebug=0;
+int gReport=1;
 
 // Global shared values for routines in this file
 static int iSeedRecordSize=0;         // Size of seed records usually 512

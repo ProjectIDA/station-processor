@@ -336,15 +336,16 @@ int main ( int argc, char **argv )
                             strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", gmtime(&(alarm->timestamp)));
 
                             if (gReport)
-                              printf( "%s <%s> (%u): Alarm event %s %s\n",
+                              printf( "%5.5s %s %s (%u): Alarm event %s %s\n",
+                                    header_seed.station_id_call_letters,
                                     time_string,
                                     alarm->description, alarm->channel,
-                                    (alarm->event & 0x7f) == 0 ? "'On'"    :
-                                    (alarm->event & 0x7f) == 1 ? "'High1'" :
-                                    (alarm->event & 0x7f) == 2 ? "'Low1'"  :
-                                    (alarm->event & 0x7f) == 3 ? "'High2'" :
-                                    (alarm->event & 0x7f) == 4 ? "'Low2'"  :
-                                                                 "'Unknown'",
+                                    (alarm->event & 0x7f) == 0 ? "On"    :
+                                    (alarm->event & 0x7f) == 1 ? "High1" :
+                                    (alarm->event & 0x7f) == 2 ? "Low1"  :
+                                    (alarm->event & 0x7f) == 3 ? "High2" :
+                                    (alarm->event & 0x7f) == 4 ? "Low2"  :
+                                                                 "Unknown",
                                     alarm->event & 0x80 ? "restored" : "triggered" );
                             else
                               printf( "    (%s)[%li]> %s (%u): Alarm event %s %s\n",
@@ -364,15 +365,27 @@ int main ( int argc, char **argv )
                     { // This is FMash data
                         data_complete = 0;
 
-                        fprintf(stdout, "\ncompressed (fmash) data size is %lu bytes\n", (unsigned long)msh_data->length);
-                        format_data(msh_data->content, msh_data->length, 0, 0);
+                        if (gDebug && !gReport)
+                        {
+                          fprintf(stdout, "\ncompressed (fmash) data size is %lu bytes\n", (unsigned long)msh_data->length);
+                          format_data(msh_data->content, msh_data->length, 0, 0);
+                        }
 
                         fmash_msh_to_csv(&csv_buffer, msh_data->content, msh_data->length);
-                        printf("=== POST EXPANSION ======================================\n");
-                        printf("    file:         %s\n", csv_buffer->file_name);
-                        printf("    channel:      %d\n", csv_buffer->header->channel);
+                        if (!gReport && gDebug)
+                        {
+                          printf("=== POST EXPANSION ======================================\n");
+                          if (csv_buffer->file_name != NULL)
+                            printf("    file:         %s\n", csv_buffer->file_name);
+                          else
+                            printf("    file:         (null)\n");
+                          printf("    channel:      %d\n", csv_buffer->header->channel);
+                        }
                         printf("    description:  %s\n", csv_buffer->header->description);
-                        printf("    lines:        %d\n", list_size(csv_buffer->list));
+                        if (!gReport && gDebug)
+                        {
+                          printf("    lines:        %d\n", list_size(csv_buffer->list));
+                        }
                         list_iterator_stop(csv_buffer->list);
                         list_iterator_start(csv_buffer->list);
                             printf("        ---------------------- ----------- ----------- ----------- \n");

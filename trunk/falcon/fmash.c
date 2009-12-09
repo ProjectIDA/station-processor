@@ -4,6 +4,8 @@
 #include <string.h>
 #include <syslog.h>
 
+extern int gDebug;
+extern int gReport;
 /*
  * OFA record internal format
  * 
@@ -102,7 +104,7 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
     buffer_write(buf, (uint8_t*)(&buf_word), sizeof(buf_word)); // Channel ID
     buffer_write(buf, (uint8_t*)(&buf_word), sizeof(buf_word)); // Row Count
     rowmap_offset = buf->offset;
-    if (gDebug && csv->header->channel == 1)
+    if (!gReport && gDebug && csv->header->channel == 1)
     {
          printf("csv_to_msh %s[%d]: row[%d], rowmap offset=0x%x\n",
              csv->header->description, csv->header->channel, i,
@@ -166,9 +168,12 @@ int fmash_csv_to_msh( csv_buffer_t* csv, uint8_t** raw_msh, size_t* length )
 
                 first_time = 0;
 
-                printf("first average : %d\n", first_average);
-                printf("first high    : %d\n", first_high);
-                printf("first low     : %d\n", first_low);
+                if (!gReport && gDebug)
+                {
+                  printf("first average : %d\n", first_average);
+                  printf("first high    : %d\n", first_high);
+                  printf("first low     : %d\n", first_low);
+                }
             } // first_time was true
         } // there was no buffered_row
 
@@ -406,7 +411,7 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
         row_count = ntohs(temp_uint16); // Row Count
         p += sizeof(uint16_t);
         rowmap = p; // Row Map
-        if (gDebug)
+        if (!gReport && gDebug)
         {
           printf("rowmap offset %02x, row_count %d, length %d\n",
              rowmap - p_begin, row_count, length);
@@ -426,9 +431,12 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
         p += vint_bytes;
         first_low = last_low = varint_to_int32(p, &vint_bytes);
         p += vint_bytes;
-        printf("first average : %d\n", first_average);
-        printf("first high    : %d\n", first_high);
-        printf("first low     : %d\n", first_low);
+        if (!gReport && gDebug)
+        {
+          printf("first average : %d\n", first_average);
+          printf("first high    : %d\n", first_high);
+          printf("first low     : %d\n", first_low);
+        }
 
         // Loop through the compressed buffer and re-construct 
         // the csv list
@@ -436,7 +444,7 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
         for (i = 0; i < (int)row_count; i++)
         {
             map = map_3_get(rowmap, i);
-            if (gDebug && p_csv->header->channel == 1)
+            if (!gReport && gDebug && p_csv->header->channel == 1)
             {
                  printf("map_3_get %s[%d]: row[%d], 0x%x\n",
                      p_csv->header->description, p_csv->header->channel, i,
@@ -515,13 +523,16 @@ int fmash_msh_to_csv( csv_buffer_t** csv, uint8_t* raw_msh, size_t length )
              (unsigned int)(p-p_begin), length);
     }
 
-    printf("last average : %d\n", last_average);
-    printf("last high    : %d\n", last_high);
-    printf("last low     : %d\n", last_low);
+    if (!gReport && gDebug)
+    {
+      printf("last average : %d\n", last_average);
+      printf("last high    : %d\n", last_high);
+      printf("last low     : %d\n", last_low);
 
-    printf("final average : %d\n", final_average);
-    printf("final high    : %d\n", final_high);
-    printf("final low     : %d\n", final_low);
+      printf("final average : %d\n", final_average);
+      printf("final high    : %d\n", final_high);
+      printf("final low     : %d\n", final_low);
+    }
 
     // Verify the final values
     if (final_average != last_average)

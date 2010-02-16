@@ -49,8 +49,8 @@ find_version_Seneca () {
 echo 
 echo
 echo "Please enter name of executable you wish to restore: "
-echo "   Seneca, dispstatus, dlutil, dumpseed, ida2arch, ida2chan, "
-echo "   ida2liss, isid, isildl, isimkdl, isirstat, log330, netreq,"
+echo "   Seneca, dispstatus, dlutil, dumpseed, falcon, ida2arch, "
+echo "   ida2chan, ida2liss, isid, isildl, isimkdl, isirstat, log330, "
 echo "   netreq, netseed, q330arch, or q330serv"
 echo
 

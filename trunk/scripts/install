@@ -107,6 +107,9 @@ dlutil)
 dumpseed)
    do_install
    ;;
+falcon)
+   do_install
+   ;;
 ida2chan)
    do_install
    ;;

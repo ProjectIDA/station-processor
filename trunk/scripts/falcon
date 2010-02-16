@@ -26,7 +26,7 @@ fi
 # Check to for command line args
 if [ $NUMARGS -lt 2 ]
 then
-    arg=/etc/q330/falcon.config
+    arg=/etc/q330/DLG1/diskloop.config
 else
     arg=$2
 fi

@@ -7,9 +7,10 @@ Update History:
 mmddyy who Changes
 ==============================================================================
 020509 fcs Creation
+021910 fcs Add beg= and end=arguments
 ******************************************************************************/
 #define WHOAMI "isirstat"
-const char *VersionIdentString = "Release 1.1";
+const char *VersionIdentString = "Release 1.2";
 
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include <stdio.h>
@@ -89,10 +90,19 @@ char          *loc          // return Location ID
 void ShowUsage()
 {
   fprintf(stderr,"Usage: %s isi=<host> [port=<port>] [<site>]\n", WHOAMI);
+  fprintf(stderr,"   [beg=<begstr>] [end=<endstr>]\n");
   fprintf(stderr," Displays status information about a remote isi disk loop\n");
   fprintf(stderr," port defaults to 39136\n");
   fprintf(stderr," site defaults to the name reported by the remote server\n");
   fprintf(stderr," Only works with 512 byte miniseed based isi disk loop\n");
+  fprintf(stderr,
+"\n"
+" You can specify start and end points <begstr> and <endstr>\n"
+" of the request using the optional 'beg=str' and 'end=str' arguments.  In this\n"
+" case the format of the 'str' string is the desired sequence number given in\n"
+" hex.  Both default to the last record or 'newest'.\n"
+" You can also use keywords 'oldest' or 'newest'\n"
+"\n");
   fprintf(stderr,"%s  %s\n", VersionIdentString, __DATE__);
 }
 
@@ -291,8 +301,8 @@ ISI_PARAM par;
 char *req = NULL;
 char *log;
 char *SiteSpec = NULL;
-char *begstr = NULL;
-char *endstr = NULL;
+char *begstr = "newest";
+char *endstr = "newest";
 char *retstr = NULL;
 ISI_SEQNO begseqno = ISI_NEWEST_SEQNO;
 ISI_SEQNO endseqno = ISI_NEWEST_SEQNO;
@@ -314,6 +324,14 @@ int format    = ISI_FORMAT_GENERIC;
     {
         isiport = atoi(argv[i] + strlen("port="));
         isiSetServerPort(&par, isiport);
+    }
+    else if (strncmp(argv[i], "beg=", strlen("beg=")) == 0)
+    {
+        begstr = argv[i] + strlen("beg=");
+    }
+    else if (strncmp(argv[i], "end=", strlen("end=")) == 0)
+    {
+        endstr = argv[i] + strlen("end=");
     }
     else if (strlen(argv[i]) <= 5 && argv[i][0] != '?' && 
              strcmp(argv[i], "help") != 0 && strcmp(argv[i], "-help") != 0)
@@ -338,6 +356,50 @@ int format    = ISI_FORMAT_GENERIC;
 
   if (server == NULL)
   {
+    ShowUsage();
+    exit(1);
+  }
+
+  // Parse out the start sequence number
+  if (strcmp(begstr, "newest") == 0)
+  {
+    begseqno = ISI_NEWEST_SEQNO;
+  }
+  else if (strcmp(begstr, "oldest") == 0)
+  {
+    begseqno = ISI_OLDEST_SEQNO;
+  }
+  else if (strlen(begstr) != 24)
+  {
+    fprintf(stderr, "Invalid begin sequence string '%s'\n", begstr);
+    ShowUsage();
+    exit(1);
+  }
+  else if (!isiStringToSeqno(begstr, &begseqno))
+  {
+    fprintf(stderr, "Invalid begin sequence string '%s'\n", begstr);
+    ShowUsage();
+    exit(1);
+  }
+
+  // Parse out the end sequence number
+  if (strcmp(endstr, "newest") == 0)
+  {
+    endseqno = ISI_NEWEST_SEQNO;
+  }
+  else if (strcmp(endstr, "oldest") == 0)
+  {
+    endseqno = ISI_OLDEST_SEQNO;
+  }
+  else if (strlen(endstr) != 24)
+  {
+    fprintf(stderr, "Invalid end sequence string '%s'\n", endstr);
+    ShowUsage();
+    exit(1);
+  }
+  else if (!isiStringToSeqno(endstr, &endseqno))
+  {
+    fprintf(stderr, "Invalid end sequence string '%s'\n", endstr);
     ShowUsage();
     exit(1);
   }

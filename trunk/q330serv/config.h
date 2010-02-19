@@ -24,7 +24,7 @@ Edit History:
 */
 #ifndef config_h
 #define config_h
-#define VER_CONFIG 2
+#define VER_CONFIG 7
 
 #ifndef libtypes_h
 #include "libtypes.h"
@@ -34,7 +34,7 @@ Edit History:
 #endif
 
 extern void getline (string *s) ;
-extern void load_configuration (const char *configfile) ;
+extern void load_configuration (const char *) ;
 extern void save_configuration (void) ;
 extern void show_create_pars (void) ;
 extern void show_idle_menu (void) ;
@@ -49,11 +49,8 @@ extern char *get_string (string *prompt, integer maxlth, string *result) ;
 extern word get_verbosity (void) ;
 extern boolean get_yesno (string *prompt, boolean default_yes) ;
 extern integer get_frequency (string *prompt) ;
-extern char *uppercase (pchar s) ;
 
-#ifndef OMIT_SERIAL
 extern enum thost_mode get_hostmode (void) ;
-#endif
 
 extern word get_timeout (string *prompt) ;
 extern word get_onesec_filter (void) ;

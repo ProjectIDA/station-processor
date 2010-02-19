@@ -31,7 +31,6 @@ else
   CC = gcc -g -Wl,--hash-style=both
 endif
 
-LIB330_DIR=../../../lib330
 COPT =
 LIBS = -L $(LIBIDA)
 CFLAGS = -Wall -I.. -I. -I$(HOME)/ida_build/include $(DEFS)

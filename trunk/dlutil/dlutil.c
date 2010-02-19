@@ -7,9 +7,10 @@ Update History:
 mmddyy who Changes
 ==============================================================================
 020807 fcs Creation
+020910 fcs New diskloop.config keywords for falcon
 ******************************************************************************/
 #define FILENAME "dlutil"
-const char *VersionIdentString = "Release 1.2";
+const char *VersionIdentString = "Release 1.3";
 
 #include <stdio.h>
 #include <stdlib.h>

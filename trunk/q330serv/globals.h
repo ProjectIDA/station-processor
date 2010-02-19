@@ -43,7 +43,7 @@ Edit History:
 #endif
 #endif
 
-#define SEN_VER "0.89"
+#define SEN_VER "1.07"
 #define MSG_QUEUE_SIZE 256 /* must be a power of 2 */
 #define MSG_QUEUE_MASK (MSG_QUEUE_SIZE - 1)
 
@@ -52,9 +52,9 @@ Edit History:
 #define ARC_RECORD_SIZE 4096
 #define ARC_FRAMES_PER_RECORD 64
 #define ARC_RECORD_EXP 12
-#define CONFIG_VERSION 2
+#define CONFIG_VERSION 3
 #else
-#define CONFIG_VERSION 102
+#define CONFIG_VERSION 103
 #endif
 
 typedef char string25[26] ;
@@ -65,7 +65,7 @@ typedef compressed_frame tcompressed_record[ARC_FRAMES_PER_RECORD] ;
 typedef tcompressed_record *pcompressed_record ;
 #endif
 
-typedef tmsg_call tmsgqueue[MSG_QUEUE_SIZE] ;
+typedef tmsg_call tsenmsgqueue[MSG_QUEUE_SIZE] ;
 typedef struct {
   word ping_type ;
   word ping_opt ;
@@ -101,11 +101,14 @@ extern longword have_cfg ; /* stuff we already have that can't change */
 extern longword status_received ; /* have this status, might be old */
 extern topstat opstat ; /* operation status */
 extern tstat_arp stat_arp ; /* arp status */
+extern tstat_ep stat_ep ; /* EP status */
 extern tdpcfg dpcfg ; /* DP configuration from tokens */
 extern tpingreq pingreq ; /* for sending ping */
 extern tfile_handle onesec_file ;
-extern tmsgqueue msgqueue ;
+extern tsenmsgqueue msgqueue ;
 extern string line ; /* input line from user */
+extern tfile_owner fowner ;
+extern tfixed fixed ;
 
 #ifndef OMIT_SEED
 extern tns_par netserve ;

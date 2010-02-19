@@ -30,9 +30,10 @@ mmddyy who Changes
 041408 fcs Add status information to mapstatus shared memory region
 122208 fcs Give more time to shutdown server and flush data queues
 050809 fcs Add release number to ShowUsage
+020910 fcs New diskloop.config keywords for falcon, new lib330_91005
 ******************************************************************************/
 #define WHOAMI "q330serv"
-const char *VersionIdentString="Release 1.2";
+const char *VersionIdentString="Release 1.3";
 
 #include "globals.h"
 #include "libtypes.h"
@@ -240,7 +241,7 @@ int main (int argc, char **argv)
   }
   if (configstruc.write_mseed)
   {
-    mseed_file = lib_file_open ("seneca.mseed", LFO_CREATE or LFO_WRITE) ;
+    mseed_file = lib_file_open (NIL, "seneca.mseed", LFO_CREATE or LFO_WRITE) ;
   }
   else
   {
@@ -249,7 +250,7 @@ int main (int argc, char **argv)
   if (configstruc.write_1sec)
   {
     pcret->call_secdata = onesec_callback ;
-    onesec_file = lib_file_open ("seneca.sec", LFO_CREATE or LFO_WRITE) ;
+    onesec_file = lib_file_open (NIL, "seneca.sec", LFO_CREATE or LFO_WRITE) ;
   }
   else
   {

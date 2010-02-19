@@ -24,9 +24,10 @@ mmddyy who Changes
 031709 fcs Add pthread_detach calls to free up thread memory after halting
 050809 fcs Add Release number to ShowUsage
 071309 fcs logapi lowered log message threshold Release 1.3
+020910 fcs New diskloop.config keywords for falcon, new lib330_91005
 ******************************************************************************/
 #define WHOAMI "q330arch"
-const char *VersionIdentString = "Release 1.3";
+const char *VersionIdentString = "Release 1.4";
 
 #define _REENTRANT
 #include <pthread.h>

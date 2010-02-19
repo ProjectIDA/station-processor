@@ -7,10 +7,11 @@ Update History:
 mmddyy who Changes
 ==============================================================================
 071309 fcs idaapi changed to only log errors or worse Release 1.2
+020910 fcs New diskloop.config keywords for falcon
 ******************************************************************************/
 
 const char *WHOAMI="ida2arch";
-const char *VersionIdentString = "Release 1.2";
+const char *VersionIdentString = "Release 1.3";
 
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include <stdio.h>

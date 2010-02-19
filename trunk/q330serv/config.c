@@ -173,16 +173,16 @@ begin
 #endif
 
   good = FALSE ;
-  cf = lib_file_open (configfile, LFO_OPEN or LFO_READ) ;
+  cf = lib_file_open (NIL, configfile, LFO_OPEN or LFO_READ) ;
   if (cf != INVALID_FILE_HANDLE)
       begin
-              lib_file_read (cf, addr(configstruc), sizeof(tconfigstruc)) ;
+              lib_file_read (NIL, cf, addr(configstruc), sizeof(tconfigstruc)) ;
               if (configstruc.cfg_ver == CONFIG_VERSION)
                 then
                   good = TRUE ;
                 else
                   printf ("Configuration file version is not current, values set to defaults\n") ;
-        lib_file_close (cf) ;
+        lib_file_close (NIL, cf) ;
       end
   if (lnot good)
     then
@@ -224,15 +224,15 @@ void save_configuration (void)
 begin
   tfile_handle cf ;
 
-  cf = lib_file_open ("/etc/q330/seneca.config", LFO_CREATE or LFO_WRITE) ;
+  cf = lib_file_open (NIL, "seneca.config", LFO_CREATE or LFO_WRITE) ;
   if (cf == INVALID_FILE_HANDLE)
     then
       begin
         printf ("Could could not create Seneca.config\n") ;
         return ;
       end
-  lib_file_write (cf, addr(configstruc), sizeof(tconfigstruc)) ;
-  lib_file_close (cf) ;
+  lib_file_write (NIL, cf, addr(configstruc), sizeof(tconfigstruc)) ;
+  lib_file_close (NIL, cf) ;
 end
 
 boolean parse_t64 (string *s, t64 *value)

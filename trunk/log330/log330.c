@@ -21,9 +21,10 @@ mmddyy who Changes
 032607 fcs Creation
 053008 fcs Remove daemon run options, q330arch serves this funcition now
 050809 fcs Add release number to Usage help
+020910 fcs New diskloop.config keywords for falcon
 ******************************************************************************/
 #define FILENAME "log330"
-const char *VersionIdentString = "Release 1.1";
+const char *VersionIdentString = "Release 1.2";
 
 #include <stdio.h>
 #include <stdlib.h>

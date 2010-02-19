@@ -28,10 +28,9 @@ else
   CC = gcc -g -Wl,--hash-style=both
 endif
 
-LIB330_DIR=../../../lib330
 COPT = 
 LIBS = -L $(LIBIDA)
-CFLAGS = -I.. -I. -I$(HOME)/ida_build/include $(DEFS) -I$(LIB330_DIR) 
+CFLAGS = -I.. -I. -I$(HOME)/ida_build/include $(DEFS)
 LIBS += -lz -lm -lpthread
 
 SRCS = ida2arch.c daemonize.c wildmatch.c

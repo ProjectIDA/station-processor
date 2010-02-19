@@ -1,8 +1,13 @@
 /*
-  Network server program to fill SEED data rerequests
- */
+Network server program to fill SEED data rerequests
 
-const char *VersionIdentString = "Release 1.1";
+Update History:
+mmddyy who Changes
+==============================================================================
+020910 fcs New diskloop.config keywords for falcon
+******************************************************************************/
+
+const char *VersionIdentString = "Release 1.2";
 
 #include <stdio.h>
 #include <string.h>

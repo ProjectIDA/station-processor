@@ -72,6 +72,10 @@ static tdetstat detstat ;
 static tlcqstat lcqstat ;
 #endif
 
+#ifndef X86_WIN32
+#include <sys/stat.h>       
+#endif
+
 static void replace_prompt (const char *s)
 begin
 
@@ -327,12 +331,12 @@ void sen_state_callback (pointer p)
                   lib_destroy_context (addr(context)) ;
               if (onesec_file != INVALID_FILE_HANDLE)
                 then
-                  lib_file_close (onesec_file) ;
+                  lib_file_close (NIL, onesec_file) ;
               onesec_file = INVALID_FILE_HANDLE ;
 #ifndef OMIT_SEED
               if (mseed_file != INVALID_FILE_HANDLE)
                 then
-                  lib_file_close (mseed_file) ;
+                  lib_file_close (NIL, mseed_file) ;
               mseed_file = INVALID_FILE_HANDLE ;
 #endif
               cfgphase = CFG_IDLE ;
@@ -376,6 +380,115 @@ void msgs_callback (pointer p)
   memcpy (addr(msgqueue[(pm->msgcount - 1) and MSG_QUEUE_MASK]), pm, sizeof(tmsg_call)) ;
   highest_avail_msgnum = pm->msgcount ;
 }
+
+enum tfilekind {FK_UNKNOWN, FK_CONT, FK_IDXDAT} ;
+
+enum tfilekind translate_file (char *s)
+begin
+  char *drive ;
+  char *fname ;
+
+  fname = strchr(s, '/') ;
+  if (fname)
+    then
+      begin
+        *fname++ = 0 ; /* terminate drive part, file name starts right after / */
+        drive = s ; /* drive is first part */
+      end
+    else
+      return FK_UNKNOWN ; /* no drive, leave filename alone */
+  if (strcmp(drive, "cont") == 0)
+    then
+      begin
+        /* In this example, the continuity file is in the current directory */
+        strcpy(s, fname) ; /* just strip off cont/ */
+        return FK_CONT ;
+      end
+    else
+      begin
+        /* For balelib you would need to pickup the drive number from idxn or
+           datan drive and build a new string with the appropriate path names
+           and copy to s */
+        return FK_IDXDAT ;
+      end
+end
+
+/* Extremely minimal implementation. Doesn't check return type from translate_file,
+   but as a result cont.bin works as well as cont/cont.bin */
+void sen_file_callback (pointer p)
+begin
+  tfileacc_call *pfa ;
+  enum tfilekind kind ;
+  tfile_handle cf ;
+#ifndef X86_WIN32
+  off_t result, long_offset ;
+  struct stat sb ;
+#endif
+
+  pfa = p ;
+  switch (pfa->fileacc_type) begin
+    case FAT_OPEN :
+      kind = translate_file (pfa->fname) ;
+#ifdef X86_WIN32
+      cf = CreateFile (pfa->fname, pfa->opt1, 0, NIL, pfa->opt2, FILE_ATTRIBUTE_NORMAL, 0) ;
+#else
+      cf = open (pfa->fname, pfa->opt2, pfa->opt1) ;
+#endif
+      pfa->response = (integer) cf ;
+      break ;
+    case FAT_CLOSE :
+#ifdef X86_WIN32
+      CloseHandle ((tfile_handle) pfa->opt1) ;
+#else
+      close ((tfile_handle) pfa->opt1) ;
+#endif
+      break ;
+    case FAT_DEL :
+      kind = translate_file (pfa->fname) ;
+#ifdef X86_WIN32
+      DeleteFile (pfa->fname) ;
+#else
+      remove (pfa->fname) ;
+#endif
+      break ;
+    case FAT_SEEK :
+#ifdef X86_WIN32
+      pfa->response = (SetFilePointer ((tfile_handle) pfa->opt1, pfa->opt2, NIL, FILE_BEGIN) == 0xFFFFFFFF) ;
+#else
+      long_offset = pfa->opt2 ;
+      result = lseek(pfa->opt1, long_offset, SEEK_SET) ;
+#ifdef __APPLE__
+      pfa->response = (result < 0) ;
+#else
+      pfa->response = (result != long_offset) ;
+#endif
+#endif
+      break ;
+    case FAT_READ :
+#ifdef X86_WIN32
+      ReadFile ((tfile_handle) pfa->opt1, pfa->fname, pfa->opt2, addr(pfa->response), NIL) ;
+#else
+      pfa->response = read (pfa->opt1, pfa->fname, pfa->opt2) ;
+#endif
+      break ;
+    case FAT_WRITE :
+#ifdef X86_WIN32
+      WriteFile ((tfile_handle) pfa->opt1, pfa->fname, pfa->opt2, addr(pfa->response), NIL) ;
+#else
+      pfa->response = write(pfa->opt1, pfa->fname, pfa->opt2) ;
+#endif
+      break ;
+    case FAT_SIZE :
+#ifdef X86_WIN32
+      pfa->response = GetFileSize ((tfile_handle) pfa->opt1, NIL) ;
+#else
+      fstat (pfa->opt1, addr(sb)) ;
+      pfa->response = sb.st_size ;
+#endif
+      break ;
+    /* Remainder of cases only required for balelib support */
+  end
+end
 
 void dump_messages (void)
 begin
@@ -427,7 +540,7 @@ void onesec_callback (pointer p)
   ps = p ;
   if (onesec_file != INVALID_FILE_HANDLE)
     then
-      lib_file_write (onesec_file, ps, ps->total_size) ;
+      lib_file_write (NIL, onesec_file, ps, ps->total_size) ;
 } // onesec_callback()
 
 #ifndef OMIT_SEED
@@ -571,7 +684,7 @@ void mini_callback (pointer p)
 /* Original Seneca save to file
         if (mseed_file != INVALID_FILE_HANDLE)
           then
-            lib_file_write (mseed_file, pm->data_address, LIB_REC_SIZE) ;
+            lib_file_write (NIL, mseed_file, pm->data_address, LIB_REC_SIZE) ;
 */
       end
 } // mini_callback()

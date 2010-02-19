@@ -24,7 +24,7 @@ Edit History:
 */
 #ifndef commands_h
 #define commands_h
-#define VER_COMMANDS 3
+#define VER_COMMANDS 8
 
 extern void run_commands (void) ;
 

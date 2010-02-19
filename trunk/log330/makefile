@@ -5,10 +5,9 @@ else
   CC=gcc -g -Wl,--hash-style=both
 endif
 
-LIB330_DIR=../../../lib330
 COPT = 
 LIBS =
-CFLAGS = -Wall -I.. -I. -I$(LIB330_DIR)
+CFLAGS = -Wall -I.. -I.
 LIBS += -lm -lpthread
 
 SRCS = log330.c logclient.c seedmsg.c

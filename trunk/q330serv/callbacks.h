@@ -24,7 +24,7 @@ Edit History:
 */
 #ifndef callbacks_h
 #define callbacks_h
-#define VER_CALLBACKS 2
+#define VER_CALLBACKS 6
 
 #ifndef libtypes_h
 #include "libtypes.h"
@@ -41,6 +41,7 @@ Edit History:
 
 extern void sen_state_callback (pointer p) ;
 extern void msgs_callback (pointer p) ;
+extern void sen_file_callback (pointer p) ;
 extern void dump_messages (void) ;
 extern void onesec_callback (pointer p) ;
 
@@ -51,8 +52,11 @@ extern void show_detectors (void) ;
 extern void show_lcqs (void) ;
 #endif
 
+#ifndef OMIT_NETWORK
 extern void poc_handler (enum tpocstate pocstate, tpoc_recvd *poc_recv) ;
+#endif
 extern void send_tunneled_request (void) ;
 extern void arp_status (void) ;
+extern void ep_status (void) ;
 
 #endif

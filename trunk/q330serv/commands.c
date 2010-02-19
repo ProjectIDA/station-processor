@@ -25,6 +25,11 @@ Edit History:
                      callback functions.
     2 2006-11-30 rdr Add handling of module versions command.
     3 2007-03-07 rdr Add call to WSACleanup.
+    4 2007-08-04 rdr Add conditionals to remove network support.
+    5 2007-08-07 rdr Add settings of continuity cache timer.
+    6 2008-01-11 rdr Add handling for F and I commands in run state.
+    7 2009-02-09 rdr Add support for EP status.
+    8 2009-08-02 rdr Add setting max DSS memory.
 */
 #ifndef globals_h
 #include "globals.h"
@@ -73,7 +78,9 @@ end
 
 void run_commands (void)
 begin
+#ifndef OMIT_NETWORK
   tpoc_par poc_par ;
+#endif
   string s ;
   word newverb ;
   enum tliberr err ;
@@ -126,12 +133,14 @@ begin
                 end
             break ;
           case 'Q' :
+#ifndef OMIT_NETWORK
             if (poc_context)
               then
                 begin
                   printf ("POC Receiver Stopped\n") ;
                   lib_poc_stop (poc_context) ;
                 end
+#endif
             if (context)
               then
                 lib_destroy_context (addr(context)) ;
@@ -163,8 +172,12 @@ begin
                 begin
                   pcret->call_state = sen_state_callback ;
                   pcret->call_messages = msgs_callback ;
+                  pcret->call_baler = NIL ;
 #ifndef OMIT_SEED
                   pcret->mini_firchain = NIL ;
+                  fowner.call_fileacc = sen_file_callback ;
+                  fowner.station_ptr = NIL ; /* Not required for seneca, only one station */
+                  pcret->file_owner = addr(fowner) ;
                   pcret->call_minidata = mini_callback ;
                   if (configstruc.write_archive)
                     then
@@ -173,7 +186,7 @@ begin
                       pcret->call_aminidata = NIL ;
                   if (configstruc.write_mseed)
                     then
-                      mseed_file = lib_file_open ("seneca.mseed", LFO_CREATE or LFO_WRITE) ;
+                      mseed_file = lib_file_open (NIL, "seneca.mseed", LFO_CREATE or LFO_WRITE) ;
                     else
                       mseed_file = INVALID_FILE_HANDLE ; /* not open */
 #endif
@@ -181,7 +194,7 @@ begin
                     then
                       begin
                         pcret->call_secdata = onesec_callback ;
-                        onesec_file = lib_file_open ("seneca.sec", LFO_CREATE or LFO_WRITE) ;
+                        onesec_file = lib_file_open (NIL, "seneca.sec", LFO_CREATE or LFO_WRITE) ;
                       end
                     else
                       begin
@@ -194,6 +207,7 @@ begin
                       begin
                         printf ("Station Thread Created\n") ;
                         cfgphase = CFG_IDLE ;
+#ifndef OMIT_NETWORK
                         if (configstruc.poc_port)
                           then
                             begin
@@ -202,6 +216,7 @@ begin
                               poc_context = lib_poc_start (addr(poc_par)) ;
                               printf ("POC Receiver Started\n") ;
                             end
+#endif
                       end
                     else
                       begin
@@ -221,13 +236,13 @@ begin
             get_t64 ("Serial number: ", addr(pcret->q330id_serial)) ; /* serial number */
             break ;
           case 'B' :
-            w = get_word ("Data port (1-4): ") ;/* Data port, use LP_TEL1 .. LP_TEL4 */
+            w = get_word ("Data port (1-4): ") ; /* Data port, use LP_TEL1 .. LP_TEL4 */
             w = w - 1 ;
             pcret->q330id_dataport = w ;
             break ;
           case 'C' :
             get_string("Station name (3-5 characters): ", 5, addr(pcret->q330id_station)) ; /* initial station name */
-            uppercase(addr(pcret->q330id_station)) ;
+            lib330_upper(addr(pcret->q330id_station)) ;
             break ;
           case 'D' :
             pcret->host_timezone = get_integer ("Timezone offset in seconds: ") ; /* seconds offset of host time. Initial value if auto-adjust enabled */
@@ -285,11 +300,6 @@ begin
           case 'C' :
             preg->q330id_baseport = get_word ("Q330 base port: ") ; /* base UDP port number */
             break ;
-#ifndef OMIT_SERIAL
-          case 'D' :
-            preg->host_mode = get_hostmode () ;
-            break ;
-#endif
           case 'E' :
             get_string("Host interface: ", 250, addr(preg->host_interface)) ; /* ethernet or serial port path name */
             break ;
@@ -336,6 +346,12 @@ begin
             break ;
           case 'P' :
             preg->opt_buflevel = get_word("Buffer level to stop connection: ") ; /* terminate connection when buffer level reaches this value if non-zero */
+            break ;
+          case 'Q' :
+            preg->opt_q330_cont = get_word("Minutes before writing Q330 continuity to file: ") ;
+            break ;
+          case 'R' :
+            preg->opt_dss_memory = get_word("Maximum DSS memory in KB: ") ;
             break ;
           case 'S' :
             save_configuration () ;
@@ -389,10 +405,20 @@ begin
             send_tunneled_request () ;
             break ;
 #ifndef OMIT_SEED
+          case 'F' :
+            if (current_state == LIBSTATE_RUN)
+              then
+                lib_flush_data (context) ;
+            break ;
           case 'H' :
             if (current_state == LIBSTATE_RUN)
               then
                 show_detectors () ;
+            break ;
+          case 'I' :
+            if (current_state == LIBSTATE_RUN)
+              then
+                lib_set_freeze_timer (context, 30) ;
             break ;
           case 'L' :
             show_lcqs () ;
@@ -416,12 +442,14 @@ begin
             if (context == NIL)
               then
                 begin /* invalid registration moved me to idle and then I went to terminate */
+#ifndef OMIT_NETWORK
                   if (poc_context)
                     then
                       begin
                         printf ("POC Receiver Stopped\n") ;
                         lib_poc_stop (poc_context) ;
                       end
+#endif
 #ifdef X86_WIN32
                   WSACleanup () ;
 #endif

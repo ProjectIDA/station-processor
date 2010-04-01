@@ -19,7 +19,7 @@ log330 : ../lib/dalib.a ../lib/dcctime2lib.a $(OBJS)
 
 log330.o: ../include/diskloop.h ../include/q330arch.h
 
-logclient.o: ../include/diskloop.h ../include/q330arch.h
+logclient.o: ../include/q330arch.h
 
 msgtest:  msgtest.o logclient.o seedmsg.o ../lib/dalib.a
 	$(CC) msgtest.o logclient.o seedmsg.o \

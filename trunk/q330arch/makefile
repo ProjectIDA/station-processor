@@ -35,7 +35,7 @@ q330arch : ../lib/dalib.a ../lib/dcctime2lib.a \
 
 q330arch.o: ../include/diskloop.h ../include/q330arch.h ../include/shmstatus.h
 
-logclient.o: ../include/diskloop.h ../include/q330arch.h
+logclient.o: ../include/q330arch.h
 
 ../dispstatus/statusutil.o:	../include/shmstatus.h
 	cd ../dispstatus; $(MAKE)

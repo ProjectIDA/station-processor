@@ -23,7 +23,7 @@ q330serv : $(LIB330_DIR)/lib330.a $(OBJS) \
 
 q330serv.o: ../include/diskloop.h ../include/shmstatus.h
 
-callbacks.o:	../include/diskloop.h ../include/q330arch.h ../include/shmstatus.h
+callbacks.o:	../include/q330arch.h ../include/shmstatus.h
 
 ../dispstatus/statusutil.o	: ../include/shmstatus.h
 	cd ../dispstatus; $(MAKE)

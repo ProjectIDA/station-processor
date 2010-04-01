@@ -33,6 +33,8 @@ Routines:
             records that fall within that range
     DumpSpans
             Debug type print of all the spans in the circular buffer
+    NoIDA
+            Add records to archive, but don't put them on IDA disk loop
 
 Update History:
 mmddyy who Changes
@@ -41,6 +43,8 @@ mmddyy who Changes
 050207 fcs Eliminate seed record time overlap caused by restarts
 060107 fcs Add sequence number and samples return values to ParseSeedHeader
 060107 fcs Use sequence number and samples for overwrite last record
+102209 fcs Support for new Falcon configuration keywords
+040110 fcs Add NoIDA keyword supporting channels for archive only
 ******************************************************************************/
 
 #include <stdio.h>
@@ -69,6 +73,9 @@ static int parse_state=0;
 
 // Will get filled in by Buffer: entries in configuration file
 static struct s_bufconfig *pChanSizeList=NULL;
+
+// Will get filled in by NoIDA: entries in configuration file
+static struct s_bufconfig *pNoIDAList=NULL;
 
 // Need a list of remapped station names
 static struct s_mapstation *pMapStationList=NULL;
@@ -209,7 +216,8 @@ char *ParseDiskLoopConfig(
           newbuf = (struct s_bufconfig *) malloc(sizeof (struct s_bufconfig));
           if (newbuf == NULL)
           {
-            fprintf(stderr, "malloc in ParseDiskLoopConfig failed.\n");
+            fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
+                    __FILE__, __LINE__);
             exit(1);
           }
 
@@ -229,6 +237,58 @@ char *ParseDiskLoopConfig(
         } // else everything appears to be in order
       } // location/channel syntax appears to be okay
     } // Buffer: keyword parsed
+
+    // NoIDA: <loc>/<chan>
+    loc[0] = 0;
+    chan[0] = 0;
+    if ((iArgs=sscanf(linestr, "NoIDA: %s", argstr)) == 1)
+    {
+      // test for blank location code
+      int i=0;
+      if (argstr[0] == '/')
+      {
+        strcpy(loc, "  ");
+        for (i=0; i < 3; i++)
+         chan[i] = argstr[i+1];
+      }
+      else if (argstr[2] == '/')
+      {
+        loc[0] = argstr[0];
+        loc[1] = argstr[1];
+        loc[2] = 0;
+
+        for (i=0; i < 3; i++)
+          chan[i] = argstr[i+3];
+        chan[i] = 0;
+      } // else location code is not blank
+      else argstr[0] = 0;
+
+      if (argstr[0] != 0)
+      {
+        // allocate space for new entry
+        newbuf = (struct s_bufconfig *) malloc(sizeof (struct s_bufconfig));
+        if (newbuf == NULL)
+        {
+          fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
+                   __FILE__, __LINE__);
+          exit(1);
+        }
+
+        // Fill  in record
+        strncpy(newbuf->loc, loc, 4);
+        newbuf->loc[3] = 0;
+        strncpy(newbuf->chan, chan, 4);
+        newbuf->chan[3] = 0;
+        newbuf->records = 0;
+
+        // Insert new record at head of the list
+        newbuf->next = pNoIDAList;
+        pNoIDAList = newbuf;
+
+        bParsed = 1;
+        continue;
+      } // location/channel syntax appears to be okay
+    } // NoIDA: keyword parsed
 
     if ((iArgs=sscanf(linestr, "MapStation: %s %s\n", argstr, argstr2)) == 2)
     {
@@ -419,6 +479,54 @@ char *LoopRecordSize(
   *size = iLoopRecordSize;
   return NULL;
 } // LoopRecordSize()
+
+//////////////////////////////////////////////////////////////////////////////
+// Tell whether the given location/channel is on the NoIDA channel list
+int CheckNoIDA(
+  const char  *chan,      // Channel ID
+  const char  *loc        // Location ID
+  )
+{
+  int bFound = 0;
+  int bMatch = 0;
+  int i;
+  struct s_bufconfig *ptr;
+  struct s_bufconfig entry;
+
+  if (parse_state == 0)
+  {
+    return 0;
+  }
+  
+  // Loop through list, return last entry to match
+  for (ptr=pNoIDAList; ptr != NULL; ptr = ptr->next)
+  {
+    // Check location code for match
+    bMatch = 1;
+    for (i=0; i < 2 && bMatch; i++)
+    {
+      if ((toupper(loc[i]) != toupper(ptr->loc[i]))
+          && (ptr->loc[i] != '?'))
+        bMatch = 0; 
+    }
+
+    // Check channel name for match
+    for (i=0; i < 3 && bMatch; i++)
+    {
+      if ((toupper(chan[i]) != toupper(ptr->chan[i]))
+          && (ptr->chan[i] != '?'))
+        bMatch = 0; 
+    }
+
+    if (bMatch)
+    {
+      bFound = 1;
+      entry = *ptr;
+    }
+  } // check all entries
+
+  return bFound;
+} // CheckNoIDA()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns the number of records for the given channel

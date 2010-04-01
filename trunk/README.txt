@@ -38,7 +38,7 @@ Release 1.8, February 9,2009
 falcon          -- New program to create seed records of falcon status
 lib330_91005    -- Supports new environmental processor (microbarograph)
 q330serv (1.3)  -- new diskloop.config keywords for falcon, lib330_91005
-q330arch (1.4)  -- new diskloop.config keywords for falcon
+q330arch (1.4)  -- new diskloop.config keywords for falcon, NoIDA keyword
 netseed (1.2)   -- new diskloop.config keywords for falcon
 netreq (1.2)    -- new diskloop.config keywords for falcon
 log330 (1.2)    -- new diskloop.config keywords for falcon

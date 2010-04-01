@@ -25,6 +25,7 @@ mmddyy who Changes
 050809 fcs Add Release number to ShowUsage
 071309 fcs logapi lowered log message threshold Release 1.3
 020910 fcs New diskloop.config keywords for falcon, new lib330_91005
+040110 fcs NoIDA in diskloop.config means don't add record to IDA disk loop
 ******************************************************************************/
 #define WHOAMI "q330arch"
 const char *VersionIdentString = "Release 1.4";
@@ -113,7 +114,13 @@ char *ArchiveSeed(char *record)
 
   // We write to archive first to give archive max chance of being complete
   retmsg2 = WriteChan(station, channel, location, record);
-  retmsg1 = idaWriteChan(station, channel, location, record, g_sIDAname);
+
+  // Make sure channel isn't listed with a NoIDA keyword in diskloop.config
+  retmsg1=NULL;
+  if (!CheckNoIDA(channel, location))
+  {
+    retmsg1 = idaWriteChan(station, channel, location, record, g_sIDAname);
+  }
 
   if (g_bDebug)
   {

@@ -34,9 +34,10 @@ Update History:
 mmddyy who Changes
 ==============================================================================
 031208 fcs Creation
+040910 fcs Built with new lib330
 ******************************************************************************/
 #define WHOAMI "dispstatus"
-const char *VersionIdentString="Release 1.2";
+const char *VersionIdentString="Release 1.3";
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -36,7 +36,7 @@ else
         fi
     else
         echo "WARNING: could not find version info for $DEST/$SRC." 
-        ecoh "Overwriting..."
+        echo "Overwriting..."
     fi
 
     echo "Okay..."

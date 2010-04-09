@@ -33,6 +33,7 @@ else
         then
             echo "cp -pf $DEST/$SRC $OPT/$SRC"_"$USR_LOCAL_SBIN_VERS"
             `cp -pf $DEST/$SRC $OPT/$SRC"_"$USR_LOCAL_SBIN_VERS`
+            chmod a+rx $OPT/$SRC"_"$USR_LOCAL_SBIN_VERS
         fi
     else
         echo "WARNING: could not find version info for $DEST/$SRC." 

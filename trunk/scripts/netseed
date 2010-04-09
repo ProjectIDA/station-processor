@@ -1,0 +1,76 @@
+#! /bin/bash
+#
+#  Bring up/down netseed 
+#
+#  description: 
+#  The netseed daemon controls 
+#
+#  config: /etc/q330/diskloop.config  
+#  logfile: /var/log/netreq.log
+
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+RETVAL=0
+OPTS=4004
+ 
+# Make sure binary exists
+test -x /usr/local/sbin/netseed || exit 0
+
+start () {
+    pids=`pidof netseed`
+    if [ -n "$pids" ] ; then
+        echo "netseed already running....killing"
+
+        for pid in `echo $pids`
+        do
+            kill -9 $pid > /dev/null
+        done
+    fi
+
+    echo "Starting netseed..."
+
+    /usr/local/sbin/netseed $OPTS
+}
+
+
+stop ()
+{
+    echo "Killing netseed ..." 
+    # program in a delay
+    sleep 2
+    pids=`pidof netseed`
+    if [ -n "$pids" ] ; then
+
+        killall netseed 
+
+        if [ $? != 0 ]; then
+            echo "Error stopping netseed"
+        fi  
+
+    fi
+    echo
+    logger "END netseed"
+}
+
+case "$1" in
+
+    start)
+        start
+	;;
+
+    stop)
+        stop
+	;;
+
+    restart|reload|force-reload)
+        echo -n "Restarting netseed "
+	stop 
+	sleep 2
+        start
+	;;
+
+    *)
+        echo "Usage: /etc/init.d/netseed {start|stop|reload|force-reload|restart}"
+        exit 1
+esac
+
+exit 0

@@ -1,7 +1,8 @@
-#! /bin/bash 
+#! /bin/bash
 #
 #  Bring up/down ida2liss daemon
-#  ida2liss creates a liss server connection on the slate, which allows access from the liss server
+#  ida2liss creates a liss server connection on the slate, 
+#  which allows access from the liss server
 #
 
 
@@ -14,11 +15,25 @@ numargs=$#
 # Make sure binary exists
 test -x /usr/local/sbin/ida2liss || exit 0
 
+# If the config file doesn't exist, then exit
+if [ ! -f /etc/q330/ida2liss.config ]; then    
+    echo "ida2liss: Config file doesn't exist... exiting."
+    exit 0
+fi
+
+# Source config file
+. /etc/q330/ida2liss.config
+
+
+
 # Now start the data collection process
 start () 
 {
     echo "Starting $PROG..." 
-    ida2liss raw server=localhost isiport=39132 lissport=4002 log=/opt/data/nrts/log/ida2liss.log depth=100 filter='*/LOG' keepalive=100
+    IDA2LISS="ida2liss server=localhost isiport=$ISIPORT lissport=$LISSPORT log=$IDA2LISS_LOG depth=$IDA2LISS_DEPTH filter=$FILTER keepalive=$IDA2LISS_KEEPALIVE raw"
+    logger $IDA2LISS
+    ` $IDA2LISS `
+    #ida2liss server=localhost isiport=$ISIPORT lissport=$LISSPORT log=$IDA2LISS_LOG depth=$IDA2LISS_DEPTH filter=$FILTER keepalive=$IDA2LISS_KEEPALIVE raw
 }
 
 

@@ -43,7 +43,7 @@ stop ()
         killall netreq 
 
         if [ $? != 0 ]; then
-            echo "Error stopping q330driver"
+            echo "Error stopping netreq"
         fi  
 
     fi

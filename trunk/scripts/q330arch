@@ -1,6 +1,6 @@
 #! /bin/bash 
 #
-#  Bring up/down dispstatus program
+#  Bring up/down q330arch program
 #
 #  description: 
 
@@ -13,7 +13,7 @@ numargs=$#
 . /home/maint/config 
 
 # Make sure binary exists
-if [ ! -x /usr/local/sbin/dispstatus ] 
+if [ ! -x /usr/local/sbin/q330arch ] 
 then
     echo "Error: Executable missing! Exiting..."
     exit 0 

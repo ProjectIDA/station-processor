@@ -1,0 +1,85 @@
+#
+# script to amek sure that all of the SAT test programs are running.
+# designed to be run from a cron job
+#
+#
+# Make sure none of the log files gets too big
+#
+date
+old=`find $NRTS_HOME/log -name '*.log' -size +1M -exec -mv {} {}_old \; -print`
+if [ "${old}" != "" ]
+then
+ echo Restarting programs due to the following large log files:
+ echo ${old}
+ # A log file was too big, so restart all drivers
+ # terminate isid server
+ pid=`/bin/ps -A -o pid,cmd | grep -e "^[ ]*[0-9]\+ isid\>" | sed -e 's/^  *//' -e 's/ .*//'`
+ if [ "${pid}" != "" ] ; then kill ${pid} ; fi
+ # terminate ida2arch processes
+ pid=`/bin/ps -A -o pid,cmd | grep -e "^[ ]*[0-9]\+ ida2arch\>" | sed -e 's/^  *//' -e 's/ .*//'`
+ if [ "${pid}" != "" ] ; then kill ${pid} ; fi
+ # give processes some time to terminate
+ sleep 5
+fi
+
+#
+# Make sure that isid server is runing
+#
+pid=`/bin/ps -A -o pid,cmd | grep -e "^[ ]*[0-9]\+ isid\>" | sed -e 's/^  *//' -e 's/ .*//'`
+if [ "${pid}" == "" ]
+then 
+  echo Starting up isid daemon
+  isid port=39136 log=$NRTS_HOME/log/isid.log -bd
+fi 
+#
+# Make sure that netseed server is running
+#
+ pid=`/bin/ps -A -o pid,cmd | grep -e "^[ ]*[0-9]\+ netseed\>" | sed -e 's/^  *//' -e 's/ .*//'`
+if [ "${pid}" == "" ]
+then 
+  echo Starting up netseed 4004 daemon
+  netseed 4004
+fi 
+#
+# Make sure that aslreq server is running
+#
+ pid=`/bin/ps -A -o pid,cmd | grep -e "^[ ]*[0-9]\+ aslreq\>" | sed -e 's/^  *//' -e 's/ .*//'`
+if [ "${pid}" == "" ]
+then 
+  echo Starting up aslreq 4003 daemon
+  netseed 4003
+fi 
+#
+# Make sure q330arch program is running
+#
+pid=`/bin/ps -A -o pid,cmd | grep -e "^[ ]*[0-9]\+ q330arch\>" | sed -e 's/^  *//' -e 's/ .*//'`
+if [ "${pid}" == "" ]
+then 
+  echo Starting up q330arch daemon
+  q330arch /etc/q330/DLG1/diskloop.config
+fi 
+#
+# Make sure q330serv program is running
+#
+pid=`/bin/ps -A -o pid,cmd | grep -e "^[ ]*[0-9]\+ q330serv\>" | sed -e 's/^  *//' -e 's/ .*//'`
+if [ "${pid}" == "" ]
+then 
+  echo Starting up q330serv daemon
+  q330serv /etc/q330/DLG1
+fi 
+
+#
+# Break down teh cron log file if it gets too big
+#
+big=`find /home/fshelly/cron.log -size +1M`
+if [ ${big}" != "" ]
+then
+ mv ${big} /home/fshelly/cron_old.log
+ touch /home/fshelly/cron.log
+ chmod ug+rw /home/fshelly/cron.log
+ echo Moving cron.log to cron_old.log due to size
+fi
+#
+# Done
+#
+echo Done

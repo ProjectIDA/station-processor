@@ -1024,7 +1024,7 @@ int argc;
  {
   fprintf(stderr, "Setting linger option\n") ;
   lingeropt.l_onoff = 0 ;
-  lingeropt.l_linger = 0 ;
+  lingeropt.l_linger = 20 ;
   j = sizeof(struct linger) ;
   setsockopt(fd, SOL_SOCKET, SO_LINGER, &lingeropt, j) ;
  }

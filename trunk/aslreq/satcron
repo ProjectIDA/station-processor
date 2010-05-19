@@ -47,7 +47,7 @@ fi
 if [ "${pid}" == "" ]
 then 
   echo Starting up aslreq 4003 daemon
-  netseed 4003
+  aslreq 4003
 fi 
 #
 # Make sure q330arch program is running
@@ -72,7 +72,7 @@ fi
 # Break down teh cron log file if it gets too big
 #
 big=`find /home/fshelly/cron.log -size +1M`
-if [ ${big}" != "" ]
+if [ "${big}" != "" ]
 then
  mv ${big} /home/fshelly/cron_old.log
  touch /home/fshelly/cron.log

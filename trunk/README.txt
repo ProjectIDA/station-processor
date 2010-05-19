@@ -1,6 +1,6 @@
 Documents changes to operational software and scripts for q330 ASP processor
 
-README Updated:  May 6, 2009
+README Updated:  May 10, 2010
 
 Release June 30, 2008
 Initial release
@@ -34,7 +34,7 @@ ida2liss        -- Removed debug messages from IDA log level
 Release 1.7, December 2, 2009
 /etc/init.d/ida2liss /etc/q330/ida2liss.config used to autostart ida2liss
 
-Release 1.8, February 9,2009
+Release 1.8, May 10,2010
 falcon          -- New program to create seed records of falcon status
 lib330_100327   -- Supports new environmental processor (microbarograph)
 q330serv (1.3)  -- new diskloop.config keywords for falcon, lib330_100327

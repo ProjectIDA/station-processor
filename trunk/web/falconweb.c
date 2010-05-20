@@ -308,6 +308,8 @@ void CreateMainFalconPage(
 "    <head>\n"
 "        <title>Falcon Health Status</title>\n"
 "        <link rel=\"stylesheet\" type=\"text/css\" href=\"falcon.css\"/>\n"
+"        <link rel=\"icon\" href=\"favicon.ico\" type=\"image/x-icon\"/>\n"
+"        <link rel=\"shortcut icon\" href=\"favicon.ico\" type=\"image/x-icon\"/>\n"
 "        <meta http-equiv=\"refresh\" content=\"900\"/>\n"
 "        <script type=\"text/javascript\" src=\"falcon.js\"></script>\n"
 "    </head>\n"

@@ -1,0 +1,55 @@
+html, body { height: 100%; }
+body { padding: 0; margin: 0; }
+
+div.main {
+    top:0px;
+    left:0px;
+    right:0px;
+    bottom:0px;
+}
+
+div.main > div {
+    background-color: #aaaaaa;
+    border-width: 1px;
+    border-style: solid;
+    margin: 10px;
+    left: 0px;
+    right: 0px;
+}
+
+div.level-2 { border-color: red; }
+div.level-1 { border-color: yellow; }
+div.level-0 { border-color: green; }
+
+div.main > div > span, div.main > div > div {
+    font-size: 16pt;
+    font-weight: bold;
+    padding-left: 3px;
+}
+div.main > div > span { 
+    padding-left: 1em;
+}
+
+div.main > div > div:first-child {
+    width: 5em;
+    float: left;
+}
+
+div.main > div > div:first-child[onClick]:hover {
+    cursor: pointer;
+}
+
+div.level-2 > div { background-color: red; }
+div.level-1 > div { background-color: yellow; }
+div.level-0 > div { background-color: green; }
+
+span.level-2 { color: red; }
+span.level-1 { color: yellow; }
+span.level-0 { color: green; }
+span.level-E { color: #aaaaaa; }
+
+div.main > div > div.alarms {
+    visibility: hidden;
+    background-color: #cccccc;
+    font-size: 14pt;
+}

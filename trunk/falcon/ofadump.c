@@ -335,7 +335,7 @@ int main ( int argc, char **argv )
 
                             strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", gmtime(&(alarm->timestamp)));
 
-                            if (gReport)
+                            if (gReport && alarm->channel != 0)
                               printf( "%5.5s %s %s (%u): Alarm event %s %s\n",
                                     header_seed.station_id_call_letters,
                                     time_string,
@@ -347,7 +347,7 @@ int main ( int argc, char **argv )
                                     (alarm->event & 0x7f) == 4 ? "Low2"  :
                                                                  "Unknown",
                                     alarm->event & 0x80 ? "restored" : "triggered" );
-                            else
+                            else if (!gReport)
                               printf( "    (%s)[%li]> %s (%u): Alarm event %s %s\n",
                                     time_string, (long)(alarm->timestamp),
                                     alarm->description, alarm->channel,

@@ -353,7 +353,7 @@ void CreateMainFalconPage(
       while (!feof(aFile))
       {
         fgets(eventstr, 80, aFile);
-        if (strlen(eventstr) < 3)
+        if (strlen(eventstr) < 3 || feof(aFile))
           continue;
         if (eventstr[strlen(eventstr)-1] == '\n')
           eventstr[strlen(eventstr)-1] = 0;

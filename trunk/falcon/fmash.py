@@ -75,12 +75,12 @@ class Fmash:
             self._generate_array_list()
 
     def _check_version(self):
-        version = struct.unpack('>H', self.raw_msh[0:2])[0]
-        if version & 0x7fff > FALCON_VERSION:
+        self.version = struct.unpack('>H', self.raw_msh[0:2])[0]
+        if self.version & 0x7fff > FALCON_VERSION:
             raise EFmashVersion()
 
     def _populate_metadata(self):
-        values = struct.unpack('>HLLHH24B', self.raw_msh[0:25])
+        values = struct.unpack('>HLLHH24B', self.raw_msh[0:38])
 
         self.version     = values[0]
         self.start_time  = values[1]
@@ -140,7 +140,7 @@ class Fmash:
             varint_max = self.total_length - offset
         if varint_max < 1:
             raise FMashOverrun()
-        result,count = varint_to_int32(struct.unpack('>%dB', self.raw_msh[offset:offset-varin_max]))
+        result,count = varint_to_int32(struct.unpack('>%dB' % varint_max, self.raw_msh[offset:offset+varint_max]))
         self.offset += count
 
     def _get_maps(self):

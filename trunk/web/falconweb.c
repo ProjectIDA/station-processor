@@ -175,13 +175,18 @@ void ProcessAlarm(struct s_alarm *alarmlist, struct s_alarm alarm, int days,
   int            alarmdir,ptrdir;
   int            alarmlevel,ptrlevel;
   int            found;
+  int            iParseErr;
 
+/* Decided to only use tr1 buffer date range, this allows program to work if falcon clock is off
   // First see if this entry is within the last days boundry
   delta_time = ST_DiffTimes(today, alarm.timetag);
+//fprintf(stderr, "Testing %s alarm age, delta %d vs max %d\n", alarm.station, delta_time.nday, days);
   if (delta_time.nday >= days)
     return;
+*/
 
   alarmptr = alarmlist->next;
+  iParseErr = 0;
 
   // See if we can find an alarm entry that matches this one
   found = 0;
@@ -211,8 +216,12 @@ void ProcessAlarm(struct s_alarm *alarmlist, struct s_alarm alarm, int days,
       delta_time = ST_DiffTimes(alarmptr->timetag, alarm.timetag);
       if (ST_DeltaToMS(delta_time) > 0)
       {
-        fprintf(stderr, "%s Alarm entries are not in time sorted order, %s\n",
-                alarmptr->station, ST_PrintDate(alarm.timetag, 1));
+        if (iParseErr == 0)
+        {
+          fprintf(stderr, "%s Alarm entries are not in time sorted order, %s\n",
+                  alarmptr->station, ST_PrintDate(alarm.timetag, 1));
+          iParseErr = 1;
+        }
         alarmptr = alarmptr->next;
         continue;
       }
@@ -300,7 +309,14 @@ void CreateMainFalconPage(
   struct s_line  *lineptr;
   char fullname[MAX_FILE_NAME];
   char eventstr[160];
+  char *class_str[2] = {"r0", "r1"};
+  char code_str[160];
+  char description_str[160];
   FILE           *aFile;
+  int            iMix;
+  int            iArg;
+  int            iParse;
+
 
   fprintf(outfile,"%s",
 "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n"
@@ -404,7 +420,21 @@ void CreateMainFalconPage(
 
   // Now we need a legend section
   fprintf(outfile, "%s\n",
-"        <h3 align='center'>Legend</h3>");
+"        <table class=\"legend\">");
+  fprintf(outfile, "%s\n",
+"            <tr>");
+  fprintf(outfile, "%s\n",
+"                <th class=\"title\" colspan=\"2\">Legend</th>");
+  fprintf(outfile, "%s\n",
+"            </tr>");
+  fprintf(outfile, "%s\n",
+"            <tr>");
+  fprintf(outfile, "%s\n",
+"                <th>Code</th>");
+  fprintf(outfile, "%s\n",
+"                <th>Description</th>");
+  fprintf(outfile, "%s\n",
+"            </tr>");
   // Loop through each line in legends.txt
   sprintf(fullname, "%s/legend.txt", topdir);
   if ((aFile = fopen(fullname, "r")) == NULL)
@@ -413,16 +443,45 @@ void CreateMainFalconPage(
   } // failed to open event file for reading
   else
   {
+    iMix=0;
     while (!feof(aFile))
     {
       fgets(eventstr, 80, aFile);
       if (strlen(eventstr) < 10 || feof(aFile))
         continue;
-      fprintf(outfile,
-"        <div>%s</div>\n", eventstr);
+      if ((iArg=sscanf(eventstr, "%s : %s\n", code_str, description_str)) != 2)
+      {
+fprintf(stderr, "DEBUG sscanf %s\n returned %d args,'%s' '%s'\n",
+eventstr, iArg, code_str, description_str);
+        continue;
+      }
+      for (iParse=strlen(code_str); iParse < strlen(eventstr) && eventstr[iParse] != ':'; iParse++)
+       ; // find :
+      for (iParse++; iParse < strlen(eventstr) &&
+             (eventstr[iParse] == ' ' || eventstr[iParse] == '\t'); iParse++)
+       ; // remove trailing spaces
+      strcpy(description_str, &eventstr[iParse]);
+      iParse=strlen(description_str) - 1;
+      while(description_str[iParse] == '\n' ||
+            description_str[iParse] == '\r')
+      {
+        description_str[iParse] = 0;
+        iParse--;
+      }
+     
+  fprintf(outfile, 
+"            <tr class=\"%s\">\n", class_str[iMix++%2]);
+  fprintf(outfile,
+"                <td>%s</td>\n", code_str);
+  fprintf(outfile,
+"                <td>%s</td>\n", description_str);
+  fprintf(outfile, "%s\n",
+"            </tr>");
     }
     fclose(aFile);
   }
+  fprintf(outfile, "%s\n",
+"        </table>");
 
   fprintf(outfile,"%s",
 "    </body>\n"

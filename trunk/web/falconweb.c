@@ -62,6 +62,7 @@ int ParseEvent(const char *eventstr, struct s_alarm *event)
          "%s %d/%d/%d %d:%d:%d %s (%d): Alarm event %s %s",
          holdevent.station, &year, &month, &dom, &hour, &minute, &second,
          description, &channel, alarmtype, direction);
+//fprintf(stderr, "DEBUG(%d): %s\n", iArgCount, eventstr);
   if (iArgCount != 11)
       return 0;
 
@@ -210,7 +211,8 @@ void ProcessAlarm(struct s_alarm *alarmlist, struct s_alarm alarm, int days,
       delta_time = ST_DiffTimes(alarmptr->timetag, alarm.timetag);
       if (ST_DeltaToMS(delta_time) > 0)
       {
-        fprintf(stderr, "Alarm entries are not in time sorted order\n");
+        fprintf(stderr, "%s Alarm entries are not in time sorted order, %s\n",
+                alarmptr->station, ST_PrintDate(alarm.timetag, 1));
         alarmptr = alarmptr->next;
         continue;
       }
@@ -353,7 +355,7 @@ void CreateMainFalconPage(
       while (!feof(aFile))
       {
         fgets(eventstr, 80, aFile);
-        if (strlen(eventstr) < 3 || feof(aFile))
+        if (strlen(eventstr) < 10 || feof(aFile))
           continue;
         if (eventstr[strlen(eventstr)-1] == '\n')
           eventstr[strlen(eventstr)-1] = 0;
@@ -370,6 +372,7 @@ void CreateMainFalconPage(
         lineptr->next = linelist;
         linelist = lineptr;
       } // read until end of file
+      fclose(aFile);
       
       // Now print out the reversed lines
       while (linelist != NULL)
@@ -397,7 +400,29 @@ void CreateMainFalconPage(
 
   fprintf(outfile,"%s",
 "        </div>\n"
-);
+         );
+
+  // Now we need a legend section
+  fprintf(outfile, "%s\n",
+"        <h3 align='center'>Legend</h3>");
+  // Loop through each line in legends.txt
+  sprintf(fullname, "%s/legend.txt", topdir);
+  if ((aFile = fopen(fullname, "r")) == NULL)
+  {
+    fprintf(stderr, "Unable to open legend file '%s'\n", fullname);
+  } // failed to open event file for reading
+  else
+  {
+    while (!feof(aFile))
+    {
+      fgets(eventstr, 80, aFile);
+      if (strlen(eventstr) < 10 || feof(aFile))
+        continue;
+      fprintf(outfile,
+"        <div>%s</div>\n", eventstr);
+    }
+    fclose(aFile);
+  }
 
   fprintf(outfile,"%s",
 "    </body>\n"
@@ -526,7 +551,8 @@ int main(int argc, char **argv)
   curDoy_work = today.day;
 
   // Creation date string
-  sprintf(createstr, "%d,%03d", curYear_work, curDoy_work);
+  sprintf(createstr, "%d,%03d %02d:%02d UTC", curYear_work, curDoy_work,
+          today.hour, today.minute);
 
   // Parse each event file in topdir
   dirptr = opendir(topdir);

@@ -35,7 +35,7 @@ div.main > div > div:first-child {
     float: left;
 }
 
-div.main > div > div:first-child[onClick]:hover {
+div.main > div > div:first-child[onclick]:hover {
     cursor: pointer;
 }
 
@@ -49,7 +49,29 @@ span.level-0 { color: green; }
 span.level-E { color: #aaaaaa; }
 
 div.main > div > div.alarms {
-    visibility: hidden;
+    display: none;
     background-color: #cccccc;
     font-size: 14pt;
 }
+
+table.legend {
+    padding-top: 2em;
+    padding-left: 0.5em;
+}
+
+td,th { 
+    padding: 0.25em;
+    font-size: 14pt; 
+}
+th { 
+    font-weight: bold; 
+    background-color: #cccccc;
+}
+th.title { 
+    font-size: 18pt; 
+    background-color: #aaaaaa;
+}
+
+tr.r0 > td { background-color: #99CCCC; }
+tr.r1 > td { background-color: #6699CC; }
+

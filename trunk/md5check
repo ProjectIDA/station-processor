@@ -1,0 +1,31 @@
+11d8138c66e1c8d6d4a3e4c968699a28  /etc/release 1.8
+
+2b1350731f63bbd5dd083c9c6d5f5243  /usr/local/sbin/Seneca 1.08
+46c5df7dd37d9910cea5446bbd0cfcbd  /usr/local/sbin/dispstatus 1.3
+0e607e73590e0d6a80d3acf69f68e68d  /usr/local/sbin/dlutil 1.3
+62ef5d434cdfccd5751c9150198d416e  /usr/local/sbin/dumpseed 1.01
+988f937852407861c57fd26887eb3efb  /usr/local/sbin/falcon 1.0
+dd5bed63b9cc5c9e2b2eeb9513bc4d1b  /usr/local/sbin/ida2chan 1.1
+6ecd7837d2a8dc1e487acd526299e2a1  /usr/local/sbin/ida2liss 1.2
+b9debb0d9b18a9c03130ea43e9b3e3e0  /usr/local/sbin/log330 1.2
+5d060d05a1cfc4f28731d3af0b658474  /usr/local/sbin/netreq 1.2
+284f27386238488622dfeb0774bf9503  /usr/local/sbin/q330arch 1.4
+0e92231ef83418fddfed27242e522346  /usr/local/sbin/q330serv 1.3
+0115b99f5e4a41883edca737f7a14bd0  /usr/local/sbin/isid 3.5.0
+7c34ff1b5cb3bdbc322f4accc1b1de9b  /usr/local/sbin/isimkdl 1.8.0
+247d361fc0f14a953638a4b2c0f997a6  /usr/local/sbin/isildl 1.4.3
+424b5bf7f7c90b7f0ca23784aa1e2d97  /usr/local/sbin/netseed 1.2
+730c286482f90f4d967b983ea3ebf1f7  /usr/local/sbin/isirstat 1.2
+
+b36719410daab9700886ff48547844ab  /etc/init.d/dispstatus
+410058590321f1bc2067935178ab5093  /etc/init.d/falcon
+c60927bcb99429a12ea6eb99ba8caffc  /etc/init.d/ida2liss
+1391012785f75bd43bdcf23794e3be03  /etc/init.d/isid
+2da5f0ef76a380d7273dc3d44b1b2c9d  /etc/init.d/netreq
+748b15fd18a405a32dee5ff64bef3b35  /etc/init.d/netseed
+070e108f7da964c7979cbb06cce219fb  /etc/init.d/q330arch
+1534b92969154a07aa0f2124fd6e65d4  /etc/init.d/q330serv
+
+9bf4cdc451c31d991518a39216ad8fc8  /home/maint/config
+338ccd86c32c68115e8497d59e76f361  /home/maint/install
+48f003213b0e97e46b49757f9c3ea78d  /home/maint/restore

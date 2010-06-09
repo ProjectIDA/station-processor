@@ -266,20 +266,20 @@ int main ( int argc, char **argv )
                 data_length = (size_t)header_opaque.blk_lth - (size_t)header_opaque.data_off;
 
                 msh_data = buffer_init();
-                if ( (header_opaque.opaque_flags & 0x0c) == 0 )
+                if ( (header_opaque.opaque_flags & 0x0c) == 0x00 )
                 { // No spanning
                     msh_data = buffer_init();
                     data_complete = 1;
                 }
-                else if ( (header_opaque.opaque_flags & 0x0c) == 1 )
+                else if ( (header_opaque.opaque_flags & 0x0c) == 0x04 )
                 { // First opaque blockette for spanning
                     msh_data = buffer_init();
                 }
-                else if ( (header_opaque.opaque_flags & 0x0c) == 3 )
+                else if ( (header_opaque.opaque_flags & 0x0c) == 0x0c )
                 { // Continuation blockette for spanning
                     ;
                 }
-                else if ( (header_opaque.opaque_flags & 0x0c) == 2 )
+                else if ( (header_opaque.opaque_flags & 0x0c) == 0x08 )
                 { // Final blockette for spanning
                     data_complete = 1;
                 }

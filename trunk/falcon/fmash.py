@@ -1,9 +1,4 @@
 import struct
-try:
-    import java.util.ArrayList as ArrayList
-    HAS_JAVA = True
-except:
-    HAS_JAVA = False
 
 NO_CHANGE = 0x00 # No deltas
 CHANGES_1 = 0x01 # 1 delta
@@ -36,9 +31,10 @@ TM_MINUTE = 60
 # Last Hi      : varint ------ (1 - 5 bytes)
 # Last Low     : varint ------ (1 - 5 bytes)
 
-class EFmashVersion(Exception): pass
-class EFmashDescLen(Exception): pass
-class EFmashOverrun(Exception): pass
+class EFmash(Exception): pass
+class EFmashDescLen(EFmash): pass
+class EFmashVarint(EFmash): pass
+class EFmashVersion(EFmash): pass
 
 class FmashRow:
     def __init__(self, timestamp, average, high, low):
@@ -71,8 +67,6 @@ class Fmash:
         self._populate_metadata()
         self._populate_rows()
         self._msh_to_dict()
-        if HAS_JAVA:
-            self._generate_array_list()
 
     def _check_version(self):
         self.version = struct.unpack('>H', self.raw_msh[0:2])[0]
@@ -136,12 +130,34 @@ class Fmash:
 
     def _get_varint(self):
         varint_max = 5
+        value = 0
+        count = 0
         if (self.total_length - self.offset) < 5:
             varint_max = self.total_length - offset
         if varint_max < 1:
             raise FMashOverrun()
-        result,count = varint_to_int32(struct.unpack('>%dB' % varint_max, self.raw_msh[offset:offset+varint_max]))
+
+        bytes = struct.unpack('>%dB' % varint_max, self.raw_msh[offset:offset+varint_max])
+        for byte in bytes:
+            count += 1
+            if count == 1:
+                value |= (byte >> 2) & 0x0000001f;
+            elif count == 5:
+                value |= (byte & 0x3f) << 26;
+                break
+            else:
+                value |= (byte & 0x0000007f) << (count * 7 - 2);
+                
+            if (0x80 & byte) == 0:
+                if byte & 0x40:
+                    if count == 1: value |= 0xffffffe0
+                    if count == 2: value |= 0xfffff000
+                    if count == 3: value |= 0xfff80000
+                    if count == 4: value |= 0xfc000000
+                break
+
         self.offset += count
+        return value
 
     def _get_maps(self):
         self.maps = []
@@ -164,32 +180,4 @@ class Fmash:
                 maps.append(((self.data_bitmap[map+pos+2] >> 2) & 0x07))
             elif rotation == 7:
                 maps.append(((self.data_bitmap[map+pos+2] >> 5) & 0x07))
-
-
-def varint_to_int32(bytes):
-    sign_map = {
-        1 : 0xffffffe0,
-        2 : 0xfffff000,
-        3 : 0xfff80000,
-        4 : 0xfc000000,
-    }
-
-    result = 0
-    count  = 0
-    for byte in bytes:
-        count += 1
-        if count == 1:
-            result |= (byte >> 2) & 0x0000001f;
-        elif count == 5:
-            result |= (byte & 0x3f) << 26;
-            break
-        else:
-            result |= (byte & 0x0000007f) << (count * 7 - 2);
-            
-        if (0x80 & byte) == 0:
-            if byte & 0x40:
-                result |= sign_map[count]
-            break
-
-    return (result,count)
 

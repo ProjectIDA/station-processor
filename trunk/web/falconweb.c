@@ -175,7 +175,7 @@ void ProcessAlarm(struct s_alarm *alarmlist, struct s_alarm alarm, int days,
   int            alarmdir,ptrdir;
   int            alarmlevel,ptrlevel;
   int            found;
-  int            iParseErr;
+  static char    errstation[8] = {""};
 
 /* Decided to only use tr1 buffer date range, this allows program to work if falcon clock is off
   // First see if this entry is within the last days boundry
@@ -186,7 +186,6 @@ void ProcessAlarm(struct s_alarm *alarmlist, struct s_alarm alarm, int days,
 */
 
   alarmptr = alarmlist->next;
-  iParseErr = 0;
 
   // See if we can find an alarm entry that matches this one
   found = 0;
@@ -216,11 +215,11 @@ void ProcessAlarm(struct s_alarm *alarmlist, struct s_alarm alarm, int days,
       delta_time = ST_DiffTimes(alarmptr->timetag, alarm.timetag);
       if (ST_DeltaToMS(delta_time) > 0)
       {
-        if (iParseErr == 0)
+        if (strcmp(errstation, alarmptr->station) != 0)
         {
           fprintf(stderr, "%s Alarm entries are not in time sorted order, %s\n",
                   alarmptr->station, ST_PrintDate(alarm.timetag, 1));
-          iParseErr = 1;
+          strcpy(errstation, alarmptr->station);
         }
         alarmptr = alarmptr->next;
         continue;
@@ -519,9 +518,11 @@ int main(int argc, char **argv)
 
   char *savestr;
   char outfilename[MAX_FILE_NAME];
+  char excludefilename[MAX_FILE_NAME];
   char createstr[MAX_FILE_NAME];
   char fullname[MAX_FILE_NAME];
   char eventstr[160];
+  char channel[160];
 
   int     opt;
   struct s_alarm newalarm;
@@ -529,12 +530,15 @@ int main(int argc, char **argv)
   struct s_alarm *stationlist=NULL;
   struct s_alarm *alarmptr;
   struct s_alarm *eventptr;
+  struct s_alarm *excludelist=NULL;
+  struct s_alarm *excludeptr;
   STDTIME today;
   int     curYear_work;
   int     curDoy_work;
 
   char *topdir;
   FILE *outfile;
+  FILE *excludefile;
 
   if (argc < 2)
   {
@@ -604,6 +608,43 @@ int main(int argc, char **argv)
     exit(1);
   }
 
+  // read list of channel names to exluce from exclude.txt
+  sprintf(excludefilename, "%s/exclude.txt", topdir);
+  if ((excludefile = fopen(excludefilename, "r")) != NULL)
+  {
+fprintf(stderr, "DEBUG opened %s\n", excludefilename);
+    lineno=0;
+    while (!feof(excludefile))
+    {
+      fgets(eventstr, 80, excludefile);
+      if (feof(excludefile))
+        continue;
+      lineno++;
+
+      if (eventstr[0] == '#')
+        continue;
+      channel[0] = 0;
+      sscanf(eventstr, "%s", channel);
+      if (strlen(channel) > 0 && strlen(channel) <= 8)
+      {
+        alarmptr = (struct s_alarm *) malloc(sizeof (struct s_alarm));
+        if (alarmptr == NULL)
+        {
+          char *errsave;
+          errsave = strerror(errno);
+          fprintf(stderr, "%s() line %d: malloc failed: '%s'\n",
+             __FILE__, __LINE__, errsave);
+          exit(1);
+        }
+        strcpy(alarmptr->description, channel);
+fprintf(stderr, "DEBUG added exclude channel '%s'\n", channel);
+        alarmptr->next = excludelist;
+        excludelist = alarmptr;
+      } // found a channel name to exclude
+    } // read all lines in exclude.txt
+    fclose(excludefile);
+  } // found exclude.txt
+
   // Get working year, month, day of year, julian day
   today = ST_GetCurrentTime();
   curYear_work = today.year;
@@ -668,6 +709,18 @@ int main(int argc, char **argv)
               fprintf(stderr, "Failed to parse line %d in %s\n'%s'\n",
                    lineno, direntry->d_name, eventstr);
             }
+
+            // see if we should exclude this alarm
+            for (excludeptr=excludelist; iParse && excludeptr != NULL; 
+                 excludeptr = excludeptr->next)
+            {
+              if (strcmp(newalarm.description, excludeptr->description) == 0)
+              {
+fprintf(stderr, "DEBUG exclude alarm for channel '%s'\n", excludeptr->description);
+                iParse = 0;
+              }
+            }
+
             if (iParse)
             {
               // Incorporate this new alarm

@@ -716,7 +716,8 @@ fprintf(stderr, "DEBUG added exclude channel '%s'\n", channel);
             {
               if (strcmp(newalarm.description, excludeptr->description) == 0)
               {
-fprintf(stderr, "DEBUG exclude alarm for channel '%s'\n", excludeptr->description);
+fprintf(stderr, "DEBUG exclude alarm for channel %s '%s'\n", 
+newalarm.station, excludeptr->description);
                 iParse = 0;
               }
             }

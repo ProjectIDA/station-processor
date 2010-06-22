@@ -27,6 +27,13 @@
 #include <record.h>
 #include <tokens.h>
 
+// Structure for linked list of unique channel names
+struct s_chan
+{
+  char          chan[12];
+  struct s_chan *next;
+} S_CHAN;
+
 void print_usage( char **args, char *msg, ... );
 int verify_int( char* arg_str, int* value );
 
@@ -39,6 +46,7 @@ int main ( int argc, char **argv )
     FILE *file_handle = NULL;
     char *file_name = NULL;
     long int file_position = 0;
+    char *errsave;
 
     uint8_t *buffer = NULL;
     size_t records_read = 0;
@@ -75,12 +83,17 @@ int main ( int argc, char **argv )
     bool display_info   = false;
     bool display_raw    = false;
     bool display_header = false;
+    bool display_description = false;
     bool limiting       = false;
     int first_records   = 0;
     int last_records    = 0;
     int record_index    = 0;
     int record_limit    = 0;
 
+    struct s_chan *chanlist = NULL;
+    struct s_chan *chanptr = NULL;
+    struct s_chan *chanprev = NULL;
+    struct s_chan *newchan = NULL;
     csv_buffer_t* csv_buffer = NULL;
     csv_row_t* csv_row = NULL;
     
@@ -95,8 +108,13 @@ int main ( int argc, char **argv )
 
     file_name = argv[argc - 1];
 
-    while ((c = getopt( argc, argv, "fhi:l:rF:IL:" )) != -1) {
+    while ((c = getopt( argc, argv, "cfhi:l:rF:IL:" )) != -1) {
         switch (c) {
+            case 'c':
+                display_description = true;
+                chanlist = NULL;
+                gDebug = 0;
+                break;
             case 'h':
                 display_header = true;
                 break;
@@ -194,17 +212,17 @@ int main ( int argc, char **argv )
         }
 
         file_position = ftell( file_handle );
-        if (!gReport)
+        if (!gReport && !display_description)
           printf( "File position: %lu\n", file_position );
         records_read = fread( buffer, record_size, 1, file_handle );
         file_position = ftell( file_handle );
 
         if ( feof(file_handle) || ferror(file_handle) ) {
-            if (!gReport)
+            if (!gReport && !display_description)
               fprintf( stdout, "EOF reached\n" );
             eof_reached = true;
             if ( !records_read ) {
-                if (!gReport)
+                if (!gReport && !display_description)
                   fprintf( stdout, "No records left\n" );
                 break;
             }
@@ -295,7 +313,7 @@ int main ( int argc, char **argv )
                     { // This is Alarm data
                         alarm = alarm_line_init();
                         alarm_data = msh_data->content;
-                        if (!gReport)
+                        if (!gReport && !display_description)
                         {
                           fprintf(stdout, "\ncompacted alarms size is %lu bytes\n", (unsigned long)msh_data->length);
                           format_data(alarm_data, msh_data->length, 0, 0);
@@ -306,7 +324,7 @@ int main ( int argc, char **argv )
                         alarm_data += sizeof(uint32_t); // Skip end time
                         alarm_count = ntohs(*(uint16_t*)(alarm_data));
                         alarm_data += sizeof(uint16_t);
-                        if (!gReport)
+                        if (!gReport && !display_description)
                           printf(
 "=== ALARMS (%d) =========================================\n", alarm_count);
 
@@ -315,11 +333,11 @@ int main ( int argc, char **argv )
                             memcpy(&val_uint16, alarm_data, 2);
                             alarm->channel = ntohs(val_uint16);
                             alarm_data += sizeof(uint16_t);
-                            if (!gReport)
+                            if (!gReport && !display_description)
                               printf("current alarm_data pointer : 0x%08x\n",
                                  (uint32_t)alarm_data);
                             memcpy(&netuint32, alarm_data, 4);
-                            if (!gReport)
+                            if (!gReport && !display_description)
                               printf("current alarm_time value   : 0x%08x\n",
                                  ntohl(netuint32));
                             alarm->timestamp = (time_t)ntohl(netuint32);
@@ -347,7 +365,7 @@ int main ( int argc, char **argv )
                                     (alarm->event & 0x7f) == 4 ? "Low2"  :
                                                                  "Unknown",
                                     alarm->event & 0x80 ? "restored" : "triggered" );
-                            else if (!gReport)
+                            else if (!gReport && !display_description)
                               printf( "    (%s)[%li]> %s (%u): Alarm event %s %s\n",
                                     time_string, (long)(alarm->timestamp),
                                     alarm->description, alarm->channel,
@@ -365,14 +383,14 @@ int main ( int argc, char **argv )
                     { // This is FMash data
                         data_complete = 0;
 
-                        if (gDebug && !gReport)
+                        if (gDebug && !gReport && !display_description)
                         {
                           fprintf(stdout, "\ncompressed (fmash) data size is %lu bytes\n", (unsigned long)msh_data->length);
                           format_data(msh_data->content, msh_data->length, 0, 0);
                         }
 
                         fmash_msh_to_csv(&csv_buffer, msh_data->content, msh_data->length);
-                        if (!gReport && gDebug)
+                        if (!gReport && !display_description && gDebug)
                         {
                           printf("=== POST EXPANSION ======================================\n");
                           if (csv_buffer->file_name != NULL)
@@ -381,21 +399,69 @@ int main ( int argc, char **argv )
                             printf("    file:         (null)\n");
                           printf("    channel:      %d\n", csv_buffer->header->channel);
                         }
-                        printf("    description:  %s\n", csv_buffer->header->description);
+                        if (!display_description)
+                        {
+                          printf("    description:  %s\n", csv_buffer->header->description);
+                        }
+                        // create linked list of descriptions
+                        if (display_description)
+                        {
+                          int found=0;
+                          // Find out where this name should appear
+                          for (chanprev=NULL, chanptr = chanlist;
+                               chanptr!= NULL && !found; 
+                               chanprev=chanptr, chanptr = chanptr->next)
+                          {
+                            found = strcmp(chanptr->chan, csv_buffer->header->description) == 0;
+                            if (strcmp(chanptr->chan, csv_buffer->header->description) > 0)
+                              break;  // new descriptor belongs before here
+                          }
+                          if (!found)
+                          {
+                            newchan = (struct s_chan *) malloc(sizeof (struct s_chan));
+                            if (newchan == NULL)
+                            {
+                              errsave = strerror(errno);
+                              fprintf(stderr, "%s() line %d: malloc failed: '%s'\n",
+                                 __FILE__, __LINE__, errsave);
+                              exit(1);
+                            }
+                            strncpy(newchan->chan, csv_buffer->header->description, 11);
+                            newchan->chan[11] = 0;
+
+                            if (chanprev == NULL)
+                            {
+                              newchan->next = chanlist;
+                              chanlist = newchan;
+                            }
+                            else
+                            {
+                              newchan->next = chanptr;
+                              chanprev->next = newchan;
+                            }
+             
+                          } // didn't find existing entry
+                        } // Create sorted list of unique descriptions
                         if (!gReport && gDebug)
                         {
                           printf("    lines:        %d\n", list_size(csv_buffer->list));
                         }
                         list_iterator_stop(csv_buffer->list);
                         list_iterator_start(csv_buffer->list);
+                        if (!display_description)
+                        {
                             printf("        ---------------------- ----------- ----------- ----------- \n");
                             printf("       | Timestamp            | Average   | High      | Low       |\n");
                             printf("        ---------------------- ----------- ----------- ----------- \n");
+                        }
                         while (list_iterator_hasnext(csv_buffer->list)) {
                             csv_row = (csv_row_t*)list_iterator_next(csv_buffer->list);
-                            strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", gmtime(&(csv_row->timestamp)));
-                            printf("       | %s | % 9d | % 9d | % 9d |\n", time_string,
+                            if (!display_description)
+                            {
+                              strftime(time_string, 31, "%Y/%m/%d %H:%M:%S", gmtime(&(csv_row->timestamp)));
+                              printf("       | %s | % 9d | % 9d | % 9d |\n", time_string,
                                    csv_row->average, csv_row->high, csv_row->low );
+                            }
                         }
                         list_iterator_stop(csv_buffer->list);
                         csv_buffer = csv_buffer_destroy(csv_buffer);
@@ -422,6 +488,16 @@ int main ( int argc, char **argv )
         buffer = NULL;
     }
 
+    if (display_description)
+    {
+      for (chanptr = chanlist;
+           chanptr!= NULL;
+           chanptr = chanptr->next)
+      {
+        printf("%s\n", chanptr->chan);
+      }
+    }
+
     return 0;
 }
 
@@ -442,6 +518,7 @@ void print_usage( char **args, char *msg, ... )
     fprintf( stderr, "usage: %s [options] seed_file\n"
                      "      options:\n"
                      "        -h       -- print opaque blockette headers \n"
+                     "        -c       -- print list of channel descriptors\n"
                      "        -i INDEX -- start with record at INDEX\n"
                      "        -l LIMIT -- display max of LIMIT records\n"
                      "        -r       -- display file contents as raw data\n"

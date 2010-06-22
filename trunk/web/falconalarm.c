@@ -422,10 +422,15 @@ int argc;
     if (ST_DiffTimes(today, lastOFC).nday > 1 && bFoundFalcon)
     {
       // Generate a custom alarm for no Falcon data
-      lastOFC = ST_AddToTime(lastOFC, 1, 0, 0, 0, 0);
+      if (ST_DiffTimes(lastOFC, firstday).nday < 0)
+      {
+        if (iDebug)
+          fprintf(stderr, "DEBUG: Setting lastOFC to first day + 1\n");
+        lastOFC = ST_AddToTime(firstday, 1, 0, 0, 0, 0);
+      }
       ST_CnvJulToCal(ST_GetJulian(lastOFC), 
                      &out_year, &out_mon, &out_day, &outjday);
-      sprintf(cmdstr, "echo '%-5.5s %04d/%02d/%02d 00:00:00 OFC (0): Alarm event On triggered' >> %s",
+      sprintf(cmdstr, "echo '%-5.5s %04d/%02d/%02d 00:00:00 OFC (-1): Alarm event On triggered' >> %s",
              station, out_year, out_mon, out_day,
              alarmfilename);
       system(cmdstr);
@@ -436,6 +441,15 @@ int argc;
       }
     } // Check for no OFC data lately
     
+    // Done with station, create list of channel names in OFC file
+    if (bFoundFalcon)
+    {
+      sprintf(ofc_name, "%s/%s_chan.txt", dirname, station);
+      sprintf(cmdstr, "ofadump -c %s > %s", ofcfilename, ofc_name);
+      if (iDebug)
+        fprintf(stderr, "DEBUG %s\n", cmdstr);
+      system(cmdstr);
+    }
   } // check each /tr1/station directory entry
 
   return 0;

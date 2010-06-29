@@ -224,11 +224,12 @@ public class TimeChartPlotter extends JPanel
 		}  // loop through each new data item
 
 		long lower = (long)dataset.getDomainLowerBound(true);
-		long upper = (long)dataset.getDomainUpperBound(true);
+//		long upper = (long)dataset.getDomainUpperBound(true);
+
 //		System.err.printf("Domain bounds %d %d\n", lower, upper);
 		chart.setTitle(station +" "+ network + " "+ channel 
 									+ " from " + new Date(lower).toString()
-				          + " to " + new Date(upper).toString());
+				          + " to " + tLastSum.getTime().toString());
 
 	} // AddNewData()
 

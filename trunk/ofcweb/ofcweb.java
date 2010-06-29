@@ -139,6 +139,11 @@ public class ofcweb extends JApplet implements ActionListener
 		dateButton.setSize((dateButton.getWidth()*2)/3, dateButton.getHeight());
 		labelJPanel.add(dateButton);
 
+		fileDateStart=null;
+		fileDateEnd=null;
+		displayDateStart=null;
+		displayDateEnd=null;
+		
 		// Plot the data
 		ofcPlot();
 
@@ -176,105 +181,113 @@ public class ofcweb extends JApplet implements ActionListener
 		// Read records until file is empty
 		try
 		{
-			System.err.printf("Loading %s data from %s\n", falconChannel, ofcdataFileName);
-			while (ofcFile.available() > 0)
+			System.err.printf("Loading %s data from %s, avail=%d\n", 
+					falconChannel, ofcdataFileName, ofcFile.available());
+			showStatus("Downloading " + falconChannel + " data from " + ofcURL);				
+
+			byteCount = 0;
+			readCount = 0;
+
+			while (readCount >= 0)
 			{
-				byteCount = 0;
-				while ((readCount = ofcFile.read(seedBytes, byteCount, 512 - byteCount)) > 0)
+				if (byteCount >= 512)
+					byteCount = 0;
+				
+				readCount = ofcFile.read(seedBytes, byteCount, 512 - byteCount);
+				byteCount += readCount;
+				
+				if (byteCount == 512)
 				{
-					byteCount += readCount;
-					if (byteCount == 512)
+					wantCCCLL = "OFC90";
+
+					// Pull the seed records off of the queue
+					try
 					{
-						wantCCCLL = "OFC90";
+						seedRecord = new MiniSeed(seedBytes);
+					} catch (IllegalSeednameException e1)
+					{
+						// Problems with seed record, warn and skip
+						continue;
+					}
 
-						// Pull the seed records off of the queue
-						try
+					// We have a new seed record see if it is the right channel
+					String newCCCLL = seedRecord.getSeedName().substring(7);
+					if (wantCCCLL.compareToIgnoreCase(newCCCLL) == 0)
+					{
+						// Time to pull out the opaque blockettes
+						int iBlocketteCount = seedRecord.getNBlockettes();
+						int blocketteOffset;
+						int blocketteType;
+						boolean bFoundB2000=false;
+						for (int ib = 0; ib < iBlocketteCount; ib++)
 						{
-							seedRecord = new MiniSeed(seedBytes);
-						} catch (IllegalSeednameException e1)
-						{
-							// Problems with seed record, warn and skip
-							continue;
-						}
+							blocketteType = seedRecord.getBlocketteType(ib);
 
-						// We have a new seed record see if it is the right channel
-						String newCCCLL = seedRecord.getSeedName().substring(7);
-						if (wantCCCLL.compareToIgnoreCase(newCCCLL) == 0)
-						{
-							// Time to pull out the opaque blockettes
-							int iBlocketteCount = seedRecord.getNBlockettes();
-							int blocketteOffset;
-							int blocketteType;
-							boolean bFoundB2000=false;
-							for (int ib = 0; ib < iBlocketteCount; ib++)
+							if (blocketteType == 2000)
 							{
-								blocketteType = seedRecord.getBlocketteType(ib);
+								// We have an opaque blockette type
+								blocketteOffset = seedRecord.getBlocketteOffset(ib);
+								iSize = Utility.uBytesToInt(seedBytes[blocketteOffset+4],
+										seedBytes[blocketteOffset+5], !seedRecord.isBigEndian());
+								iDataOffset = Utility.uBytesToInt(seedBytes[blocketteOffset+6],
+										seedBytes[blocketteOffset+7], !seedRecord.isBigEndian());
+								iDataOffset += blocketteOffset;
+								
+								byte[] b2000 = new byte[iSize];
+						    System.arraycopy(seedBytes, blocketteOffset, b2000, 0, iSize);
+						    
+						    if (!bFoundB2000)
+						    {
+							    fchan = new String(b2000).substring(15,20);
+							    if (fchan.compareTo("FALC~") != 0)
+							    {
+							    	System.err.printf("Found unexpected opaque channel type %s\n",
+							    			fchan);
+							    	continue; // Not the right type of opaque blockette
+							    }
+						    	bFoundB2000 = true;
+						    }
 
-								if (blocketteType == 2000)
-								{
-									// We have an opaque blockette type
-									blocketteOffset = seedRecord.getBlocketteOffset(ib);
-									iSize = Utility.uBytesToInt(seedBytes[blocketteOffset+4],
-											seedBytes[blocketteOffset+5], !seedRecord.isBigEndian());
-									iDataOffset = Utility.uBytesToInt(seedBytes[blocketteOffset+6],
-											seedBytes[blocketteOffset+7], !seedRecord.isBigEndian());
-									iDataOffset += blocketteOffset;
-									
-									byte[] b2000 = new byte[iSize];
-							    System.arraycopy(seedBytes, blocketteOffset, b2000, 0, iSize);
-							    
-							    if (!bFoundB2000)
-							    {
-  							    fchan = new String(b2000).substring(15,20);
-  							    if (fchan.compareTo("FALC~") != 0)
-  							    {
-  							    	System.err.printf("Found unexpected opaque channel type %s\n",
-  							    			fchan);
-  							    	continue; // Not the right type of opaque blockette
-  							    }
-							    	bFoundB2000 = true;
-							    }
+						    if (getOFCdescription(b2000, !seedRecord.isBigEndian()).
+				    				compareTo(falconChannel) != 0)
+					    	continue;  // only interested in specific falcon channel
+					    	
+						    if (!bContinue)
+						    {
+						    	ofcBlock = new OFCb2000(b2000);
+						    }
+						    else
+						    {
+					    		System.err.printf("Continuation blockette %s %s, needs debuging\n",
+					    				falconChannel, new Date(ofcBlock.get_start_time()).toString());
+						    	ofcBlock.Continue(b2000);
+						    }
+						    bContinue = ofcBlock.get_Continuation();
 
-							    if (getOFCdescription(b2000, !seedRecord.isBigEndian()).
-					    				compareTo(falconChannel) != 0)
-						    	continue;  // only interested in specific falcon channel
-						    	
-							    if (!bContinue)
-							    {
-							    	ofcBlock = new OFCb2000(b2000);
-							    }
-							    else
-							    {
-						    		System.err.printf("Continuation blockette %s %s, needs debuging\n",
-						    				falconChannel, new Date(ofcBlock.get_start_time()).toString());
-							    	ofcBlock.Continue(b2000);
-							    }
-							    bContinue = ofcBlock.get_Continuation();
-	
-						    	if (bContinue)
-						    	{
+					    	if (bContinue)
+					    	{
+					    		continue;
+					    	}
+
+					    	if (ofcBlock.get_average_data() == null ||
+					    			ofcBlock.get_average_data().length == 0)
+					    		continue;  // no data to plot
+					    	
+					    	if (fileDateStart == null)
+					    		fileDateStart = new Date(ofcBlock.get_start_time()*1000);
+					    	fileDateEnd = new Date(ofcBlock.get_end_time()*1000);
+
+					    	if (displayDateStart != null)
+					    	{
+					    		if (displayDateStart.getTime()/1000 > ofcBlock.get_end_time())
+					    			continue;
+					    	}
+					    	
+					    	if (displayDateEnd != null)
+					    	{
+						    	if (displayDateEnd.getTime()/1000 + 86400 < ofcBlock.get_start_time())
 						    		continue;
-						    	}
-
-						    	if (ofcBlock.get_average_data() == null ||
-						    			ofcBlock.get_average_data().length == 0)
-						    		continue;  // no data to plot
-						    	
-						    	if (fileDateStart == null)
-						    		fileDateStart = new Date(ofcBlock.get_start_time()*1000);
-						    	fileDateEnd = new Date(ofcBlock.get_end_time()*1000);
-
-						    	if (displayDateStart != null)
-						    	{
-						    		if (displayDateStart.getTime()/1000 > ofcBlock.get_end_time())
-						    			continue;
-						    	}
-						    	
-						    	if (displayDateEnd != null)
-						    	{
-  						    	if (displayDateEnd.getTime()/1000 + 86400 < ofcBlock.get_start_time())
-  						    		continue;
-						    	}
+					    	}
 /*
 System.err.printf(
 "DEBUG: %s ; type %d; length %d; offset %d; record %d; order %d; flags %02x\n",
@@ -295,36 +308,43 @@ for (int i=0; i < ofcBlock.get_average_data().length; i++)
 	current_time += 60;
 }
 */
-    							if (station.length() == 0 || network.length() == 0)
-    							{
-    								// We need to label the title according to the station
-    								network = seedRecord.getSeedName().substring(0, 2);
-    								station = seedRecord.getSeedName().substring(2, 7).trim();
-    								timeChartPlot.SetTitle(station, network,
-    								    falconChannel);
-    							}
+  							if (station.length() == 0 || network.length() == 0)
+  							{
+  								// We need to label the title according to the station
+  								network = seedRecord.getSeedName().substring(0, 2);
+  								station = seedRecord.getSeedName().substring(2, 7).trim();
+  								timeChartPlot.SetTitle(station, network,
+  								    falconChannel);
+  							}
 
-    							iTotalDataCount += ofcBlock.get_average_data().length;
-    							GregorianCalendar startTime =
-    									new GregorianCalendar(TimeZone.getTimeZone("GMT"));
-    							startTime.setTimeInMillis(ofcBlock.get_start_time()*1000);
-  								timeChartPlot.AddNewData(ofcBlock.get_low_data(),
-  										ofcBlock.get_high_data(), ofcBlock.get_average_data(),
-  										startTime, minutesPerTick);
-								} // blockette 2000
-							} // loop through all blockettes
-						} // Seed record was an OFC channel
-					} // we have read a full record
-				} // while we are successfully reading data
-			} // While more data in file
+  							iTotalDataCount += ofcBlock.get_average_data().length;
+  							GregorianCalendar startTime =
+  									new GregorianCalendar(TimeZone.getTimeZone("GMT"));
+  							startTime.setTimeInMillis(ofcBlock.get_start_time()*1000);
+								timeChartPlot.AddNewData(ofcBlock.get_low_data(),
+										ofcBlock.get_high_data(), ofcBlock.get_average_data(),
+										startTime, minutesPerTick);
+							} // blockette 2000
+						} // loop through all blockettes
+					} // Seed record was an OFC channel
+				} // we have read a full record
+			} // while we are successfully reading data
+			
 			System.err.printf("Done %s data from %s, %d values\n", 
 					falconChannel, ofcdataFileName, iTotalDataCount);
 			ofcFile.close();
 			
-			if (displayDateStart == null)
-				displayDateStart = (Date) fileDateStart.clone();
-			if (displayDateEnd == null)
-				displayDateEnd = (Date) fileDateEnd.clone();
+			if (fileDateStart != null)
+			{
+  			if (displayDateStart == null)
+  				displayDateStart = (Date) fileDateStart.clone();
+  			if (displayDateEnd == null)
+  				displayDateEnd = (Date) fileDateEnd.clone();
+			}
+			else
+			{
+				showStatus("Failed to retrieve data from " + ofcURL + ", try refresh");				
+			}
 			
 		} catch (IOException e1)
 		{
@@ -395,31 +415,34 @@ for (int i=0; i < ofcBlock.get_average_data().length; i++)
 		
 		if (source == dateButton)
 		{
-			dateSelect = new DateSelect(
-					findParentFrame(), 
-		  		fileDateStart, 
-		  		fileDateEnd,
-		  		displayDateStart, 
-		  		displayDateEnd,
-		  		daysBack);			
-			dateSelect.setVisible(true);
-			
-			if (!dateSelect.bCancel)
+			if (fileDateStart != null)
 			{
-				// User hit OK button so lets plot again
-				timeChartPlot.clearDataSet();
-				displayDateStart.setTime(dateSelect.getStartDate().getTime());
-				displayDateEnd.setTime(dateSelect.getEndDate().getTime());
-				
-				minutesPerTick = (int)
-					((displayDateEnd.getTime() - displayDateStart.getTime())/60000) /
-					2000;
-				if (minutesPerTick < 1)
-					minutesPerTick = 1;
-				System.err.printf("ofcplot(%s .. %s, ticks %d\n", 
-						displayDateStart.toString(), displayDateEnd.toString(), minutesPerTick);
-				ofcPlot();
-			} // User hit OK button in dialog
+  			dateSelect = new DateSelect(
+  					findParentFrame(), 
+  		  		fileDateStart, 
+  		  		fileDateEnd,
+  		  		displayDateStart, 
+  		  		displayDateEnd,
+  		  		daysBack);			
+  			dateSelect.setVisible(true);
+  			
+  			if (!dateSelect.bCancel)
+  			{
+  				// User hit OK button so lets plot again
+  				timeChartPlot.clearDataSet();
+  				displayDateStart.setTime(dateSelect.getStartDate().getTime());
+  				displayDateEnd.setTime(dateSelect.getEndDate().getTime());
+  				
+  				minutesPerTick = (int)
+  					((displayDateEnd.getTime() - displayDateStart.getTime())/60000) /
+  					2000;
+  				if (minutesPerTick < 1)
+  					minutesPerTick = 1;
+  				System.err.printf("ofcplot(%s .. %s, ticks %d\n", 
+  						displayDateStart.toString(), displayDateEnd.toString(), minutesPerTick);
+  				ofcPlot();
+  			} // User hit OK button in dialog
+			} // There is data present in file
 		} // dateButton
 	} // actionPerformed()
 

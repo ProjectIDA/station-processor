@@ -5,6 +5,7 @@
  * Modification History:
  *    Version 1.0  Nov 3, 2009
  *    Version 1.1  May 20, 2010  Display alarms newest to oldest
+ *    Version 2.0  June 22, 2010  Add OFC data charts
  */
 
 #include <stdlib.h>
@@ -15,10 +16,18 @@
 #include <dcc_time.h>
 
 #define PROGRAM_NAME "falconweb"
-#define VERSION "Version 1.1"
-#define EFF_DATE "November 3, 2009"
+#define VERSION "Version 2.0"
+#define EFF_DATE "June 22, 2010"
 
 #define MAX_FILE_NAME 4096
+
+// Store list of ofc channels
+struct s_ofc
+{
+  char     description[12];
+  int      has_alarm;
+  struct   s_ofc *next;
+} S_OFC;
 
 // Stores parsed alarm information
 struct s_alarm
@@ -31,6 +40,7 @@ struct s_alarm
   unsigned char  level;
   struct s_alarm *next;
   struct s_alarm *nextstation;
+  struct s_ofc   *ofclist;
 } S_ALARM;
 
 // Need a structure to reverse order of alarm messages
@@ -163,6 +173,86 @@ void AddStation(struct s_alarm entry, struct s_alarm **stationlist)
   newalarm->nextstation = *stationlist;
   *stationlist = newalarm;
 } // AddStation()
+
+//////////////////////////////////////////////////////////////////////////////
+void ProcessOFC(FILE *cFile, struct s_alarm *stationlist,
+                struct s_alarm *excludelist)
+{
+  struct s_ofc *ofcptr;
+  struct s_ofc *newofc;
+  struct s_alarm *excludeptr;
+  int  found;
+  char *errsave;
+  char name[12];
+
+  // loop through each channel name entry in cFile
+  while (!feof(cFile))
+  {
+    if (fgets(name, 11, cFile) == NULL)
+      break;
+
+    if (name[strlen(name)-1] == '\n')
+      name[strlen(name)-1] = 0;
+    if (name[strlen(name)-1] == '\r')
+      name[strlen(name)-1] = 0;
+    if (name[strlen(name)-1] == '\n')
+      name[strlen(name)-1] = 0;
+    if (name[strlen(name)-1] == '\r')
+      name[strlen(name)-1] = 0;
+
+    if (strlen(name) < 1 || feof(cFile))
+      continue;
+
+    // We have some bad names with more than 6 chars so exclude them
+    if (strlen(name) > 6)
+    {
+      fprintf(stderr, "DEBUG excluded OFC channel '%s', > 6 chars\n",
+              name);
+      continue;
+    }
+
+    // See if name is on the exclude.txt list
+    for (found=0, excludeptr=excludelist; !found && excludeptr != NULL; 
+         excludeptr = excludeptr->next)
+    {
+      if (strcmp(name, excludeptr->description) == 0)
+      {
+        fprintf(stderr, "DEBUG excluded OFC channel '%s' in exclude.txt\n",
+              name);
+        found = 1;
+      }
+    }
+    if (found)
+      continue;
+
+    // Create a new entry for this name
+    newofc = (struct s_ofc *) malloc(sizeof (struct s_ofc));
+    if (newofc == NULL)
+    {
+      errsave = strerror(errno);
+      fprintf(stderr, "%s() line %d: malloc failed: '%s'\n",
+         __FILE__, __LINE__, errsave);
+      exit(1);
+    }
+    strcpy(newofc->description, name);
+    newofc->has_alarm = 0;
+    newofc->next = NULL;
+
+    if (stationlist->ofclist == NULL)
+    {
+      stationlist->ofclist = newofc;
+    }
+    else
+    {
+      // Add new channel name to end of list
+      for (ofcptr = stationlist->ofclist; ofcptr->next != NULL; ofcptr = ofcptr->next)
+        ; // find last entry in linked list
+      ofcptr->next = newofc;
+    }
+
+  } // get list of channel names from cFile
+  
+} // ProcessOFC()
 
 //////////////////////////////////////////////////////////////////////////////
 void ProcessAlarm(struct s_alarm *alarmlist, struct s_alarm alarm, int days,
@@ -304,6 +394,7 @@ void CreateMainFalconPage(
 {
   struct s_alarm *alarmptr;
   struct s_alarm *eventptr;
+  struct s_ofc   *ofcptr;
   struct s_line  *linelist;
   struct s_line  *lineptr;
   char fullname[MAX_FILE_NAME];
@@ -349,57 +440,101 @@ void CreateMainFalconPage(
 
     for (eventptr=alarmptr->next; eventptr != NULL; eventptr = eventptr->next)
     {
-      fprintf(outfile,
+      int found_match;
+      // See if this alarm channel has timeseries data too
+      for (found_match=0, ofcptr=alarmptr->ofclist; 
+           ofcptr != NULL && !found_match; ofcptr = ofcptr->next)
+      {
+        if (strcmp(ofcptr->description, eventptr->description) == 0)
+        {
+          found_match=1;
+          ofcptr->has_alarm=1;
+        }
+      }
+      if (!found_match)
+      {
+        // No link to this label
+        fprintf(outfile,
 "                <span class=\"level-%d\">%s</span>\n",
               eventptr->level-1, eventptr->description);
+      }
+      else
+      {
+        // Label links to an ofcweb plot page
+        fprintf(outfile,
+"                <span class=\"level-%d\"><A HREF=\"ofcweb.html?station=%s&amp;channel=%s\">%s</A></span>\n",
+              eventptr->level-1, alarmptr->station, 
+              eventptr->description, eventptr->description);
+      }
     } // loop through all alarms for this station
 
-    // Done if no events for this station
-    if (alarmptr->next != NULL)
+    // Make links for any remaing OFC channels
+    for (ofcptr=alarmptr->ofclist; 
+         ofcptr != NULL; ofcptr = ofcptr->next)
     {
-      // Now let the user see all of the events if they want
+      if (!ofcptr->has_alarm)
+      {
+fprintf(stderr, "DEBUG creating OFC span\n");
+        fprintf(outfile,
+"                <span class=\"level-N\"><A HREF=\"ofcweb.html?station=%s&amp;channel=%s\">%s</A></span>\n",
+              alarmptr->station, ofcptr->description, ofcptr->description);
+      } // found one wich hasn't been listed by alarm loop
+    } // loop through list of OFC channels
+
+    // Done if no events or data channels for this station
+    if (alarmptr->next != NULL || alarmptr->ofclist != NULL)
+    {
       fprintf(outfile,
 "                <div id='%s' class='alarms'>\n", alarmptr->station);
+
+      // Now let the user see all of the events if they want
       sprintf(fullname, "%s/%s_alarms.txt", topdir, alarmptr->station);
       if ((aFile = fopen(fullname, "r")) == NULL)
       {
         fprintf(stderr, "Unable to open event file '%s'\n", fullname);
-        continue;
       } // failed to open event file for reading
-      linelist = NULL;
-      while (!feof(aFile))
+      else
       {
-        fgets(eventstr, 80, aFile);
-        if (strlen(eventstr) < 10 || feof(aFile))
-          continue;
-        if (eventstr[strlen(eventstr)-1] == '\n')
-          eventstr[strlen(eventstr)-1] = 0;
-        if (eventstr[strlen(eventstr)-1] == '\r')
-          eventstr[strlen(eventstr)-1] = 0;
-        if (eventstr[strlen(eventstr)-1] == '\n')
-          eventstr[strlen(eventstr)-1] = 0;
-        if (eventstr[strlen(eventstr)-1] == '\r')
-          eventstr[strlen(eventstr)-1] = 0;
+        linelist = NULL;
+        while (!feof(aFile))
+        {
+          fgets(eventstr, 80, aFile);
+          if (strlen(eventstr) < 10 || feof(aFile))
+            continue;
+          if (eventstr[strlen(eventstr)-1] == '\n')
+            eventstr[strlen(eventstr)-1] = 0;
+          if (eventstr[strlen(eventstr)-1] == '\r')
+            eventstr[strlen(eventstr)-1] = 0;
+          if (eventstr[strlen(eventstr)-1] == '\n')
+            eventstr[strlen(eventstr)-1] = 0;
+          if (eventstr[strlen(eventstr)-1] == '\r')
+            eventstr[strlen(eventstr)-1] = 0;
 
-        lineptr = malloc(sizeof (struct s_line));
-        lineptr->msg = malloc(strlen(eventstr)+1);
-        strcpy(lineptr->msg, eventstr);
-        lineptr->next = linelist;
-        linelist = lineptr;
-      } // read until end of file
-      fclose(aFile);
+          lineptr = malloc(sizeof (struct s_line));
+          lineptr->msg = malloc(strlen(eventstr)+1);
+          strcpy(lineptr->msg, eventstr);
+          lineptr->next = linelist;
+          linelist = lineptr;
+        } // read until end of file
+        fclose(aFile);
       
-      // Now print out the reversed lines
-      while (linelist != NULL)
+        // Now print out the reversed lines
+        while (linelist != NULL)
+        {
+          fprintf(outfile,
+"                    <div>%s</div>\n", linelist->msg);
+          lineptr = linelist;
+          linelist = linelist->next;
+          free(lineptr->msg);
+          free(lineptr);
+          lineptr = NULL;
+        } // loop through all reversed lines
+      } // Able to open file
+      if (alarmptr->next == NULL)
       {
         fprintf(outfile,
-"                    <div>%s</div>\n", linelist->msg);
-        lineptr = linelist;
-        linelist = linelist->next;
-        free(lineptr->msg);
-        free(lineptr);
-        lineptr = NULL;
-      } // loop through all reversed lines
+"                    <div>%s No events</div>\n", alarmptr->station);
+      }
       fprintf(outfile,
 "                </div>\n");
     } // if this station had events
@@ -489,6 +624,66 @@ eventstr, iArg, code_str, description_str);
   return;
 } // CreateMainFalconPage()
 
+///////////////////////////////////////////////////////////////////////////////
+void CreateOfcPages(
+    struct s_alarm *stationlist)
+{
+  struct s_alarm *alarmptr;
+  struct s_ofc   *ofcptr;
+  char           ofcfilename[MAX_FILE_NAME];
+  FILE           *ofcfile;
+
+  // Go through list of stations
+  for (alarmptr = stationlist; alarmptr != NULL;
+       alarmptr = alarmptr->nextstation)
+  {
+    // Go through all OFC channel data for this station
+    for (ofcptr = alarmptr->ofclist; 
+         ofcptr != NULL; ofcptr=ofcptr->next)
+    {
+      // create web page
+      sprintf(ofcfilename, "%s_%s_ofcweb.html",
+         alarmptr->station, ofcptr->description);
+      if ((ofcfile = fopen(ofcfilename, "w")) == NULL)
+      {
+        fprintf(stderr, "availweb: failed to create %s, Aborting!\n",
+           ofcfilename);
+        exit(1);
+      }
+
+      // Headers
+      fprintf(ofcfile,
+"<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n"
+"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\""
+" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n"
+"<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n"
+"  <head>\n"
+"    <title>Falcon %s channel plot</title>\n"
+"  </head>\n"
+"  <body onload=\"initialize()\">\n", ofcptr->description);
+
+      // Call up ofcweb java applet to do plot
+      fprintf(ofcfile,
+"    <applet code='ofcweb' archive=\"ofcweb.jar\" width=1000 height=350>\n");
+      fprintf(ofcfile,
+"      <PARAM NAME=ofcdata VALUE=\"%s_ofc.seed.hist\">\n", alarmptr->station);
+      fprintf(ofcfile,
+"      <PARAM NAME=channel VALUE=\"%s\">\n", ofcptr->description);
+      fprintf(ofcfile,
+"      <PARAM NAME=minutespertick VALUE=\"1440\">\n");
+      fprintf(ofcfile,
+"    </applet>\n");
+
+      // End header
+      fprintf(ofcfile,"%s",
+"  </body>\n"
+"</html>\n" );
+
+      fclose(ofcfile);
+    } // loop through each unique OFC channel description
+  } // look at all stations
+
+} // CreateOfcPages()
 
 ///////////////////////////////////////////////////////////////////////////////
 void ShowUsage()
@@ -608,7 +803,7 @@ int main(int argc, char **argv)
     exit(1);
   }
 
-  // read list of channel names to exluce from exclude.txt
+  // read list of channel names to exclude from exclude.txt
   sprintf(excludefilename, "%s/exclude.txt", topdir);
   if ((excludefile = fopen(excludefilename, "r")) != NULL)
   {
@@ -729,6 +924,16 @@ newalarm.station, excludeptr->description);
             } // parsed line
          } // read until end of file
          fclose(aFile);
+
+         // get list of channel descriptors in OFC files
+         sprintf(fullname, "%s/%s_chan.txt", topdir, station);
+         if ((aFile = fopen(fullname, "r")) == NULL)
+         {
+           fprintf(stderr, "Unable to channnel data file '%s'\n", fullname);
+           continue;
+         } // failed to open event file for reading
+         ProcessOFC(aFile, stationlist, excludelist);
+
        } // file name matches correct format
     } // found a file in the directory
   } while (direntry != NULL);
@@ -796,6 +1001,10 @@ newalarm.station, excludeptr->description);
 
   CreateMainFalconPage(outfile, stationlist, topdir, createstr);
   fclose(outfile);
+
+  // Create OFC channel web pages
+// seperate OFC channel web pages are no longer needed
+//  CreateOfcPages(stationlist);
 
   exit(0);
 } // main()

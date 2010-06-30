@@ -43,10 +43,11 @@ div.level-2 > div { background-color: red; }
 div.level-1 > div { background-color: yellow; }
 div.level-0 > div { background-color: green; }
 
-span.level-2 { color: red; }
-span.level-1 { color: yellow; }
-span.level-0 { color: green; }
-span.level-E { color: #aaaaaa; }
+span.level-2, span.level-2 > a, span.level-2 > a:hover, span.level-2 > a:visited { color: red; }
+span.level-1, span.level-1 > a, span.level-1 > a:hover, span.level-1 > a:visited { color: yellow; }
+span.level-0, span.level-0 > a, span.level-0 > a:hover, span.level-0 > a:visited { color: green; }
+span.level-E, span.level-E > a, span.level-E > a:hover, span.level-E > a:visited { color: #AAAAAA; }
+span.level-N, span.level-N > a, span.level-N > a:hover, span.level-N > a:visited { color: black; }
 
 div.main > div > div.alarms {
     display: none;

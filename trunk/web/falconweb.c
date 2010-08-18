@@ -6,6 +6,8 @@
  *    Version 1.0  Nov 3, 2009
  *    Version 1.1  May 20, 2010  Display alarms newest to oldest
  *    Version 2.0  June 22, 2010  Add OFC data charts
+ *    Version 2.1  Assume that events within 2 seconds of each other
+ *                 are at the same time, prevents restore mixup
  */
 
 #include <stdlib.h>
@@ -314,9 +316,9 @@ void ProcessAlarm(struct s_alarm *alarmlist, struct s_alarm alarm, int days,
         alarmptr = alarmptr->next;
         continue;
       }
-      if (ST_DeltaToMS(delta_time) == 0)
+      if ((ST_DeltaToMS(delta_time)/2000) == 0)
       {
-        // Timetags match so determine precedence
+        // Timetags match within 2 seconds so determine precedence
         // Need stored alarm info
         ptrnum = alarmptr->event & 0x7f;
         ptrdir = alarmptr->event & 0x80;
@@ -474,7 +476,6 @@ void CreateMainFalconPage(
     {
       if (!ofcptr->has_alarm)
       {
-fprintf(stderr, "DEBUG creating OFC span\n");
         fprintf(outfile,
 "                <span class=\"level-N\"><A HREF=\"ofcweb.html?station=%s&amp;channel=%s\">%s</A></span>\n",
               alarmptr->station, ofcptr->description, ofcptr->description);

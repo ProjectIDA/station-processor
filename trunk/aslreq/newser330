@@ -1,31 +1,56 @@
-#! /bin/bash
+#!/usr/bin/perl
+#=========================================================================
+# Script: newser330
+#
+# Purpose: Updates the serial number in seneca.config so a new Q330
+#          can be put through SATQ testing
+#
+#=========================================================================
 
-if [[ $# != 1 ]] ; then
-  echo "Usage: $0 <serialnumber>"
-  echo "  Updates the seneca.config serial number"
-  echo "  Restarts the q330serv program to use the new serial number"
-  exit 1
-fi
+use strict;
 
-echo Changing Q330 seneca.config serial number to $1
+my $newserno;
+my $cmd;
+my $cmdout;
 
-cd /etc/q330/DLG1 ; Seneca << end
-y
-c
-a
-$1
-s
-x
-q
-end
+# Make sure the first four non optional arguments are present
+if ($#ARGV != 0)
+{
 
-pid=`/bin/ps -e | grep q330serv | sed -e 's/^  *//' -e 's/ .*//'`
-if [ "${pid}" != "" ]
-then
-  echo Restarting q330serv
-  /bin/kill ${pid}
-  sleep 10
-  q330serv /etc/q330/DLG1
-fi
+  print "Invalid number of arguments\n";
 
-exit 0
+  print
+"Utility to change the Q330 serial number in seneca.config\n" .
+"\n" .
+"Usage:\n" .
+"   newser330 <serno>\n";
+}
+
+# pull mandatory arguments
+# convert to upper case first
+tr/a-z/A-Z/ for @ARGV;
+
+$newserno = $ARGV[0];
+
+$cmd = "cd /etc/q330/DLG1 ; Seneca << end\n" .
+       "y\n" .
+       "c\n" .
+         "a\n" .
+           "$newserno\n" .
+         "c\n" .
+           "SATQ\n" .
+         "s\n" .
+         "x\n" .
+       "q\n" .
+       "end\n";
+
+$cmdout = `$cmd`
+  or die "Seneca update failed\n";
+
+system("terminate q330serv; sleep 10") == 0
+  or die "Failed to run 'terminate q330serv': $?\n";
+
+system("q330serv /etc/q330/DLG1") == 0
+  or die "Failed to run 'q330serv /etc/q330/DLG1': $?\n";
+
+exit(0);

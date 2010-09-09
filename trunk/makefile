@@ -40,7 +40,7 @@ install:
      falcon/falcon dlresize/dlresize \
       $(INSTALLDIR)
 cpio:
-	find aslreq q330serv ida2arch ida2chan isirstat aslreq netreq dispstatus dlresize dlutil log330 q330arch ida2liss netseed falcon lib include -name '*.[ch]' -print >/tmp/flist
+	find aslreq q330serv ida2arch ida2chan isirstat netreq dispstatus dlresize dlutil log330 q330arch ida2liss netseed falcon lib include -name '*.[ch]' -print >/tmp/flist
 	find . -name '[mM]akefile' -print >>/tmp/flist
 	sort /tmp/flist >/tmp/slist	
 	cpio -ov </tmp/slist >q330asp.cpio

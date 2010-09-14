@@ -189,6 +189,12 @@ char *RangeSpans(
   int         lastRecord   // Last record in range
   );                       // returns NULL or an error string pointer
 
+//////////////////////////////////////////////////////////////////////////////
+// Remaps the station name in the seeed record if diskloop.config
+// has an applicable MapStation: entry
+// Returns 1 on a remap, 0 on no remap
+int RemapStationName(
+  char *str_header);       // seed record pointer
 
 #endif // _DISKLOOP_H_ defined
 

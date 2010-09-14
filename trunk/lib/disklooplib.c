@@ -35,6 +35,9 @@ Routines:
             Debug type print of all the spans in the circular buffer
     NoIDA
             Add records to archive, but don't put them on IDA disk loop
+    RemapStationName
+            Used to implement diskloop.config MapStation: keyword
+            Changes seed header station name if a MapStation match is found
 
 Update History:
 mmddyy who Changes
@@ -45,6 +48,7 @@ mmddyy who Changes
 060107 fcs Use sequence number and samples for overwrite last record
 102209 fcs Support for new Falcon configuration keywords
 040110 fcs Add NoIDA keyword supporting channels for archive only
+091410 fcs Add RemapStationName routine
 ******************************************************************************/
 
 #include <stdio.h>
@@ -756,6 +760,56 @@ char *FalconPort(int *port)
 } // FalconPort()
 
 //////////////////////////////////////////////////////////////////////////////
+// Remaps the station name in the seeed record if diskloop.config
+// has an applicable MapStation: entry 
+// Returns 1 on a remap, 0 on no remap
+int RemapStationName(                      
+  char *str_header)        // seed record pointer
+{
+  seed_header *pheader;
+  char station[8];
+  int  i;
+
+  char *mapstation=NULL;
+  struct s_mapstation *ptr;
+
+  pheader = (seed_header *)str_header;
+
+  // Parse station name
+  for (i=0; i < 5 
+       && isalnum((int)pheader->station_id_call_letters[i]); i++)
+    station[i] = pheader->station_id_call_letters[i];
+  station[i] = 0;
+
+  // Now remap q330 station name if match found
+  for (ptr=pMapStationList; ptr != NULL; ptr=ptr->next)
+  {
+    if (strcmp(station, ptr->station_q330) == 0)
+    {
+      mapstation = ptr->station;
+      break;
+    }
+  } // check all station name remap entries
+
+  // Change seed record station name if we are remapping
+  if (mapstation != NULL)
+  {
+    for (i=0; i < 5 && mapstation[i] != 0; i++)
+    {
+      pheader->station_id_call_letters[i] = mapstation[i];
+    }
+    // blank pad the station name to 5 chars
+    for (; i < 5; i++)
+    {
+      pheader->station_id_call_letters[i] = ' ';
+    }
+  }
+
+  return (mapstation != NULL);
+
+} // RemapSationName()
+
+//////////////////////////////////////////////////////////////////////////////
 // Station name from 330 contains Network ID, this code strips off network
 // Also maps q330 station name to final station name if needed
 // Returns pointer to string after network ID
@@ -856,6 +910,114 @@ char *NewBuffer(
 
   return NULL;
 } // NewBuffer()
+
+//////////////////////////////////////////////////////////////////////////////
+// Parses str_header to get station, channel, location, time start/end
+char *ParseSeedHeader(
+const char    *str_header,  // Header buffer
+char          *station,     // return station name
+char          *chan,        // return Channel ID
+char          *loc,         // return Location ID
+STDTIME2      *ptRecStart,  // Returns start time for record
+STDTIME2      *ptRecEnd,    // Returns end time for record
+int           *piSeqNum,    // Returns the sequence number for the record
+int           *piSamples    // Returns the number of samples
+  )                         // returns NULL or an error string pointer
+{
+  int i;
+  int iRateFactor;
+  int iRateMult;
+  int iSamples;
+  int iSpanDay;
+  int iSpanHour;
+  int iSpanMin;
+  int iSpanSec;
+  int iSpanTMSec;
+  double dSampleRate;
+  seed_header *pheader;
+  char str[10];
+
+  pheader = (seed_header *)str_header;
+
+  // Parse the sequence number
+  *piSeqNum = 0;
+  strncpy(str, pheader->sequence, 6);
+  str[6] = 0;
+  sscanf(str, "%d", piSeqNum);
+  
+  // Parse station name
+  for (i=0; i < 5 
+       && isalnum((int)pheader->station_id_call_letters[i]); i++)
+    station[i] = pheader->station_id_call_letters[i];
+  station[i] = 0;
+
+  // Parse location name
+  for (i=0; i < 2; i++)
+    loc[i] = pheader->location_id[i];
+  loc[i] = 0;
+
+  // Parse channel name
+  for (i=0; i < 3; i++)
+    chan[i] = pheader->channel_id[i];
+  chan[i] = 0;
+
+  // Parse Record Start time
+  ptRecStart->year = ntohs(pheader->yr);
+  ptRecStart->day = ntohs(pheader->jday);
+  ptRecStart->hour = (int)pheader->hr;
+  ptRecStart->minute = (int)pheader->minute;
+  ptRecStart->second = (int)pheader->seconds;
+  ptRecStart->tenth_msec = ntohs(pheader->tenth_millisec);
+
+  // Parse samples
+  iSamples = (unsigned short)ntohs(pheader->samples_in_record);
+  iRateFactor = (short)ntohs(pheader->sample_rate_factor);
+  iRateMult = (short)ntohs(pheader->sample_rate_multiplier);
+
+  *piSamples = iSamples;
+
+  // Get sample rate, See SEED Reference Manual Chp 8
+  // Fixed Section of Data Header for formulas
+  dSampleRate = 0;
+  if (iRateFactor > 0 && iRateMult > 0)
+    dSampleRate = (double)(iRateFactor * iRateMult);
+
+  if (iRateFactor > 0 && iRateMult < 0)
+    dSampleRate = -((double)iRateFactor / (double)iRateMult);
+  
+  if (iRateFactor < 0 && iRateMult > 0)
+    dSampleRate = -((double)iRateMult / (double)iRateFactor);
+
+  if (iRateFactor < 0 && iRateMult < 0)
+    dSampleRate = 1.0 / (double)(iRateFactor * iRateMult);
+
+  // Get Span time in tenths of milliseconds
+  if (iRateFactor != 0 && iRateMult != 0)
+    iSpanTMSec = (int)((iSamples / dSampleRate) * 10000.0);
+  else
+    iSpanTMSec = 0;
+
+//fprintf(stdout, "Samp=%d Factor=%d Mult=%d dSampleRate=%.5f, TMSec=%d\n",
+//iSamples, iRateFactor, iRateMult, dSampleRate, iSpanTMSec);
+
+
+  // Add to start time to get end time
+  iSpanSec = iSpanTMSec/10000;
+  iSpanTMSec = iSpanTMSec % 10000;
+  iSpanMin = iSpanSec / 60;
+  iSpanSec = iSpanSec % 60;
+  iSpanHour = iSpanMin / 60;
+  iSpanMin = iSpanMin % 60;
+  iSpanDay = iSpanHour / 24;
+  iSpanHour = iSpanHour % 24;
+//fprintf(stdout, "%s + ", ST_PrintDate2(*ptRecStart, 1));
+//fprintf(stdout, "%03d,%02d:%02d:%02d.%04d",
+//iSpanDay, iSpanHour, iSpanMin, iSpanSec, iSpanTMSec);
+  *ptRecEnd = ST_AddToTime2(*ptRecStart, 
+          iSpanDay, iSpanHour, iSpanMin, iSpanSec, iSpanTMSec);
+//fprintf(stdout, " = %s\n", ST_PrintDate2(*ptRecEnd, 1));
+  return NULL;
+} // ParseSeedHeader()
 
 //////////////////////////////////////////////////////////////////////////////
 // The index info is repeated 3 times.  So even if we read it during the
@@ -1346,114 +1508,6 @@ char *ReadLast(
   fclose(fp_idx);
   return NULL;
 } // ReadLast()
-
-//////////////////////////////////////////////////////////////////////////////
-// Parses str_header to get station, channel, location, time start/end
-char *ParseSeedHeader(
-const char    *str_header,  // Header buffer
-char          *station,     // return station name
-char          *chan,        // return Channel ID
-char          *loc,         // return Location ID
-STDTIME2      *ptRecStart,  // Returns start time for record
-STDTIME2      *ptRecEnd,    // Returns end time for record
-int           *piSeqNum,    // Returns the sequence number for the record
-int           *piSamples    // Returns the number of samples
-  )                         // returns NULL or an error string pointer
-{
-  int i;
-  int iRateFactor;
-  int iRateMult;
-  int iSamples;
-  int iSpanDay;
-  int iSpanHour;
-  int iSpanMin;
-  int iSpanSec;
-  int iSpanTMSec;
-  double dSampleRate;
-  seed_header *pheader;
-  char str[10];
-
-  pheader = (seed_header *)str_header;
-
-  // Parse the sequence number
-  *piSeqNum = 0;
-  strncpy(str, pheader->sequence, 6);
-  str[6] = 0;
-  sscanf(str, "%d", piSeqNum);
-  
-  // Parse station name
-  for (i=0; i < 5 
-       && isalnum((int)pheader->station_id_call_letters[i]); i++)
-    station[i] = pheader->station_id_call_letters[i];
-  station[i] = 0;
-
-  // Parse location name
-  for (i=0; i < 2; i++)
-    loc[i] = pheader->location_id[i];
-  loc[i] = 0;
-
-  // Parse channel name
-  for (i=0; i < 3; i++)
-    chan[i] = pheader->channel_id[i];
-  chan[i] = 0;
-
-  // Parse Record Start time
-  ptRecStart->year = ntohs(pheader->yr);
-  ptRecStart->day = ntohs(pheader->jday);
-  ptRecStart->hour = (int)pheader->hr;
-  ptRecStart->minute = (int)pheader->minute;
-  ptRecStart->second = (int)pheader->seconds;
-  ptRecStart->tenth_msec = ntohs(pheader->tenth_millisec);
-
-  // Parse samples
-  iSamples = (unsigned short)ntohs(pheader->samples_in_record);
-  iRateFactor = (short)ntohs(pheader->sample_rate_factor);
-  iRateMult = (short)ntohs(pheader->sample_rate_multiplier);
-
-  *piSamples = iSamples;
-
-  // Get sample rate, See SEED Reference Manual Chp 8
-  // Fixed Section of Data Header for formulas
-  dSampleRate = 0;
-  if (iRateFactor > 0 && iRateMult > 0)
-    dSampleRate = (double)(iRateFactor * iRateMult);
-
-  if (iRateFactor > 0 && iRateMult < 0)
-    dSampleRate = -((double)iRateFactor / (double)iRateMult);
-  
-  if (iRateFactor < 0 && iRateMult > 0)
-    dSampleRate = -((double)iRateMult / (double)iRateFactor);
-
-  if (iRateFactor < 0 && iRateMult < 0)
-    dSampleRate = 1.0 / (double)(iRateFactor * iRateMult);
-
-  // Get Span time in tenths of milliseconds
-  if (iRateFactor != 0 && iRateMult != 0)
-    iSpanTMSec = (int)((iSamples / dSampleRate) * 10000.0);
-  else
-    iSpanTMSec = 0;
-
-//fprintf(stdout, "Samp=%d Factor=%d Mult=%d dSampleRate=%.5f, TMSec=%d\n",
-//iSamples, iRateFactor, iRateMult, dSampleRate, iSpanTMSec);
-
-
-  // Add to start time to get end time
-  iSpanSec = iSpanTMSec/10000;
-  iSpanTMSec = iSpanTMSec % 10000;
-  iSpanMin = iSpanSec / 60;
-  iSpanSec = iSpanSec % 60;
-  iSpanHour = iSpanMin / 60;
-  iSpanMin = iSpanMin % 60;
-  iSpanDay = iSpanHour / 24;
-  iSpanHour = iSpanHour % 24;
-//fprintf(stdout, "%s + ", ST_PrintDate2(*ptRecStart, 1));
-//fprintf(stdout, "%03d,%02d:%02d:%02d.%04d",
-//iSpanDay, iSpanHour, iSpanMin, iSpanSec, iSpanTMSec);
-  *ptRecEnd = ST_AddToTime2(*ptRecStart, 
-          iSpanDay, iSpanHour, iSpanMin, iSpanSec, iSpanTMSec);
-//fprintf(stdout, " = %s\n", ST_PrintDate2(*ptRecEnd, 1));
-  return NULL;
-} // ParseSeedHeader()
 
 //////////////////////////////////////////////////////////////////////////////
 // Read the last record of data written to this channel

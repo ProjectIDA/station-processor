@@ -22,8 +22,10 @@ Edit History:
    -- ---------- --- ---------------------------------------------------
     0 2006-10-02 rdr Created
     1 2006-10-26 rdr Change mseed__.BHZ type file names to DORK_1__.BHZ format.
-    2 2006-12-01 rdr Change method of clearing global variables since they not be in the
-                     order specified on all platforms.
+    2 2006-12-01 rdr Change method of clearing global variables since they 
+                     not be in the order specified on all platforms.
+    3 2010-09-14 fcs Add station name remap, add 1 sec callback to get
+                     vacuum readings from channel ??/VY?/
 */
 #include <syslog.h>
 
@@ -650,13 +652,17 @@ void mini_callback (pointer p)
           int       iSamples;
           int       iWriteIndex;
 
+          // Implement MapStation: keyword in diskloop.config
+          RemapStationName((char *)pm->data_address);
+
+          // parse record for time and station name
+          retstr = ParseSeedHeader(pm->data_address,
+                       station, chan, loc, 
+                       &recStartTime, &recEndTime, &iSeqNum, &iSamples);
+
           // Let status program know we received a record
           if (mapstatus != NULL)
           {
-            // First parse record for time
-            retstr = ParseSeedHeader(pm->data_address,
-                       station, chan, loc, &recStartTime, &recEndTime, &iSeqNum, &iSamples);
-
             // Calculate which mapstatus->ixWriteData[iDlg] value to use
             if (mapstatus->ixWriteData[iDlg] != 0 && mapstatus->ixReadData[iDlg] != 0)
               iWriteIndex = 0;
@@ -675,9 +681,9 @@ void mini_callback (pointer p)
           while ((retstr = q330SeedSend((void *)pm->data_address)) != NULL)
           {
             if (debug_arg)
-              fprintf(stderr, "amini_callback q330SeedSend: %s\n", retstr);
+              fprintf(stderr, "mini_callback q330SeedSend: %s\n", retstr);
             else
-              syslog(LOG_ERR, "amini_callback q330SeedSend: %s\n", retstr);
+              syslog(LOG_ERR, "mini_callback q330SeedSend: %s\n", retstr);
 	    sleep(1);
           }
         } // End addition to save 512 records to files

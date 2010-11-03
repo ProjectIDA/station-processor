@@ -538,11 +538,66 @@ end
 void onesec_callback (pointer p)
 {
   tonesec_call *ps ;
+  int iWriteIndex;
 
   ps = p ;
   if (onesec_file != INVALID_FILE_HANDLE)
-    then
-      lib_file_write (NIL, onesec_file, ps, ps->total_size) ;
+  {
+    lib_file_write (NIL, onesec_file, ps, ps->total_size) ;
+  }
+
+  // Code to get 1 second */VY* vacuum
+  if (ps->channel[0] == 'V' && ps->channel[1] == 'Y')
+  {
+    // Let status program see the latest vacuum readings
+    if (mapstatus != NULL)
+    {
+      // Store the latest vacuum reading
+      if (ps->channel[2] == 'Z')
+      {
+        // Don't worry about locking since a singe long value write
+        for (iWriteIndex=0; iWriteIndex < 3; iWriteIndex++)
+        {
+          mapstatus->dlg[iWriteIndex][iDlg].vacuum[0] = ps->samples[0];
+        }
+      }
+      else if (ps->channel[2] == '1' || ps->channel[2] == 'N')
+      {
+        // Don't worry about locking since a singe long value write
+        for (iWriteIndex=0; iWriteIndex < 3; iWriteIndex++)
+        {
+          mapstatus->dlg[iWriteIndex][iDlg].vacuum[1] = ps->samples[0];
+        }
+      }
+      else if (ps->channel[2] == '2' || ps->channel[2] == 'E')
+      {
+        // Don't worry about locking since a singe long value write
+        for (iWriteIndex=0; iWriteIndex < 3; iWriteIndex++)
+        {
+          mapstatus->dlg[iWriteIndex][iDlg].vacuum[2] = ps->samples[0];
+        }
+      }
+    } // if memory map present
+//  if (debug_arg)
+//  {
+//    fprintf(stderr, "DEBUG 1 sec data %s/%s size %d val = %ld\n", 
+//            ps->location, ps->channel, ps->total_size, ps->samples[0]);
+//  }
+  } // VY* vacuum pressure to store
+
+  // Code to get 1 second */LDO * pressure
+  if (ps->channel[0] == 'L' && ps->channel[1] == 'D' && ps->channel[2] == 'O')
+  {
+    // Let status program see the latest pressure readings
+    if (mapstatus != NULL)
+    {
+      // Store the latest pressure reading
+      for (iWriteIndex=0; iWriteIndex < 3; iWriteIndex++)
+      {
+        mapstatus->dlg[iWriteIndex][iDlg].pressure = ps->samples[0];
+      }
+    } // if memory map present
+  } // LDO data to store
 } // onesec_callback()
 
 #ifndef OMIT_SEED

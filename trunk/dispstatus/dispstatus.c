@@ -472,8 +472,14 @@ void PrimaryScreen(
      sprintf(msg, "PLL state: Unknown");
   }
   acsPrint(fdTerm, msg, 7);
-  sprintf(msg, "PLL Drift: %.6f", dlg[iDlg].pll_time_error);
-  acsPrint(fdTerm, msg, 8);
+  if (dlg[iDlg].vacuum[0] >= 0 ||
+      dlg[iDlg].vacuum[1] >= 0 ||
+      dlg[iDlg].vacuum[2] >= 0)
+  {
+    sprintf(msg, "Vac %d %d %d",
+            dlg[iDlg].vacuum[0], dlg[iDlg].vacuum[1], dlg[iDlg].vacuum[2]);
+    acsPrint(fdTerm, msg, 8);
+  }
 
 } // PrimaryScreen
 

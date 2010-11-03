@@ -31,9 +31,10 @@ mmddyy who Changes
 122208 fcs Give more time to shutdown server and flush data queues
 050809 fcs Add release number to ShowUsage
 020910 fcs New diskloop.config keywords for falcon, new lib330_91005
+110310 fcs Add 1 sec callback to get timely vacuum data
 ******************************************************************************/
 #define WHOAMI "q330serv"
-const char *VersionIdentString="Release 1.3";
+const char *VersionIdentString="Release 1.4";
 
 #include "globals.h"
 #include "libtypes.h"
@@ -148,6 +149,7 @@ int main (int argc, char **argv)
   int             iWriteIndex;
   int             iWriteIndexServ;
   int             iBoom;
+  int             i,j,k;
   enum tlibstate  libstate;
 
 
@@ -224,6 +226,19 @@ int main (int argc, char **argv)
     exit(1);
   }
 
+  // Initialize the vacumm status to all -1 (not used)
+  for (i=0; i < 3; i++)
+  {
+    for (j=0; j < MAX_DLG; j++)
+    {
+      for (k=0; k < 3; k++)
+      {
+        mapstatus->dlg[i][j].vacuum[k] = -1;
+      }
+      mapstatus->dlg[i][j].pressure = -1;
+    }
+  }
+
   // Create the station thread
   preg = addr(configstruc.par_register) ;
   pcret = addr(configstruc.par_create) ;
@@ -254,7 +269,7 @@ int main (int argc, char **argv)
   }
   else
   {
-    pcret->call_secdata = NIL ;
+    pcret->call_secdata = onesec_callback ;
     onesec_file = INVALID_FILE_HANDLE ; /* not open */
   }
   lib_create_context (addr(context), pcret) ;

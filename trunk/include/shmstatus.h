@@ -26,6 +26,7 @@ Update History:
 mmddyy who Changes
 ==============================================================================
 031208 fcs Creation
+110310 fcs Add place to store vacuum pressure readings
 ******************************************************************************/
 
 #ifndef _SHMSTATUS_H_
@@ -66,10 +67,12 @@ struct s_dlgstatus
   int           pll_state;       // PLL_OFF PLL_HOLD PLL_TRACK PLL_LOCK PLL_AUTO
   float         pll_time_error;  // PLL clock drift
   int           clock_quality;   // 0-100 %
+  long          vacuum[3];       // STS1 vacuum pressure readings, -1 = unused
+  long          pressure;        // Last pressure reading -1 = no sensor
 
   // Create some dummy space so we can keep record size constant
   // Otherwise we have to reboot to wipe out memory of shared memory size
-  long        dummyl[98];
+  long        dummyl[94];
 }; // s_dlgstatus
 
 // Server structure for inter fork comm

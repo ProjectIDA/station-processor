@@ -32,6 +32,7 @@ mmddyy who Changes
 050809 fcs Add release number to ShowUsage
 020910 fcs New diskloop.config keywords for falcon, new lib330_91005
 110310 fcs Add 1 sec callback to get timely vacuum data
+110910 fcs Initialize baler_callback = NIL to fix segmentation fault
 ******************************************************************************/
 #define WHOAMI "q330serv"
 const char *VersionIdentString="Release 1.4";
@@ -229,14 +230,11 @@ int main (int argc, char **argv)
   // Initialize the vacumm status to all -1 (not used)
   for (i=0; i < 3; i++)
   {
-    for (j=0; j < MAX_DLG; j++)
+    for (k=0; k < 3; k++)
     {
-      for (k=0; k < 3; k++)
-      {
-        mapstatus->dlg[i][j].vacuum[k] = -1;
-      }
-      mapstatus->dlg[i][j].pressure = -1;
+      mapstatus->dlg[i][iDlg].vacuum[k] = -1;
     }
+    mapstatus->dlg[i][iDlg].pressure = -1;
   }
 
   // Create the station thread
@@ -244,8 +242,10 @@ int main (int argc, char **argv)
   pcret = addr(configstruc.par_create) ;
   pcret->call_state = sen_state_callback;
   pcret->call_messages = msgs_callback;
+  pcret->call_baler = NIL;
   pcret->mini_firchain = NIL ;
   pcret->call_minidata = mini_callback ;
+  pcret->file_owner = NIL;
   if (configstruc.write_archive)
   {
     pcret->call_aminidata = amini_callback ;
@@ -312,7 +312,8 @@ int main (int argc, char **argv)
     }
   }
 
-  printf("Infinite loop, ^C to exit\n");
+  if (debug_arg)
+      fprintf(stderr, "Infinite loop, ^C to exit\n");
 
   // Tell q330lib how often to get status (10 seconds was default)
   lib_request_status(context,

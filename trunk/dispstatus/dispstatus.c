@@ -35,9 +35,10 @@ mmddyy who Changes
 ==============================================================================
 031208 fcs Creation
 040910 fcs Built with new lib330
+110910 fcs Display vacuum readings for STS1 on last line
 ******************************************************************************/
 #define WHOAMI "dispstatus"
-const char *VersionIdentString="Release 1.3";
+const char *VersionIdentString="Release 1.4";
 
 #include <stdio.h>
 #include <stdlib.h>

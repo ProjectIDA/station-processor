@@ -26,6 +26,8 @@ Edit History:
                      not be in the order specified on all platforms.
     3 2010-09-14 fcs Add station name remap, add 1 sec callback to get
                      vacuum readings from channel ??/VY?/
+    4 2010-12-02 fcs Exit program when state goes into LIBSTATE_TERM
+                     otherwise we can get segmentation faults
 */
 #include <syslog.h>
 
@@ -325,6 +327,14 @@ void sen_state_callback (pointer p)
               lib_get_state (context, addr(err), addr(opstat)) ;
               if (err == LIBERR_INVREG)
                 then
+                  if (debug_arg)
+                  {
+                    fprintf (stderr, "Q330 registration failure!\n");
+                  }
+                  else
+                  {
+                    syslog (LOG_ERR, "Q330 registration failure!\n");
+                  }
                   lib_change_state (context, LIBSTATE_TERM, LIBERR_CLOSED) ; /* terminate thread */
               break ;
             case LIBSTATE_TERM :
@@ -342,7 +352,7 @@ void sen_state_callback (pointer p)
               mseed_file = INVALID_FILE_HANDLE ;
 #endif
               cfgphase = CFG_IDLE ;
-              show_idle_menu () ;
+              exit(1);
               break ;
           end ;
       previous_state = current_state ;

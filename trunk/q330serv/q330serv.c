@@ -184,6 +184,7 @@ int main (int argc, char **argv)
   }
 
   // Load configuration file seneca.config
+  memset(&configstruc, 0, sizeof(configstruc));
   if (strlen(argv[1]) + strlen("/seneca.config") > MAXCONFIGLINELEN)
   {
     fprintf(stderr, "%s/seneca.config > %d chars\n",

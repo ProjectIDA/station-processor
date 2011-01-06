@@ -1,0 +1,53 @@
+# Get the aliases and functions
+if [ -f ~/.bashrc ]; then
+	. ~/.bashrc
+fi
+
+# Set up platform environment for IDA
+export osname=`uname -s | tr "[A-Z]" "[a-z]"`
+osver=`uname -r`
+
+machine=`uname -m`
+if [[ $machine == "i386" ]] ; then machine="i86pc"; fi
+if [[ $machine == "i486" ]] ; then machine="i86pc"; fi
+if [[ $machine == "i586" ]] ; then machine="i86pc"; fi
+if [[ $machine == "i686" ]] ; then machine="i86pc"; fi
+export machine
+if [[ $machine == "i86pc" || $machine == "armv5tel" ]] ; then
+  export order="LTL_ENDIAN_ORDER"
+else
+  export order="BIG_ENDIAN_ORDER"
+fi
+
+if [[ $osname == "linux" ]] ; then
+  export osver=`expr substr $osver 1 3`
+  export ostype=SVR4
+fi
+if [[ $osname == "sunos" ]] ; then
+  export ostype=SVR4
+  export osname=solaris
+fi
+if [[ $osname == "openbsd" || $osname == "freebsd" ]] ; then
+  export ostype=BSD
+fi
+
+export platform=$osname.$osver.$machine
+
+export NRTS_HOME="/opt/data/nrts"
+export IDA_DBDIR=$NRTS_HOME
+export DBIO_DATABASE=$NRTS_HOME
+export PLATFORM=$platform
+export MACHINE=$machine
+export OSNAME=`echo $osname | tr "[a-z]" "[A-Z]"`
+export OSTYPE=$ostype
+
+# User specific environment and startup programs
+
+PATH=$PATH:$HOME/bin:/usr/local/sbin
+BASH_ENV=$HOME/.bashrc
+USERNAME=""
+PYTHONPATH=/home/maint
+
+export USERNAME BASH_ENV PATH
+export PYTHONPATH
+

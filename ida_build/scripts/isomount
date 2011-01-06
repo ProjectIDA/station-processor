@@ -1,0 +1,52 @@
+#!/bin/csh -f
+# $Id: isomount,v 1.3 2008/03/26 22:49:41 dechavez Exp $
+#
+# Mount an ISO image
+
+set myname = isomount
+
+if ($#argv != 2) then
+    echo "usage: $myname ImagePath MountPoint"
+    exit 1
+endif
+
+set image = $argv[1]
+set mnt   = $argv[2]
+if (! -d ${mnt}) then
+    echo "${mnt}: no such directory"
+    exit 1
+endif
+
+set osname   = `uname -s | tr "[A-Z]" "[a-z]"`
+
+if ($osname == sunos) then
+    goto sunos
+else if ($osname == freebsd) then
+    goto freebsd
+else
+    goto unsupported
+endif
+
+freebsd:
+set isodev = `sudo mdconfig -a -t vnode -f ${image}`
+sudo mount -t cd9660 /dev/${isodev} ${mnt}
+echo "Be sure to ' sudo umount ${mnt} ; sudo mdconfig -d -u ${isodev} ' when done'"
+exit 0
+
+sunos:
+set isodev = `sudo lofiadm -a ${image}`
+sudo mount -F hsfs -o ro ${isodev} ${mnt}
+echo "Be sure to ' sudo umount ${mnt} ; sudo lofiadm -d ${isodev} ' when done'"
+exit 0
+
+unsupported:
+echo "${myname}: unsupported on this platform."
+exit 1
+
+# $Log: isomount,v $
+# Revision 1.3  2008/03/26 22:49:41  dechavez
+# fixed typo in mount point check
+#
+# Revision 1.2  2008/03/24 19:17:15  dechavez
+# added Solaris support
+#

@@ -1,0 +1,8 @@
+#!/bin/csh -f
+# $Id: SetSerialPortPerms,v 1.1 2008/05/06 21:00:05 dechavez Exp $
+#
+# Stupid hack to ensure serial ports are read/write at boot time
+
+foreach device (/dev/cua*)
+	chmod 666 ${device}*
+end

@@ -1,0 +1,30 @@
+#!/bin/csh
+#
+# $id$
+
+if ($#argv != 1) then
+    echo "usage: CountIsoImages dir"
+    exit 1
+endif
+
+cd $argv[1]
+if ($status != 0) then
+    echo -1
+    exit 1
+endif
+
+set dummy = $$.iso
+touch $dummy
+@ count = `ls *.iso | wc -l`
+@ count -= 1
+rm $dummy
+
+echo $count
+exit 0
+
+# Revision History
+#
+# $Log: CountIsoImages,v $
+# Revision 1.1  2005/02/11 22:10:25  dechavez
+# Initial release
+#

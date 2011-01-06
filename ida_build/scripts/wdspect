@@ -1,0 +1,114 @@
+#!/bin/csh -f
+# $Id: wdspect,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+
+if ($#argv == 3 || $#argv == 4) then
+    set pattern  = `echo $argv[1] | ucase`
+    set start    = $argv[2]
+    set duration = $argv[3]
+    if ($#argv == 4) then
+        set wfdisc = $argv[4]
+    else
+        set wfdisc = css.wfdisc
+    endif
+else
+    echo "usage: wdspect pattern start duration [wfdisc]"
+    echo "example: wdspect bh 94:132-15:00 3600"
+    exit 1
+endif
+
+echo $wfdisc | fgrep wfdisc >& /dev/null
+if ($status != 0) then
+    if ($?NRTS_HOME) then
+        set nrts_home = $NRTS_HOME
+    else
+        set nrts_home = /usr/nrts
+    endif
+    set wfdisc = $nrts_home/wfdiscs/$wfdisc.wfdisc
+    echo "using $wfdisc as input wfdisc"
+endif
+
+if ($pattern == SH) then
+    set pattern = "SH[ZNE]"
+else if ($pattern == SL) then
+    set pattern = "SL[ZNE]"
+else if ($pattern == BH) then
+    set pattern = "BH[ZNE]"
+else if ($pattern == BL) then
+    set pattern = "BL[ZNE]"
+else if ($pattern == LH) then
+    set pattern = "LH[ZNE]"
+else if ($pattern == LL) then
+    set pattern = "LL[ZNE]"
+else if ($pattern == VH) then
+    set pattern = "VH[ZNE]"
+else if ($pattern == VL) then
+    set pattern = "VL[ZNE]"
+else if ($pattern == VM) then
+    set pattern = "VM[ZNE]"
+else if ($pattern == VM) then
+    set pattern = "EH[ZNE]"
+else if ($pattern == EH) then
+    set pattern = "EL[ZNE]"
+else if ($pattern == EG) then
+    set pattern = "EG[ZNE]"
+else if ($pattern == LG) then
+    set pattern = "LG[ZNE]"
+else
+    echo "abort: pattern '$pattern' is not recognized"
+    exit 1
+endif
+
+if (! -e $wfdisc) then
+    echo "abort: wfdisc file '$wfdisc' does not exist"
+    exit 1
+endif
+
+if ( -z $wfdisc) then
+    echo "abort: wfdisc file '$wfdisc' is empty"
+    exit 1
+endif
+
+# Cut out the requested subset of data 
+
+@ start = `attol $start`
+@ stop  = $start + $duration
+set dfile = wdspect$$.w
+
+echo "Cutting out requested data section from $wfdisc"
+
+set tmp = wdspect$$.wfdisc
+cp /dev/null $tmp
+grep -i "$pattern" $wfdisc | \
+wdcut $start $stop      | \
+wdcat dir=. dfile=$dfile >> $tmp
+
+if ($status != 0) then
+    echo "abort: failed to create working data set"
+    rm $tmp
+    exit 1
+endif
+
+if ( -z $tmp) then
+    echo "abort: no data in $wfdisc matches the requested window"
+    rm $tmp
+    exit 1
+endif
+
+echo "Working data set is $tmp, running qdspect on it"
+
+qdspect $tmp
+if ($status != 0) then
+    echo "qdspect failed, hope the reason is obvious"
+endif
+
+echo "Removing $tmp and its waveform data"
+/bin/rm -f $tmp $dfile
+
+exit 0
+
+# Revision History
+#
+# $Log: wdspect,v $
+# Revision 1.1.1.1  2000/02/08 20:20:45  dec
+# import existing IDA/NRTS sources
+#

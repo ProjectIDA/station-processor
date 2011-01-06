@@ -1,0 +1,58 @@
+#!/bin/csh -f
+# $Id: StageAllTeeFiles,v 1.2 2007/01/19 23:41:23 dechavez Exp $
+#
+# Run isiStageTeeFiles for all systems on this host
+
+set debug  = 0
+set myname = StageAllTeeFiles
+
+if ($debug) logger -t $myname"[$$]" -p user.info "begin"
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    set message = "missing $setup"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    goto failure
+endif
+source $setup
+if ($debug) logger -t $myname"[$$]" -p user.info "$setup OK"
+
+# Find out the command to execute
+
+if ($#argv == 0) then
+    set command = isiStageTeeFiles
+else
+    set command = $argv[1]
+endif
+
+# Process each system for which there is a tee file and iso directory
+
+foreach site ($SystemsList)
+    set SiteDir  = $NRTS_HOME/$site
+    if (-d $NRTS_HOME/$site/tee) $command $site
+end
+
+# Normal exit
+
+success:
+pkill -HUP -x ispd
+if ($debug) logger -t $myname"[$$]" -p user.info "completed OK"
+exit 0
+
+failure:
+pkill -HUP -x ispd
+logger -t $myname"[$$]" -p user.info "exit 1"
+exit 1
+
+# Revision History
+#
+# $Log: StageAllTeeFiles,v $
+# Revision 1.2  2007/01/19 23:41:23  dechavez
+# allow for optional command
+#
+# Revision 1.1  2007/01/19 23:37:21  dechavez
+# initial release
+#

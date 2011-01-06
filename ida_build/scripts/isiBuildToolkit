@@ -1,0 +1,152 @@
+#!/bin/csh -f
+
+if ($#argv != 1) then
+    echo "usage: isiBuildToolkit output_dir"
+    exit 1
+endif
+
+set SrcRoot = /home/dechavez/ida/src
+set outdir = `pwd`/$argv[1]
+if (-e $outdir) then
+    echo "$outdir already exists"
+    exit 1
+endif
+
+set Master = $SrcRoot/ISI_Toolkit
+set README = $Master/README
+set libmake = $Master/Makefile.lib
+set isimake = $Master/Makefile.example
+
+set libdir = $outdir/lib
+set incdir = $outdir/include
+set isidir = $outdir/example
+set pdfdir = $outdir
+
+mkdir -p $libdir $incdir $isidir
+if ($status != 0) exit 1
+
+set iacpList = ""
+set iacpList = "$iacpList auth.c"
+set iacpList = "$iacpList close.c"
+set iacpList = "$iacpList connect.c"
+set iacpList = "$iacpList free.c"
+set iacpList = "$iacpList get.c"
+set iacpList = "$iacpList handshake.c"
+set iacpList = "$iacpList open.c"
+set iacpList = "$iacpList recv.c"
+set iacpList = "$iacpList send.c"
+set iacpList = "$iacpList set.c"
+set iacpList = "$iacpList stats.c"
+set iacpList = "$iacpList string.c"
+set iacpList = "$iacpList util.c"
+
+foreach file ($iacpList)
+    cp $SrcRoot/lib/iacp/$file $libdir/iacp_$file
+    if ($status != 0) exit 1
+end
+
+set isiList = ""
+set isiList = "$isiList cnf.c"
+set isiList = "$isiList datreq.c"
+set isiList = "$isiList ezio.c"
+set isiList = "$isiList log.c"
+set isiList = "$isiList netutil.c"
+set isiList = "$isiList open.c"
+set isiList = "$isiList pack.c"
+set isiList = "$isiList raw.c"
+set isiList = "$isiList read.c"
+set isiList = "$isiList seqno.c"
+set isiList = "$isiList soh.c"
+set isiList = "$isiList string.c"
+set isiList = "$isiList ts.c"
+set isiList = "$isiList utils.c"
+set isiList = "$isiList wfdisc.c"
+
+foreach file ($isiList)
+    cp $SrcRoot/lib/isi/$file $libdir/isi_$file
+    if ($status != 0) exit 1
+end
+
+set logioList = ""
+set logioList = "$logioList dump.c"
+set logioList = "$logioList init.c"
+set logioList = "$logioList msg.c"
+set logioList = "$logioList string.c"
+set logioList = "$logioList threshold.c"
+
+foreach file ($logioList)
+    cp $SrcRoot/lib/logio/$file $libdir/logio_$file
+    if ($status != 0) exit 1
+end
+
+set utilList = ""
+set utilList = "$utilList compress.c"
+set utilList = "$utilList etoh.c"
+set utilList = "$utilList hexdump.c"
+set utilList = "$utilList htoe.c"
+set utilList = "$utilList list.c"
+set utilList = "$utilList misc.c"
+set utilList = "$utilList pack.c"
+set utilList = "$utilList parse.c"
+set utilList = "$utilList peer.c"
+set utilList = "$utilList string.c"
+set utilList = "$utilList swap.c"
+set utilList = "$utilList timefunc.c"
+set utilList = "$utilList timer.c"
+
+foreach file ($utilList)
+    cp $SrcRoot/lib/util/$file $libdir/util_$file
+    if ($status != 0) exit 1
+end
+
+set incList = ""
+set incList = "$incList iacp.h"
+set incList = "$incList ida.h"
+set incList = "$incList isi.h"
+set incList = "$incList list.h"
+set incList = "$incList logio.h"
+set incList = "$incList platform.h"
+set incList = "$incList stdtypes.h"
+set incList = "$incList util.h"
+
+foreach file ($incList)
+    cp $SrcRoot/include/$file $incdir/$file
+    if ($status != 0) exit 1
+end
+
+set isiList = ""
+set isiList = "$isiList ReleaseNotes.c"
+set isiList = "$isiList main.c"
+
+foreach file ($isiList)
+    cp $SrcRoot/bin/isi/$file $isidir/$file
+    if ($status != 0) exit 1
+end
+
+set pdfList = ""
+set pdfList = "$pdfList $Master/iacp.pdf"
+set pdfList = "$pdfList $Master/isi.pdf"
+
+foreach file ($pdfList)
+    cp  $file $pdfdir
+    if ($status != 0) exit 1
+end
+
+cp $README $outdir
+if ($status != 0) exit 1
+
+cp $libmake $libdir/Makefile
+if ($status != 0) exit 1
+
+cp $isimake $isidir/Makefile
+if ($status != 0) exit 1
+
+# Windows stuff
+
+if (-d $Master/win32) then
+    cd $Master
+    tar cf - win32 | (cd $outdir ; tar xfp -)
+endif
+
+echo "$outdir built OK"
+exit 0

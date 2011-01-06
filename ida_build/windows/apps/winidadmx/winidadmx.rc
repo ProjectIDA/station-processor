@@ -1,0 +1,511 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Russian resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_RUS)
+#ifdef _WIN32
+LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
+#pragma code_page(1251)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\winidadmx.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON    DISCARDABLE     "res\\winidadmx.ico"
+IDI_FILEICON            ICON    DISCARDABLE     "res\\Note11.ico"
+IDI_FOLDERICON          ICON    DISCARDABLE     "res\\Clsdfold.ico"
+IDI_ENTER               ICON    DISCARDABLE     "res\\icon1.ico"
+IDI_ENTER_BLACK         ICON    DISCARDABLE     "res\\ico00001.ico"
+IDI_OPENEDFOLDER        ICON    DISCARDABLE     "res\\ico00002.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_SELECTFILESONCD DIALOG DISCARDABLE  0, 0, 233, 255
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Select files on CD"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,176,234,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,119,234,50,14
+    EDITTEXT        IDC_EDIT,7,149,219,79,ES_MULTILINE | ES_AUTOHSCROLL | 
+                    ES_WANTRETURN | WS_VSCROLL | WS_HSCROLL
+    CONTROL         "List1",IDC_LIST,"SysListView32",LVS_REPORT | 
+                    LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP,7,7,219,136
+    PUSHBUTTON      "Select *",IDC_SELALL,64,234,50,14
+    PUSHBUTTON      "Unselect *",IDC_UNSELALL,7,234,50,14
+END
+
+IDD_BROWSESUBDIR DIALOG DISCARDABLE  0, 0, 422, 249
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Output subdirectories"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "List1",IDC_SUBDIRLIST,"SysListView32",LVS_REPORT | 
+                    LVS_SHOWSELALWAYS | LVS_EDITLABELS | WS_BORDER | 
+                    WS_TABSTOP,7,27,122,162
+    CONTROL         "List3",IDC_FILELIST,"SysListView32",LVS_REPORT | 
+                    WS_BORDER | WS_TABSTOP,132,27,77,162
+    CONTROL         "List3",IDC_PREVIEW,"SysListView32",LVS_REPORT | 
+                    WS_BORDER | WS_TABSTOP,212,27,203,162
+    PUSHBUTTON      "Delete directory",IDC_DELDIR,7,191,122,14
+    PUSHBUTTON      "Move directory",IDC_MOVEDIR,7,208,122,14
+    PUSHBUTTON      "Rename directory",IDC_RENAMEDIR,7,225,122,14
+    PUSHBUTTON      "Done",IDCANCEL,365,225,50,14
+    LTEXT           "Working directory:",IDC_STATIC,7,7,65,8
+    LTEXT           "",IDC_WORKINGDIRECTORY,75,7,340,8
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_SELECTFILESONCD, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 226
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 248
+    END
+
+    IDD_BROWSESUBDIR, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 415
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 242
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_TREEIMG             BITMAP  DISCARDABLE     "res\\treeimg.bmp"
+#endif    // Russian resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 320, 110
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About winidadmx"
+FONT 8, "MS Sans Serif"
+BEGIN
+    ICON            IDR_MAINFRAME,IDC_STATIC,12,10,20,20
+    LTEXT           "Copyright(c) 2000-2006 Regents of the University of California. \nAll Rights Reserved.\n\n",
+                    IDC_STATIC,37,43,213,20,SS_NOPREFIX
+    DEFPUSHBUTTON   "OK",IDOK,263,7,50,14,WS_GROUP
+    LTEXT           "Developed for the University of California by",
+                    IDC_STATIC,37,67,205,8
+    LTEXT           "Engineering Services && Software\nSan Diego, CA, USA",
+                    IDC_ESSWSTATIC,37,77,209,19
+    LTEXT           "",IDC_REALVERSIONINFO,37,14,195,8
+END
+
+IDD_WINIDADMX_DIALOG DIALOGEX 0, 0, 468, 301
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "WinIdaDmx"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Tape",IDC_INPUTFROMTAPE,"Button",BS_AUTORADIOBUTTON | 
+                    BS_FLAT | WS_GROUP | WS_TABSTOP,21,17,47,10
+    CONTROL         "Disk",IDC_IDCINPUTFROMDISK,"Button",BS_AUTORADIOBUTTON | 
+                    BS_FLAT | WS_TABSTOP,70,17,47,10
+    CONTROL         "CD ROM",IDC_IDCINPUTFROMCD,"Button",BS_AUTORADIOBUTTON | 
+                    BS_FLAT | WS_TABSTOP,119,17,47,10
+    COMBOBOX        IDC_CDCOMBO,290,16,147,119,CBS_DROPDOWNLIST | 
+                    CBS_AUTOHSCROLL | CBS_SORT | CBS_DISABLENOSCROLL | 
+                    WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_ADDRESSCOMBO,290,16,147,119,CBS_DROPDOWN | 
+                    CBS_AUTOHSCROLL | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "",IDC_ENTERADDRESS,442,16,15,12
+    COMBOBOX        IDC_INPUTFORMAT,87,56,152,92,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_STACODE,118,110,38,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "Database directory",IDC_BROWSECHANMAP,15,130,82,14
+    EDITTEXT        IDC_DBDIR,118,130,120,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "Working directory",IDC_BROWSEOUTPUTDATADIR,15,149,82,14
+    EDITTEXT        IDC_WORKINGDIRECTORY,118,149,120,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_OUTPUTDIRECTORY,118,169,120,14,ES_AUTOHSCROLL
+    CONTROL         "All",IDC_UNPACKALL,"Button",BS_AUTORADIOBUTTON | 
+                    BS_FLAT | WS_GROUP | WS_TABSTOP,24,203,37,15
+    CONTROL         "Range  from",IDC_UNPACKRANGE,"Button",
+                    BS_AUTORADIOBUTTON | BS_FLAT,24,219,55,10
+    EDITTEXT        IDC_RECORD1,80,216,40,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_RECORD2,150,216,40,14,ES_AUTOHSCROLL
+    CONTROL         "Write raw packet headers to disk",IDC_WRITERAWHEADER,
+                    "Button",BS_AUTOCHECKBOX | BS_FLAT | WS_TABSTOP,18,244,
+                    120,10
+    CONTROL         "Time tag summary",IDC_TIMETAGSUMMARY,"Button",
+                    BS_AUTOCHECKBOX | BS_FLAT | WS_TABSTOP,18,257,76,10
+    DEFPUSHBUTTON   "Begin",IDOK,76,280,50,14
+    PUSHBUTTON      "Quit",IDCANCEL,140,280,50,14
+    CONTROL         "Byte-swap into host order",IDC_BYTESWAPINTOHOSTORDER,
+                    "Button",BS_AUTOCHECKBOX | BS_FLAT | WS_TABSTOP,140,244,
+                    102,10
+    GROUPBOX        "Data source",IDC_STATIC,7,6,239,92
+    GROUPBOX        "",IDC_STATIC,7,235,240,35
+    LTEXT           "to",IDC_STATIC,129,219,8,8
+    GROUPBOX        "Unpack Records",IDC_STATIC,7,192,240,45
+    LTEXT           "Format Revision",IDC_STATIC,19,58,59,8
+    GROUPBOX        "",IDC_STATIC,7,103,240,87
+    CTEXT           "Enter station code",IDC_STATIC,14,113,82,8
+    COMBOBOX        IDC_DATASOURCE1,20,30,119,92,CBS_DROPDOWN | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    CONTROL         "List1",IDC_LIST,"SysListView32",LVS_REPORT | 
+                    LVS_SHOWSELALWAYS | LVS_OWNERDATA | WS_BORDER | 
+                    WS_TABSTOP,255,44,203,151
+    GROUPBOX        "Files",IDC_STATIC,252,6,209,288
+    EDITTEXT        IDC_EDIT,255,217,203,59,ES_MULTILINE | ES_AUTOHSCROLL | 
+                    ES_WANTRETURN | WS_VSCROLL | WS_HSCROLL
+    PUSHBUTTON      "Select *",IDC_SELALL,366,278,50,14
+    PUSHBUTTON      "Unselect *",IDC_UNSELALL,309,278,50,14
+    LTEXT           "File time:",IDC_STATIC,258,200,49,8
+    LTEXT           "",IDC_CDFILETIME,317,200,135,8
+    LTEXT           "Map file",IDC_STATIC,18,79,54,8
+    COMBOBOX        IDC_MAPFILENAME,87,79,152,92,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Output subdirectory",IDC_BROWSEOUTPUTDATASUBDIR,15,168,
+                    82,14
+    LTEXT           "Address",IDC_STATIC,260,18,26,8
+    LTEXT           "",IDC_CURRENTDATADIR,255,33,203,8
+END
+
+IDD_VIEWRESULTSDLG DIALOG DISCARDABLE  0, 0, 439, 189
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "IdaDmx output"
+FONT 8, "MS Sans Serif"
+BEGIN
+    PUSHBUTTON      "Done",IDCANCEL,223,168,50,14
+    EDITTEXT        IDC_RESULTS,7,7,425,142,ES_MULTILINE | ES_AUTOVSCROLL | 
+                    ES_AUTOHSCROLL | ES_WANTRETURN | WS_VSCROLL | WS_HSCROLL
+    PUSHBUTTON      "View data",IDC_RUNVIEWDATA,165,168,50,14
+END
+
+IDD_WORKINGDLG DIALOGEX 0, 0, 61, 47
+STYLE DS_MODALFRAME | DS_NOIDLEMSG | DS_CENTER | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_NOPARENTNOTIFY
+CAPTION "Working..."
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    CONTROL         133,IDC_PICT,"Static",SS_BITMAP | SS_CENTERIMAGE,15,10,
+                    30,27
+END
+
+IDD_VIEWLSTDLG DIALOG DISCARDABLE  0, 0, 439, 189
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "IdaLst output"
+FONT 8, "MS Sans Serif"
+BEGIN
+    PUSHBUTTON      "Done",IDCANCEL,195,168,50,14
+    EDITTEXT        IDC_RESULTS,7,7,425,142,ES_MULTILINE | ES_AUTOVSCROLL | 
+                    ES_AUTOHSCROLL | ES_WANTRETURN | WS_VSCROLL | WS_HSCROLL
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 313
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 103
+    END
+
+    IDD_WINIDADMX_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 461
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 294
+    END
+
+    IDD_VIEWRESULTSDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 432
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 182
+    END
+
+    IDD_WORKINGDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 44
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 34
+    END
+
+    IDD_VIEWLSTDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 432
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 182
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_BITMAP1             BITMAP  DISCARDABLE     "res\\bitmap1.bmp"
+IDB_BITMAP2             BITMAP  DISCARDABLE     "res\\bitmap2.bmp"
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 0,0,1,6
+ PRODUCTVERSION 0,0,1,6
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "Comments", "\0"
+            VALUE "CompanyName", "\0"
+            VALUE "FileDescription", "winidadmx MFC Application\0"
+            VALUE "FileVersion", "0, 0, 1, 6\0"
+            VALUE "InternalName", "winidadmx\0"
+            VALUE "LegalCopyright", "Copyright (C) 2000-2006\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "OriginalFilename", "winidadmx.EXE\0"
+            VALUE "PrivateBuild", "\0"
+            VALUE "ProductName", "winidadmx Application\0"
+            VALUE "ProductVersion", "0, 0, 1, 6\0"
+            VALUE "SpecialBuild", "\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_WINIDADMX_DIALOG DLGINIT
+BEGIN
+    IDC_INPUTFORMAT, 0x403, 18, 0
+0x2032, 0x2020, 0x4b4d, 0x2034, 0x6572, 0x2076, 0x3830, 0x382d, 0x0038, 
+
+    IDC_INPUTFORMAT, 0x403, 18, 0
+0x2033, 0x2020, 0x4b4d, 0x2034, 0x6572, 0x2076, 0x3130, 0x382d, 0x0039, 
+
+    IDC_INPUTFORMAT, 0x403, 34, 0
+0x2034, 0x2020, 0x4b4d, 0x2035, 0x6572, 0x2076, 0x3031, 0x383a, 0x2c39, 
+0x4d20, 0x364b, 0x2041, 0x6572, 0x2076, 0x3630, 0x392f, 0x0030, 
+    IDC_INPUTFORMAT, 0x403, 18, 0
+0x2035, 0x2020, 0x7473, 0x6e61, 0x6164, 0x6472, 0x4d20, 0x364b, 0x0042, 
+
+    IDC_INPUTFORMAT, 0x403, 28, 0
+0x2036, 0x2020, 0x696d, 0x696e, 0x612d, 0x7272, 0x7961, 0x4d20, 0x364b, 
+0x2042, 0x3428, 0x2030, 0x7a48, 0x0029, 
+    IDC_INPUTFORMAT, 0x403, 17, 0
+0x2037, 0x2020, 0x726f, 0x6769, 0x6e69, 0x6c61, 0x4d20, 0x374b, "\000" 
+    IDC_INPUTFORMAT, 0x403, 20, 0
+0x2038, 0x2020, 0x6962, 0x2d74, 0x6873, 0x6669, 0x6574, 0x2064, 0x4b4d, 
+0x0037, 
+    IDC_INPUTFORMAT, 0x403, 45, 0
+0x2039, 0x2020, 0x6572, 0x2076, 0x2038, 0x2f77, 0x7320, 0x7165, 0x6f6e, 
+0x2073, 0x6e61, 0x2064, 0x7263, 0x6165, 0x6974, 0x6e6f, 0x7420, 0x6d69, 
+0x2065, 0x7473, 0x6d61, 0x7370, "\000" 
+    IDC_INPUTFORMAT, 0x403, 7, 0
+0x3031, 0x5320, 0x4e41, "\000" 
+    IDC_DATASOURCE1, 0x403, 18, 0
+0x2032, 0x2020, 0x4b4d, 0x2034, 0x6572, 0x2076, 0x3830, 0x382d, 0x0038, 
+
+    IDC_DATASOURCE1, 0x403, 18, 0
+0x2033, 0x2020, 0x4b4d, 0x2034, 0x6572, 0x2076, 0x3130, 0x382d, 0x0039, 
+
+    IDC_DATASOURCE1, 0x403, 34, 0
+0x2034, 0x2020, 0x4b4d, 0x2035, 0x6572, 0x2076, 0x3031, 0x383a, 0x2c39, 
+0x4d20, 0x364b, 0x2041, 0x6572, 0x2076, 0x3630, 0x392f, 0x0030, 
+    IDC_DATASOURCE1, 0x403, 18, 0
+0x2035, 0x2020, 0x7473, 0x6e61, 0x6164, 0x6472, 0x4d20, 0x364b, 0x0042, 
+
+    IDC_DATASOURCE1, 0x403, 28, 0
+0x2036, 0x2020, 0x696d, 0x696e, 0x612d, 0x7272, 0x7961, 0x4d20, 0x364b, 
+0x2042, 0x3428, 0x2030, 0x7a48, 0x0029, 
+    IDC_DATASOURCE1, 0x403, 17, 0
+0x2037, 0x2020, 0x726f, 0x6769, 0x6e69, 0x6c61, 0x4d20, 0x374b, "\000" 
+    IDC_DATASOURCE1, 0x403, 20, 0
+0x2038, 0x2020, 0x6962, 0x2d74, 0x6873, 0x6669, 0x6574, 0x2064, 0x4b4d, 
+0x0037, 
+    IDC_DATASOURCE1, 0x403, 37, 0
+0x2039, 0x2020, 0x6572, 0x2076, 0x2038, 0x2f77, 0x3220, 0x3030, 0x482d, 
+0x207a, 0x3432, 0x622d, 0x7469, 0x6420, 0x6769, 0x7469, 0x7a69, 0x7265, 
+"\000" 
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Cursor
+//
+
+IDC_HAND                CURSOR  DISCARDABLE     "res\\hand.cur"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_ABOUTBOX            "&About winidadmx..."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDC_ESSWSTATIC          "http://www.essw.com"
+    IDS_STRING1038          "No files selected"
+    IDS_STRING1039          "Temporary file creating error"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_STRING1040          "Temporary file writing error"
+    IDS_STRING1041          "File '%s' reading error"
+    IDS_STRING1042          "IDADMX version %s (%s %s)"
+    IDS_STRING1043          "Working directory '%s' does not exist. Create?"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\winidadmx.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

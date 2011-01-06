@@ -1,0 +1,251 @@
+#!/bin/csh
+# $Id: ispZipTeeFiles,v 1.10 2005/02/11 22:11:16 dechavez Exp $
+#
+# Prepare ISP "tee" files for subsequent ISO image generation
+
+set debug  = 0
+set myname = ispZipTeeFiles
+
+# This only works if there is a "tee" subdir and we are
+# sitting right above it
+
+set StartingDir = `pwd`
+set TeeDir = "$StartingDir/tee"
+set ScpDir = "$StartingDir/scp"
+if (! -e $TeeDir) then
+    set message = "bad StartingDir: $StartingDir"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    exit 0
+endif
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    set message = "missing $setup"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    goto abort
+endif
+source $setup
+
+# Specific setup
+
+set ispCreateIsoImage = $NRTS_HOME/scripts/ispCreateIsoImage
+if (! -e $ispCreateIsoImage) then
+    set message = "Missing $ispCreateIsoImage"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    set status = 1
+endif
+
+set ispGenerateIsoLabel = $NRTS_HOME/scripts/ispGenerateIsoLabel
+if (! -e $ispGenerateIsoLabel) then
+    set message = "Missing $ispGenerateIsoLabel"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    set status = 1
+endif
+
+set ispIsoNotify = $NRTS_HOME/scripts/ispIsoNotify
+
+# Set up subdirectories
+
+set IsoDir   = "$StartingDir/iso"
+set ZipDir   = "$IsoDir/zip"
+set StageDir = "$IsoDir/stage"
+set DoneZips = "$IsoDir/done/gziped"
+set DoneIsos = "$IsoDir/done/images"
+
+foreach dir ($ZipDir $StageDir $DoneZips $DoneIsos)
+    if (! -e $dir) then
+        set command = "mkdir -p $dir"
+        logger -t $myname"[$$]" -p user.info "$command"
+        echo "$command"
+        $command
+        if ($status != 0) then
+            logger -t $myname"[$$]" -p user.info "FAILED"
+            echo "FAILED: $command"
+            goto abort
+        endif
+    endif
+end
+
+# Clean up old files
+
+find $DoneZips -atime $DoneZipsFindValue -a -exec rm -f {} \;
+find $DoneIsos -atime $DoneIsosFindValue -a -exec rm -f {} \;
+find $IsoDir -name "*.iso" -mtime $IsoDirFindValue -a -exec rm -f {} \;
+
+# Command line setup
+
+if ($#argv != 4) then
+    echo "usage: $myname MaxMBytesPerArchive StaName PktRev PktLen"
+    goto abort
+endif
+set StaName = `echo $argv[2] | ucase`
+set PktRev  = $argv[3]
+set PktLen  = $argv[4]
+
+if ($argv[1] == FORCE) then
+    set Force = TRUE
+    logger -t $myname"[$$]" -p user.info "begin (FORCE $StaName $PktRev $PktLen)"
+else
+    set MaxMBytesPerArchive = $argv[1]
+    @ MaxBytesPerArchive = $MaxMBytesPerArchive * 1024 * 1024
+    set Force = FALSE
+    logger -t $myname"[$$]" -p user.info "begin ($MaxMBytesPerArchive $StaName $PktRev $PktLen)"
+endif
+
+# If forcing an ISO image, then do it now
+
+if ($Force == TRUE) then
+    source $ispCreateIsoImage
+    goto done
+endif
+
+# Compress all the new stuff
+
+cd $TeeDir
+if ($status != 0) then
+    logger -t $myname"[$$]" -p user.info "ERROR: CAN'T CD TO $TeeDir"
+    goto abort
+endif
+if ($debug) logger -t $myname"[$$]" -p user.info "working directory is $TeeDir"
+
+set dummy = YYYY:DDD-HH:00
+touch $dummy
+chmod 777 $dummy
+set raw_files = ????:???-??:00 > & /dev/null
+if ($status == 0) then
+    foreach file ($raw_files)
+        if (! -x $file) then
+
+        # rename from yyyy:ddd-hh:00 to yydddhh
+ 
+            set epoch = `attol $file`
+            set newname = `etoh code=9 $epoch`
+            set newpath = $ZipDir/$newname
+            set command = "mv $file $newpath"
+            if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+            $command
+            set exitstatus = $status
+            if ($exitstatus != 0) then
+                logger -t $myname"[$$]" -p user.info "FAILED"
+            endif
+
+        # compress
+
+            set command = "gzip -f $newpath"
+            if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+            $command
+            set exitstatus = $status
+            if ($exitstatus != 0) then
+                logger -t $myname"[$$]" -p user.info "FAILED"
+            endif
+
+        # copy to scp directory (if there is one)
+
+            if ( -d $ScpDir ) scp $newpath.gz $ScpDir
+
+        endif
+    end
+endif
+rm -f $dummy
+cd $StartingDir
+
+# Move zipped files into the staging area, building ISO images as needed
+
+StartOfLoop:
+
+    @ BytesUsed  = `du -sk $StageDir | awk '{print $1}'`
+    @ BytesUsed *= 1024 # convert from K-bytes to bytes
+    if ($BytesUsed > $MaxBytesPerArchive) then
+        logger -t $myname"[$$]" -p user.info "WARNING: $StageDir is too full"
+        source $ispCreateIsoImage
+        goto StartOfLoop
+    endif
+    @ AvailSpace = $MaxBytesPerArchive - $BytesUsed
+
+    # Move files from the compressed directory to the staging directory
+
+    if ($debug) logger -t $myname"[$$]" -p user.info "staging files from $ZipDir to $StageDir"
+    set dummy = $ZipDir/Dummy.gz
+    touch $dummy
+    chmod 777 $dummy
+    set CompressedFiles = `ls $ZipDir/*.gz`
+    rm -f $dummy
+    if ($status == 0) then
+        foreach file ($CompressedFiles)
+            if ($file != $dummy) then
+                @ FileSize = `wc -c $file | awk '{print $1}'`
+                if ($FileSize > $AvailSpace) then
+                    logger -t $myname"[$$]" -p user.info "$StageDir is full"
+                    source $ispCreateIsoImage
+                    goto StartOfLoop
+                else
+                    set command = "mv $file $StageDir"
+                    if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+                    $command
+                    if ($status == 0) then
+                        @ AvailSpace -= $FileSize
+                        if ($AvailSpace <= 0) then
+                            logger -t $myname"[$$]" -p user.info "$StageDir is full"
+                            source $ispCreateIsoImage
+                            goto StartOfLoop
+                        endif
+                    else
+                        logger -t $myname"[$$]" -p user.info "FAILED: $command"
+                        goto abort
+                    endif
+                endif
+            endif
+        end
+    endif
+
+# Normal exit
+
+done:
+
+logger -t $myname"[$$]" -p user.info "completed OK"
+exit 0
+
+abort:
+
+logger -t $myname"[$$]" -p user.info "ABORTED DUE TO ERRORS"
+exit 1
+
+# Revision History
+#
+# $Log: ispZipTeeFiles,v $
+# Revision 1.10  2005/02/11 22:11:16  dechavez
+# general cleanup and mods to support NRTS-based CD writers
+#
+# Revision 1.9  2004/04/26 20:55:53  dechavez
+# delete files using DoneZipsFindValue variable instead of hardcoded date
+#
+# Revision 1.8  2004/02/04 22:54:03  dechavez
+# copy to scp directory if it exists
+#
+# Revision 1.7  2003/03/18 19:27:59  dechavez
+# added ispIsoNotify
+#
+# Revision 1.6  2003/03/13 22:45:20  dechavez
+# remove unburned iso images after two months
+#
+# Revision 1.5  2002/02/22 21:17:57  dec
+# Log all abnormal exits, don't generate stats
+#
+# Revision 1.4  2001/12/21 01:25:49  dec
+# opps, debug'd out the gzip command.  Now fixed.
+#
+# Revision 1.3  2001/12/20 18:08:55  dec
+# added DoneZips and DoneIsos directories check/creates, added verbose
+# flag to set logging level
+#
+# Revision 1.2  2001/10/24 22:58:20  dec
+# added ISO image generation pass
+#
+# Revision 1.1  2001/10/18 00:58:35  dec
+# created

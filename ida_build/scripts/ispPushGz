@@ -1,0 +1,169 @@
+#!/bin/csh
+# $Id: ispPushGz,v 1.2 2004/02/18 20:24:30 dechavez Exp $
+#
+# Deliver gzip'd files to remote location
+#
+
+set myname = ispPushGz
+set  debug = 0
+
+# Make sure no other instance of this script is currently running
+
+ps -ef | fgrep $myname | fgrep -v fgrep | fgrep -v $$ | fgrep -v "sh -c" > /dev/null
+if ($status == 0) exit 0
+
+setenv NRTS_HOME /usr/nrts
+setenv IRIS_HOME $NRTS_HOME
+setenv IDA_DPATH $NRTS_HOME/etc
+
+if (-e $NRTS_HOME/UNCONFIGURED) exit 0
+
+set path = ($NRTS_HOME/bin $NRTS_HOME/scripts /opt/local/bin /usr/local/bin $path)
+@ beg_time = `gmt raw`
+
+if ($debug) logger -t $myname"[$$]" -p user.info "begin"
+
+if ($#argv == 5 || $#argv == 6) then
+    set RemoteHost = $argv[1]
+    set RemotePath = $argv[2]
+    set UserName   = $argv[3]
+    set Password   = $argv[4]
+    set Agent      = $Password
+    set MaxAge     = $argv[5]
+    if ($#argv == 6) then
+        set NeedToGzip = $argv[6]
+        if ($NeedToGzip != 0 && $NeedToGzip != "no" && $NeedToGzip != "NO") set NeedToGzip = 1
+    else
+        set NeedToGzip = 0
+    endif
+else
+    logger -t $myname"[$$]" -p user.info "incorrect command line: $argv"
+    logger -t $myname"[$$]" -p user.info "ABORTED"
+    goto done
+endif
+
+set systems_file = $NRTS_HOME/etc/Systems
+if ( -e $systems_file ) then
+    set systems = `stripcat $systems_file`
+else
+    logger -t $myname"[$$]" -p user.info "error: missing $systems_file"
+    logger -t $myname"[$$]" -p user.info "ABORTED"
+    goto done
+endif
+
+# Compress the files, if necessary
+
+if ($NeedToGzip) then
+    foreach system ($systems)
+        set teedir = $NRTS_HOME/$system/isp/tee
+        set scpdir = $NRTS_HOME/$system/isp/scp
+        if (! -e $teedir || ! -e $scpdir) continue
+        cd $teedir # absolute path so we don't have to cd out later
+        if ($status != 0) then
+            logger -t $myname"[$$]" -p user.info "ERROR: CAN'T CD TO $teedir"
+            continue
+        endif
+        if ($debug) logger -t $myname"[$$]" -p user.info "$teedir"
+        find . -mtime $MaxAge -a -exec rm -f {} \;
+        set raw_files = ????:???-??:00 > & /dev/null
+        if ($status == 0) then
+            foreach file ($raw_files)
+                set epoch = `attol $file`
+                set newname = `etoh code=9 $epoch`
+                if (! -x $file) then
+                    set command = "mv $file $scpdir/$newname"
+                    if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+                    $command
+                    if ($status != 0) then
+                        logger -t $myname"[$$]" -p user.info "$command FAILED"
+                        continue
+                    endif
+                    set command = "gzip -f $scpdir/$newname"
+                    if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+                    $command
+                    if ($status != 0) logger -t $myname"[$$]" -p user.info "$command FAILED"
+                endif
+            end
+        endif
+    end
+endif
+
+# Copy over the files
+
+@ sent = 0
+
+foreach system ($systems)
+    set scpdir = $NRTS_HOME/$system/isp/scp
+    if (! -e $scpdir) continue
+    cd $scpdir # absolute path so we don't have to cd out later
+    if ($status != 0) then
+        logger -t $myname"[$$]" -p user.info "ERROR: CAN'T CD TO $scpdir"
+        continue
+    endif
+    if ($debug) logger -t $myname"[$$]" -p user.info "$scpdir"
+        
+    # Delete all the old stuff right away
+
+    find . -mtime $MaxAge -a -exec rm -f {} \;
+
+    # (Try to) send everything
+
+    set dummy = dummy.gz
+    touch $dummy
+    set compressed_files = *.gz > & /dev/null
+    if ($status == 0) then
+        @ total = $#compressed_files - 1
+        foreach file ($compressed_files)
+            if ($file == $dummy) continue
+            @ modtime = `modtime $file`
+            @ now = `gmt raw`
+            @ age = $now - $modtime
+            if ($age < 60) then
+                logger -t $myname"[$$]" -p user.info "skip $file (age=$age)"
+                continue
+            endif
+            if ($Agent == "scp") then
+                set command = "scp -q $file $UserName@{$RemoteHost}:{$RemotePath}/$system"
+            else 
+                set ftp_args = "$file"
+                set ftp_args = "$ftp_args $RemoteHost"
+                set ftp_args = "$ftp_args $RemotePath/$system"
+                set ftp_args = "$ftp_args $UserName"
+                set ftp_args = "$ftp_args $Password"
+                set command = "ftp_file $ftp_args"
+            endif
+            if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+            $command
+            set exitstatus = $status
+            if ($exitstatus != 0) then
+                logger -t $myname"[$$]" -p user.info "FAILED"
+                rm -f $dummy
+                goto done
+            else
+                set command = "rm -f $file"
+                if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+                $command
+                @ sent += 1
+            endif
+        end
+    endif
+    rm -f $dummy
+end # foreach system loop
+
+done:
+if ($total != 0) logger -t $myname"[$$]" -p user.info "$sent of $total files sent OK"
+@ end_time = `gmt raw`
+@ elapsed  = $end_time - $beg_time
+set elapsed_string = `etoh code=2 $elapsed`
+if ($debug) logger -t $myname"[$$]" -p user.info "elapsed time = $elapsed_string"
+exit 0
+
+# Revision History
+#
+# $Log: ispPushGz,v $
+# Revision 1.2  2004/02/18 20:24:30  dechavez
+# added gzip option, made most logging debug optional
+#
+# Revision 1.1  2004/02/04 22:53:46  dechavez
+# initial version
+#

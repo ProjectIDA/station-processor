@@ -1,0 +1,12 @@
+#!/bin/csh -f
+#
+# $Id: ClearAllDiskloops,v 1.1 2005/02/11 22:13:26 dechavez Exp $
+
+set path = (/usr/nrts/bin $path)
+set Systems = `stripcat /usr/nrts/etc/Systems`
+foreach sys ($Systems)
+    echo $sys
+    cd /usr/nrts/$sys
+    /bin/rm -f bwd hdr dat raw sys
+    nrts_mkdl fill=0 $sys
+end

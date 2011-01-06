@@ -1,0 +1,118 @@
+#!/opt/php/bin/php
+<?php
+/* $Id: nrtsStartPush,v 1.1 2005/05/06 22:36:01 dechavez Exp $
+ *
+ * Initiate a push connection
+ *
+ */
+
+$home   = "/usr/nrts";
+$pppd   = "/usr/bin/pppd";
+$push   = "$home/bin/nrts_push";
+$ping   = "/usr/sbin/ping";
+$defto  = 60;
+$ident  = sprintf("%s[%d]", basename($argv[0]), getmypid());
+
+function logString($message)
+{
+global $ident;
+
+    system("logger -t \"$ident\" -p local7.info \"$message\"");
+}
+
+function Finish()
+{
+global $lock, $start;
+
+    $message = sprintf("done: elapsed time = %d seconds\n", time() - $start);
+    logString($message);
+    flock($lock, LOCK_UN);
+    fclose($lock);
+    exit(0);
+}
+
+    if ($argc == 4) {
+        $server   = $argv[1];
+        $provider = $argv[2];
+        $system   = $argv[3];
+        $timeout  = $defto;
+    } else if ($argc == 5) {
+        $server   = $argv[1];
+        $provider = $argv[2];
+        $system   = $argv[3];
+        $timeout  = $argv[4];
+    } else {
+        printf("usage: %s server provider system [ to ]\n", basename($argv[0]));
+        exit(1);
+    }
+
+    $start = time();
+    logString("begin: server=$server provider=$provider system=$system timeout=$timeout");
+
+/* Don't go any further if we can't get the lock */
+
+    $lockfile = $home."/tmp/locks/".$system;
+    $lock = fopen($lockfile, 'a') or die($php_errmsg);
+    if (flock($lock, LOCK_EX | LOCK_NB) == false) {
+        logString("quit: $lockfile is already locked");
+        Finish();
+    } else {
+        logString("lock obtained on $lockfile");
+    }
+
+/* Start PPP and wait until the link is established */
+
+    $command = "$pppd call $provider";
+    logString($command);
+    $result = `$command 2>&1`;
+
+    $begin = time();
+    $now   = $begin;
+    $ready = false;
+    $timedout = false;
+
+    logString("waiting for connection to $server");
+    while (!$ready && !$timedout) {
+        $result = `$ping $server 2>&1`;
+        if (stristr($result, "alive") != false) {
+            $ready = true;
+        } else {
+            $now = time();
+            if ($now - $begin > $timeout) $timedout = true;
+        }
+    }
+
+    if ($timedout) {
+        logString("timeout waiting for connection");
+        $command = "pkill -TERM pppd";
+        logString($command);
+        system("$command");
+        Finish();
+    }
+
+    logString("$server is up");
+
+/* Connect to the push server */
+
+    $command = "$push server=$server log=syslog $system";
+    logString($command);
+    $result = `$command 2>&1`;
+
+/* All done, let PPP timeout on its own */
+
+    Finish();
+
+/* Revision History
+ *
+ * $Log: nrtsStartPush,v $
+ * Revision 1.1  2005/05/06 22:36:01  dechavez
+ * added to ida repository
+ *
+ * Revision 1.2  2003/06/18 17:06:39  nrts
+ * fixed typo in startup log message
+ *
+ * Revision 1.1  2003/06/18 17:03:07  nrts
+ * initial release
+ *
+ */
+?>

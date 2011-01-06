@@ -1,0 +1,158 @@
+#!/bin/csh
+# $Id: isp_flushlog,v 1.9 2005/10/26 23:46:13 dechavez Exp $
+#
+#  NRTS log file managment in ISP systems.  Flushes the log and
+#  passes the contents to the ISP daemon for processing.
+
+# General setup
+
+set myname = isp_flushlog
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    echo "${myname}: missing $setup"
+    goto failure
+endif
+source $setup
+
+set mode      = 644
+set adm       = nrtsmgr
+set mail      = /usr/ucb/Mail
+set oldlog    = /tmp/$myname.$$
+set nrtslog   = $NRTS_HOME/log/nrtslog
+set yyyyddd   = `date -u +20%y%j`
+set Systems   = $NRTS_HOME/etc/Systems
+set Processes = $NRTS_HOME/etc/Processes
+
+# Save existing NRTS log file and make an empty new one
+
+logger -t $myname -p user.info -i "flushing log"
+mv $nrtslog  $oldlog
+cp /dev/null $nrtslog
+chmod $mode  $nrtslog
+
+# Let syslogd know about the new log file
+
+sudo /usr/bin/pkill -HUP syslogd
+logger -t $myname -p user.info -i "log flushed"
+
+# Packetize the flushed log and forward to ispd
+
+isp_logpkt < $oldlog | isp_inject
+
+# Split the saved log into pieces
+
+# Process logs
+
+set tempname = $Processes.`hostname`
+if (-e $tempname) set Processes = $tempname
+if (-e $Processes) then
+    set list = `cat $Processes | stripcat`
+    if ($status != 0) then
+        echo "stripcat $Processes failed" | $mail -s "$myname failed" $adm
+        exit 0
+    endif
+else
+    set list = ""
+endif
+
+foreach process ($list)
+    set logdir = $NRTS_HOME/log/$process
+    mkdir -p $logdir >& /dev/null
+    if (-e $logdir) then
+        set log = $logdir/$yyyyddd
+        touch $log
+        fgrep -i $process $oldlog >> $log
+        chmod $mode $log
+        find $logdir -mtime $FlushLogFindValue -name '???????' -name '???????' -exec rm -f {} \;
+    endif
+end
+
+# System logs
+
+set tempname = $Systems.`hostname`
+if (-e $tempname) set Systems = $tempname
+if (-e $Systems) then
+    set list = `cat $Systems | stripcat`
+    if ($status != 0) then
+        echo "stripcat $Systems failed" | $mail -s "$myname failed" $adm
+        exit 0
+    endif
+else
+    set list = ""
+endif
+
+foreach sta ($list)
+    set STA = `echo $sta | ucase`
+    set logdir = $NRTS_HOME/$sta/log
+    if (-e $NRTS_HOME/$sta) mkdir -p $logdir >& /dev/null
+    if (-e $logdir) then
+        set log = $logdir/$yyyyddd
+        touch $log
+        fgrep $STA\  $oldlog >> $log
+        chmod $mode $log
+        find $logdir -mtime $FlushLogFindValue -name '???????' -exec rm -f {} \;
+    endif
+
+# DAS log record maintenance
+
+    set daslog = $NRTS_HOME/$sta/isp/daslog
+    if ( -d $daslog ) then
+        find $daslog -mtime $FlushLogFindValue -name '???????' -exec rm -f {} \;
+    endif
+
+# Save a copy of all this in the ISPLog dir
+
+    set isplog = $NRTS_HOME/$sta/isp/isplog
+    if ( -d $isplog ) then
+        set log = $isplog/$yyyyddd
+        touch $log
+        cat $oldlog >> $log
+        find $isplog -mtime $FlushLogFindValue -name '???????' -exec rm -f {} \;
+        set active = $isplog/active
+        if (-e $active) then
+            touch $active
+        else
+            ln -s $nrtslog $active
+        endif
+    endif
+
+end
+
+# Remove the saved log
+
+rm $oldlog
+
+exit 0
+
+# Revision History
+#
+# $Log: isp_flushlog,v $
+# Revision 1.9  2005/10/26 23:46:13  dechavez
+# use ScriptSetup and FlushLogFindValue for purging old files
+#
+# Revision 1.8  2005/02/15 18:12:50  dechavez
+# removed chown, now that it is being run as nrts
+#
+# Revision 1.7  2005/02/15 18:10:39  dechavez
+# removed root test
+#
+# Revision 1.6  2005/02/11 22:09:43  dechavez
+# remove all the cross platform crap and use sudo pkill to HUP syslogd so
+# that we don't have to run this as root
+#
+# Revision 1.5  2002/02/22 21:22:00  dec
+# chown day files to nrts
+#
+# Revision 1.4  2001/10/24 22:58:59  dec
+# changed path to include nrts_home/bin
+#
+# Revision 1.3  2001/05/31 16:39:52  dec
+# remove $platform from path (finally)
+#
+# Revision 1.2  2001/05/20 18:46:03  dec
+# FreeBSD support
+#
+# Revision 1.1.1.1  2000/02/08 20:20:44  dec
+# import existing IDA/NRTS sources
+#

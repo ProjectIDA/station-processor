@@ -1,0 +1,15 @@
+# sta chan lcode lta sta threshold lowpass highpass order
+abpo  bhz  00    20  1    8.5        0.7 1.4  3
+borg  bhz  00    20  1    8.5        0.7 1.4  3
+bfo   bhz  00    20  1    8.5        0.7 1.4  3
+cmla  bhz  00    20  1    8.5        0.7 1.4  3
+coco  bhz  00    20  1    8.5        0.7 1.4  3
+esk   bhz  00    20  1    8.5        0.7 1.4  3
+ffc   bhz  00    20  1    8.5        0.7 1.4  3
+kdak  bhz  00    20  1    8.5        0.7 1.4  3
+msey  bhz  00    20  1    8.5        0.7 1.4  3
+nil   bhz  00    20  1    8.5        0.7 1.4  3
+palk  bhz  00    20  1    8.5        0.7 1.4  3
+pfo   bhz  00    20  1    8.5        0.7 1.4  3
+rpn   bhz  00    20  1    8.5        0.7 1.4  3
+shel  bhz  00    20  1    8.5        0.7 1.4  3

@@ -1,0 +1,57 @@
+#!/bin/csh -f
+# $Id: ppp,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+# Script to allow unprivilged operator to enable/disable PPP
+
+set tagfile = ~nrts/etc/PPP_DISABLED
+set daemon  = pppd
+
+if ($#argv == 0) goto ReportState
+
+if ($#argv != 1) goto help
+
+if ($argv == "disable") then
+    touch $tagfile
+    if ($status != 0) then
+        echo "Error: can't update $tagfile"
+        exit 1
+    else
+        goto ReportState
+    endif
+endif
+
+if ($argv == "enable") then
+    if (-e $tagfile) then
+        /bin/rm -f $tagfile
+        if ($status != 0) then
+            echo "Error: can't delete $tagfile"
+            exit 1
+        else
+            goto ReportState
+        endif
+    endif
+endif
+
+echo "usage: ppp [enable | disable]"
+exit 1
+
+ReportState:
+
+    if (-e $tagfile) then
+        echo "PPP is disabled."
+        set ppppid = `/usr/bin/ps -ef -o pid,args | /usr/bin/grep -w $daemon | /usr/bin/grep -v grep | /usr/bin/sed -e 's/^  *//' -e 's/ .*//'`
+        if ($ppppid != "") then
+            echo "Although PPP will not start at reboot, it IS running now."
+            echo "You should reboot the computer to insure PPP is off."
+            echo "The way to reboot is via the isp OPERATOR command 'reboot isp'".
+        endif
+    else
+        echo "PPP is enabled."
+    endif
+    exit 0
+
+# Revision History
+#
+# $Log: ppp,v $
+# Revision 1.1.1.1  2000/02/08 20:20:45  dec
+# import existing IDA/NRTS sources
+#

@@ -1,0 +1,154 @@
+#!/bin/csh -f
+# $Id: qdpBuildToolkit,v 1.2 2006/06/02 21:35:06 dechavez Exp $
+
+if ($#argv != 1) then
+    echo "usage: qdpBuildToolkit output_dir"
+    exit 1
+endif
+
+set SrcRoot = /home/dechavez/ida/src
+set outdir = $argv[1]
+if (-e $outdir) then
+    echo "$outdir already exists"
+    exit 1
+endif
+
+set Master = $SrcRoot/QDP_Toolkit
+set README = $Master/README.first
+set NOTES = $Master/ReleaseNotes
+set libmake = $Master/Makefile.lib
+set q330make = $Master/Makefile.bin
+
+set libdir = $outdir/lib
+set incdir = $outdir/include
+set qdpincdir = $outdir/include/qdp
+set q330dir = $outdir/example
+
+mkdir -p $libdir $incdir $qdpincdir $q330dir
+if ($status != 0) exit 1
+
+# Files that can get copied with current names
+
+set fileList = ""
+set fileList = "$fileList msgq/msgq.c"
+set fileList = "$fileList udpio/udpio.c"
+set fileList = "$fileList md5/md5.c"
+set fileList = "$fileList qdp/action.h"
+
+foreach file ($fileList)
+    cp $SrcRoot/lib/$file $libdir
+    if ($status != 0) exit 1
+end
+
+set readmeList = ""
+set readmeList = "$readmeList qdp/README.qdp"
+set readmeList = "$readmeList logio/README.logio"
+
+foreach file ($readmeList)
+    cp $SrcRoot/lib/$file $outdir
+    if ($status != 0) exit 1
+end
+
+# The libraries with multiple files get prefixed names
+
+set logioList = ""
+set logioList = "$logioList dump.c"
+set logioList = "$logioList init.c"
+set logioList = "$logioList msg.c"
+set logioList = "$logioList string.c"
+set logioList = "$logioList threshold.c"
+
+foreach file ($logioList)
+    cp $SrcRoot/lib/logio/$file $libdir/logio_$file
+    if ($status != 0) exit 1
+end
+
+set utilList = ""
+set utilList = "$utilList etoh.c"
+set utilList = "$utilList hexdump.c"
+set utilList = "$utilList htoe.c"
+set utilList = "$utilList list.c"
+set utilList = "$utilList misc.c"
+set utilList = "$utilList pack.c"
+set utilList = "$utilList parse.c"
+set utilList = "$utilList swap.c"
+set utilList = "$utilList timefunc.c"
+set utilList = "$utilList timer.c"
+
+foreach file ($utilList)
+    cp $SrcRoot/lib/util/$file $libdir/util_$file
+    if ($status != 0) exit 1
+end
+
+set qdpList = ""
+set qdpList = "$qdpList action.c"
+set qdpList = "$qdpList cmds.c"
+set qdpList = "$qdpList connect.c"
+set qdpList = "$qdpList crc.c"
+set qdpList = "$qdpList debug.c"
+set qdpList = "$qdpList decode.c"
+set qdpList = "$qdpList encode.c"
+set qdpList = "$qdpList fsa.c"
+set qdpList = "$qdpList init.c"
+set qdpList = "$qdpList io.c"
+set qdpList = "$qdpList md5.c"
+set qdpList = "$qdpList mem.c"
+set qdpList = "$qdpList misc.c"
+set qdpList = "$qdpList msgq.c"
+set qdpList = "$qdpList par.c"
+set qdpList = "$qdpList pkts.c"
+set qdpList = "$qdpList print.c"
+set qdpList = "$qdpList reorder.c"
+set qdpList = "$qdpList stats.c"
+set qdpList = "$qdpList string.c"
+
+# copy the include files
+
+foreach file ($qdpList)
+    cp $SrcRoot/lib/qdp/$file $libdir/qdp_$file
+    if ($status != 0) exit 1
+end
+
+set incList = ""
+set incList = "$incList logio.h"
+set incList = "$incList md5.h"
+set incList = "$incList msgq.h"
+set incList = "$incList platform.h"
+set incList = "$incList qdp.h"
+set incList = "$incList stdtypes.h"
+set incList = "$incList udpio.h"
+set incList = "$incList util.h"
+set incList = "$incList list.h"
+
+foreach file ($incList)
+    cp $SrcRoot/include/$file $incdir/$file
+    if ($status != 0) exit 1
+end
+
+cp $SrcRoot/include/qdp/*.h $qdpincdir
+
+# copy the test harness
+
+set q330List = ""
+set q330List = "$q330List ReleaseNotes.c"
+set q330List = "$q330List main.c"
+
+foreach file ($q330List)
+    cp $SrcRoot/bin/q330/$file $q330dir/$file
+    if ($status != 0) exit 1
+end
+
+cp $README $outdir
+if ($status != 0) exit 1
+
+cp $NOTES $outdir
+if ($status != 0) exit 1
+
+cp $libmake $libdir/Makefile
+if ($status != 0) exit 1
+
+cp $q330make $q330dir/Makefile
+if ($status != 0) exit 1
+
+echo "$outdir built OK"
+exit 0

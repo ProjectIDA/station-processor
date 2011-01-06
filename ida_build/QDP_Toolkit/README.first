@@ -1,0 +1,99 @@
+This directory contains the "QDP Toolkit", a collection of C code
+for communicating with the Quanterra Q330.   It has been tested with
+gcc 3.2.2 under Solaris 9 (sparc), but ought to compile and run
+under Unix, Linux, and Windows with little or no modification.  As I
+have yet to test on a little-endian system, there _might_ be some
+byte order issues associated with the checksum and MD5 digest.
+
+At this point, all you get is the basic plumbing for maintaining a
+reliable, error free connection with the Q330 and the ability to send
+commands and receive responses and data.  Code to generate complex commands
+or to do anything interesting with the packets sent from the Q330
+has yet to be developed.
+
+README.qdp describes the high level API.  
+
+README.logio describes the message logging facility used by the library
+
+To build the library, change to the lib subdirectory, review the
+Makefile and edit if necessary and then type "make".
+
+To build the test program, change to the example subdirectory,
+review the Makefile and edit if necessary and then type "make".
+The output will be an executable named "q330".  
+
+To test a data feed with mild verbosity:
+
+% q330 -v q330=xxx.xxx.xxx.xxx serialno=0100000B650D876E port=1 data
+2006:137-23:35:20 q330[9303:1]           host = xxx.xxx.xxx.xxx
+2006:137-23:35:20 q330[9303:1]       serialno = 0100000B650D876E
+2006:137-23:35:20 q330[9303:1]       authcode = 0000000000000000
+2006:137-23:35:20 q330[9303:1]      base port = 5330
+2006:137-23:35:20 q330[9303:1]           port = Logical Port 1
+2006:137-23:35:20 q330[9303:1]   ctrl timeout = 5
+2006:137-23:35:20 q330[9303:1]   data timeout = 1
+2006:137-23:35:20 q330[9303:1] retry interval = 10
+2006:137-23:35:20 q330[9303:1]  open interval = 100
+2006:137-23:35:20 q330[9303:1] hbeat interval = 60
+2006:137-23:35:20 q330[9303:1]  status bitmap = 0x01ef, forwarded
+2006:137-23:35:20 q330[9303:1]           nbuf = 256
+2006:137-23:35:20 q330[9303:1]          debug = normal
+2006:137-23:35:20 q330[9303:1]          trash = disabled
+2006:137-23:35:20 q330[9303:2] 0100000B650D876E Logical Port 1 configuration requested
+2006:137-23:35:20 q330[9303:2] 0100000B650D876E Logical Port 1 configuration received
+2006:137-23:35:20 q330[9303:2] 0100000B650D876E Logical Port 1 DP tokens requested
+2006:137-23:35:20 q330[9303:2] 0100000B650D876E Logical Port 1 DP tokens received, nbyte=1812
+2006:137-23:35:20 q330[9303:2] 0100000B650D876E handshake complete
+2006:137-23:35:20 q330[9303:1] C1_FLGS(0, 1) from 0100000B650D876E received by application
+2006:137-23:35:20 q330[9303:1] C1_MEM(0, 2) from 0100000B650D876E received by application
+2006:137-23:35:20 q330[9303:1] C1_MEM(0, 3) from 0100000B650D876E received by application
+2006:137-23:35:20 q330[9303:1] C1_MEM(0, 4) from 0100000B650D876E received by application
+2006:137-23:35:20 q330[9303:1] C1_MEM(0, 5) from 0100000B650D876E received by application
+2006:137-23:35:20 q330[9303:1] C1_MEM(0, 6) from 0100000B650D876E received by application
+2006:137-23:35:20 q330[9303:1] C1_STAT(0, 7) from 0100000B650D876E received by application
+2006:137-23:35:20 q330[9303:1] DT_DATA(6554, 0) from 0100000B650D876E received by application
+2006:137-23:35:20 q330[9303:1] DT_DATA(6555, 0) from 0100000B650D876E received by application
+2006:137-23:35:20 q330[9303:1] DT_DATA(6556, 0) from 0100000B650D876E received by application
+2006:137-23:35:20 q330[9303:1] DT_DATA(6557, 0) from 0100000B650D876E received by application
+2006:137-23:35:20 q330[9303:1] DT_DATA(6558, 0) from 0100000B650D876E received by application
+2006:137-23:35:20 q330[9303:1] DT_DATA(6559, 0) from 0100000B650D876E received by application
+2006:137-23:35:20 q330[9303:1] DT_DATA(6560, 0) from 0100000B650D876E received by application
+...
+
+Use -V instead of -v and you can observe all the behind the scene details.
+
+To test a data feed under stressful conditions, use the -trash option:
+
+% q330 -v q330=xxx.xxx.xxx serialno=XXXXXXXXXXXXXXXX port=1 data -trash
+
+To test simple command and control
+
+% q330 q330=xxx.xxx.xxx.xxx port=cfg reboot
+
+ +-----------------------------------------------------------------------+
+ |                                                                       |
+ | Copyright (C) 2006 Regents of the University of California            |
+ |                                                                       |
+ | This software is provided 'as-is', without any express or implied     |
+ | warranty.  In no event will the authors be held liable for any        |
+ | damages arising from the use of this software.                        |
+ |                                                                       |
+ | Permission is granted to anyone to use this software for any purpose, |
+ | including commercial applications, and to alter it and redistribute   |
+ | it freely, subject to the following restrictions:                     |
+ |                                                                       |
+ | 1. The origin of this software must not be misrepresented; you must   |
+ |    not claim that you wrote the original software. If you use this    |
+ |    software in a product, an acknowledgment in the product            |
+ |    documentation of the contribution by Project IDA, UCSD would be    |
+ |    appreciated but is not required.                                   |
+ | 2. Altered source versions must be plainly marked as such, and must   |
+ |    not be misrepresented as being the original software.              |
+ | 3. This notice may not be removed or altered from any source          |
+ |    distribution.                                                      |
+ |                                                                       |
+ +-----------------------------------------------------------------------+
+
+David Chavez
+UC San Diego
+dchavez@ucsd.edu

@@ -1,5 +1,7 @@
 INSTALLDIR=$(HOME)/bin/
 all:
+	cd lib330; $(MAKE)
+	cd ida_build; $(MAKE)
 	cd lib; $(MAKE)
 	cd dispstatus; $(MAKE)
 	cd q330serv; $(MAKE)
@@ -17,6 +19,8 @@ all:
 	cd falcon; $(MAKE)
 
 clean:
+	cd lib330; $(MAKE) clean
+	cd ida_build; $(MAKE) clean
 	cd lib; $(MAKE) clean
 	cd q330serv; $(MAKE) clean
 	cd ida2arch; $(MAKE) clean

@@ -1,0 +1,47 @@
+#!/bin/csh
+# $Id: ftp_file,v 1.1.1.1 2000/02/08 20:20:44 dec Exp $
+#
+# Send a file via ftp
+#
+
+set myname = ftp_file
+
+set rm   = /bin/rm
+set grep = /usr/xpg4/bin/grep
+set ftp  = /usr/bin/ftp
+set sh   = /bin/sh
+
+if ($#argv == 5) then
+    set File       = $argv[1]
+    set RemoteHost = $argv[2]
+    set RemotePath = $argv[3]
+    set UserName   = $argv[4]
+    set Password   = $argv[5]
+else
+    logger -t $myname"[$$]" -p user.info "incorrect command line: $argv"
+    exit 1
+endif
+
+set runfile = /tmp/$myname.$$
+cp /dev/null $runfile
+
+echo "$ftp -i -n -v $RemoteHost << EOF" >> $runfile
+echo "user $UserName $Password"        >> $runfile
+echo "cd $RemotePath"                  >> $runfile
+echo "binary"                          >> $runfile
+echo "put $File"                       >> $runfile
+echo "quit"                            >> $runfile
+echo "EOF"                             >> $runfile
+
+$sh $runfile | $grep -q 226
+set exitstatus = $status
+
+$rm -f $runfile
+exit $exitstatus
+
+# Revision History
+#
+# $Log: ftp_file,v $
+# Revision 1.1.1.1  2000/02/08 20:20:44  dec
+# import existing IDA/NRTS sources
+#

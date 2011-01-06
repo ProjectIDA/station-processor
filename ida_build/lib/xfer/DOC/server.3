@@ -1,0 +1,231 @@
+.\" $Id: server.3,v 1.1.1.1 2000/02/08 20:20:43 dec Exp $
+.TH XFER_SERVER 3 "June 1996" "IDA Data Exchange Routines"
+.SH NAME
+Xfer_ServInit, Xfer_Access, Xfer_Peer, Xfer_RecvReq, Xfer_SendWav, Xfer_Ack, Xfer_Break, Xfer_ErrStr, Xfer_Exit \- IDA data server routines
+.SH SYNOPSIS
+.B cc
+.RI "[ " "flag" " \|.\|.\|. ] " "file" " \|.\|.\|."
+.B \-lxfer \-lutil
+.RI "[ " "library" " \|.\|.\|. ]"
+.LP
+.B #include "xfer.h"
+.ft
+.fi
+.LP
+.nf
+.ft B
+void Xfer_ServInit(home, timeo)
+char *home;
+int timeo;
+.ft
+.fi
+.LP
+.nf
+.ft B
+int Xfer_Access(sd)
+int sd;
+.ft
+.fi
+.LP
+.nf
+.ft B
+char *Xfer_Peer(sd)
+int sd;
+.ft
+.fi
+.LP
+.nf
+.ft B
+void Xfer_RecvReq(sd, request, cnf)
+int sd;
+struct xfer_req *request;
+struct xfer_cnf *cnf;
+.ft
+.fi
+.LP
+.nf
+.ft B
+int Xfer_SendWav(sd, wav)
+int sd;
+struct xfer_wav *wav;
+.ft
+.fi
+.LP
+.nf
+.ft B
+void Xfer_Ack(sd, code)
+int sd;
+int code;
+.ft
+.fi
+.LP
+.nf
+.ft B
+void Xfer_Break(sd)
+int sd;
+.ft
+.fi
+.LP
+.nf
+.ft B
+char *Xfer_ErrStr()
+.ft
+.fi
+.LP
+.nf
+.ft B
+int Xfer_Exit(sd, status)
+int sd;
+int status;
+.ft
+.fi
+.SH DESCRIPTION
+These functions support dialog with an IDA data client, following the
+\fInrts_xfer2\fR protocol.  The information
+provided here assumes familiarity with the protocol and the implementation
+specific data structures, described in the
+\fBIDA Data Exchange Protocol\fR document.
+.sp
+.B Xfer_ServInit(\|)
+\fImust\fR be called during the program's initialization.  It sets the 
+initial socket I/O time out interval to \fItimeo\fR seconds, and
+loads the access list file \fIhome\fB/XFER_CLIENTS\fR (where
+.B XFER_CLIENTS
+is defined in the include file \fIxfer.h\fR).
+.sp
+.B Xfer_Access(\|)
+determines if the client connected via the socket descriptor \fIsd\fR
+has access rights, and returns 1 if so and 0 if not.
+.sp
+.B Xfer_Peer(\!)
+returns the name of the client connected via the socket descriptor \fIsd\fR.
+If it cannot determine the name of the client (for example, if it is not
+registered with DNS) then its IP address following the conventional
+\fB` . '\fR notation is given.
+.sp
+.B Xfer_RecvReq(\|)
+reads a request message from the client connected via the socket \fIsd\fR,
+loads it into the structure pointed to by \fIreq\fR, and sets the
+socket time out interval to agree with the client side value, as provided
+in the request.
+If the received request does not contain any errors, then the configuration
+record pointed to by \fIcnf\fR is sent to the client.  If the server
+is too busy to accept the connection, or if none of the requested
+stations and channels are available to the server, or if the request
+is otherwise deemed invalid then the appropriate acknowledgment is
+sent to the client and 
+.B Xfer_RecvReq(\|)
+logs an informational message and exits.
+.sp
+.B Xfer_SendWav(\|)
+sends the waveform record pointed to by \fIwav\fR to the client
+connected via the socket descriptor \fIsd\fR, compressing the data
+as specified by \fIwav\fR.
+.sp
+.B Xfer_Ack(\|)
+sends the message \fIcode\fR to the client connected via the socket
+descriptor \fIsd\fR.  You may send a heartbeat by setting code to
+\fBXFER_HEARTBEAT\fR.
+.sp
+.B Xfer_Break(\|)
+sends a break (zero length message) to the client
+connected via the socket descriptor \fIsd\fR.  This is normally done
+after the server has provided all the data it intends to send.
+.sp
+.B Xfer_ErrStr(\|)
+returns a null-terminated string describing the error condition 
+specified by the current value of the global variable \fIxfer_errno\fR.
+.sp
+\fBXfer_Exit(\|)\fR does a \fIshutdown\fR(2) on the socket \fIsd\fR (if it
+is a positive, non-zero descriptor), logs a message indicating the
+exit \fIstatus\fR and exits.  If you have the socket descriptor available,
+then you should pass it to the routine.  Otherwise (if you just want to
+get the logged exit) set \fIsd\fR to be zero or negative.
+.SH SIGNALS
+\fBXfer_ServInit(\|)\fR installs signal handlers to trap
+\fBSIGPIPE\fR (for writes to a client which has died) and
+\fBSIGALRM\fR (to handle socket I/O timeouts).  In addition,
+\fBSIGUSR1\fR and \fBSIGUSR2\fR are trapped by the logging facility
+if it is enabled (see NOTES).
+.SH RETURN VALUES
+.B Xfer_ServInit(\|)
+returns no value.  If any errors are encountered it logs a message
+via \fIutil_log\fR() and exits.
+.sp
+.B Xfer_Access(\|)
+returns 0 if access is denied, 1 if it is granted.
+.sp
+.B Xfer_Peer(\|)
+returns a pointer to a null-terminated string.  The
+pointer is to static data whose contents are overwritten by each call.
+.sp
+\fBXfer_SendWav(\|)\fR
+will return \fBXFER_OK\fR upon success and \fBXFER_ERROR\fR in case
+of error compressing the data.  In case of any other errors then an
+informational message is logged and the server exits.
+.sp
+\fBXfer_RecvReq(\|)\fR,
+\fBXfer_Ack(\|)\fR
+and
+\fBXfer_Break(\|)\fR,
+have no return value.  If the operation is unsuccessful then an
+informational message is logged and the server exits.
+.sp
+\fBXfer_ErrStr(\|)\fR returns a pointer to a null-terminated string.  The
+pointer is to static data whose contents are overwritten by each call.
+.sp
+\fBXfer_Exit(\|)\fR
+does not return.
+.sp
+In case of failure, all functions set the global variable \fIxfer_errno\fR
+to indicate the reason.  The possible values of \fIxfer_errno\fR are
+given below.
+.SH ERRORS
+.TP 18
+.SM XFER_EBUSY
+The server is too busy to accept the connection.
+.TP
+.SM XFER_ECONNECT
+No connection with peer.
+.TP
+.SM XFER_EFORMAT
+Unsupported format.
+.TP
+.SM XFER_EHANDLER
+Unable to install signal handler.
+Refer to the global variable \fIerrno\fR for the cause.
+.TP
+.SM XFER_EINVAL
+Illegal data were received.  
+If this ever occurs the problem is with the client.
+.TP
+.SM XFER_EIO
+An I/O error occured.  
+Refer to the global variable \fIerrno\fR for the cause.
+.TP
+.SM XFER_ELIMIT
+An implementation defined limit was exceeded.
+.TP
+.SM XFER_EPIPE
+The client died.
+.TP
+.SM XFER_EPROTOCOL
+Unsupported protocol version.
+.TP
+.SM XFER_ENOSUCH
+None of the requested stations/channels are available to this server.
+.TP
+.SM XFER_ETIMEDOUT
+The socket I/O time limit expired.
+.TP
+.SM XFER_ETOOBIG
+An incoming message exceeded the implementation message size limit.
+This indicates a bug in the client, should it ever occur.
+.SH NOTES
+It is possible to enable informational and error messages which are
+logged (via \fIutil_log\fR(3)) to a file or to the \fIsyslogd\fR(8)
+daemon by calling \fIutil_loginit\fR(3) during program initialization,
+if desired.
+.SH SEE ALSO
+.BR util_loginit (3),
+.BR util_log (3)

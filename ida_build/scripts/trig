@@ -1,0 +1,68 @@
+#!/bin/csh -f
+# $Id: trig,v 1.1 2008/01/15 04:39:41 dechavez Exp $
+# Manual control of Q330 trigger
+
+if ($#argv == 1) then
+    set report = 1
+else if ($#argv == 2) then
+    set report = 0
+else
+    goto help
+endif
+
+set sta = $argv[1]
+set meta = /usr/nrts/${sta}330/meta
+if (! -e $meta) then
+    echo "Station '$sta' is not configured as a Q330 based site."
+    exit 0
+endif
+
+set trigger = $meta/trigger
+if (-e $trigger) then
+    set on = 1
+else
+    set on = 0
+endif
+
+if ($report) then
+    if ($on) then
+        echo "Station '$sta' trigger is ON"
+    else
+        echo "Station '$sta' trigger is OFF"
+    endif
+    exit 0
+endif
+
+if ($argv[2] == "on") then
+    if ($on) then
+        echo "Station '$sta' trigger is already on."
+        exit 0
+    endif
+    touch $trigger
+    echo "Station '$sta' trigger activated."
+    exit 0
+endif
+
+if ($argv[2] == "off") then
+    if (! $on) then
+        echo "Station '$sta' trigger is already off."
+        exit 0
+    endif
+    rm -f $trigger
+    echo "Station '$sta' trigger terminated."
+    exit 0
+endif
+
+echo "Unrecognized argument: $argv[2]"
+goto help
+
+help:
+    echo "usage: trig sta [ on | off ]"
+    exit 1
+
+# Revision History
+#
+# $Log: trig,v $
+# Revision 1.1  2008/01/15 04:39:41  dechavez
+# initial release
+#

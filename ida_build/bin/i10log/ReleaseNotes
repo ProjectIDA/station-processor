@@ -1,0 +1,13 @@
+ida10 Release Notes
+
+1.2.1  04/29/2002 (cvs rtag ida10_1_2_1 ida10)
+       use new ida10TStoString to generate TS summary
+
+1.2.0  03/15/2002 (cvs rtag ida10_1_2_0 ida10)
+       support IDA10.x (and hence transparent buffer lengths)
+
+1.1.0  09/06/2001 (cvs rtag ida10_1_1_0bis ida10)
+       allow user to specify alternate buffer lengths
+
+1.0.0  04/02/2001 (cvs rtag ida10_1_0_0 ida10)
+       created

@@ -1,0 +1,52 @@
+#!/bin/csh -f
+# $Id: tssh,v 1.1 2008/05/08 15:45:50 dechavez Exp $
+#
+# SSH into an IDA station via tunnel (or direct, if no tunnel)
+
+set debug  = 0
+set myname = tssh
+set lock   = /var/tmp/$myname.lock
+
+if ($#argv < 1) then
+	echo "usage: $myname sitename [ command ]"
+	exit 1
+endif
+set site = $argv[1]
+shift
+
+set setup  = /usr/nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    echo "${myname}: missing $setup"
+    exit 1
+endif
+source $setup
+
+set TunnelInfo = $NRTS_HOME/etc/Tunnels
+
+if (! -e $TunnelInfo) then
+    echo "${myname}: missing $TunnelInfo"
+    exit 1
+endif
+
+set PortString = `stripcat $TunnelInfo | grep -i " $site " `
+set exitstatus = $status
+if ($exitstatus != 0) then
+	set command = "ssh $site"
+else
+	set port = `echo $PortString | awk '{print $3}'`
+	set command = "ssh -p $port localhost"
+endif
+
+if ($#argv != 0) set command = "$command $argv"
+
+echo $command
+$command
+
+exit 0
+
+# Revision History
+#
+# $Log: tssh,v $
+# Revision 1.1  2008/05/08 15:45:50  dechavez
+# created
+#

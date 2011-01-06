@@ -1,0 +1,271 @@
+#!/bin/csh -f
+# $Id: qdspect,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+
+if ($#argv == 0) then
+    set input = css.wfdisc
+else if ($#argv == 1) then
+    set input = $argv[1]
+else
+    echo "usage: qdspect [wfdisc]"
+    exit 1
+endif
+
+# Search for PLOTXY templates
+
+set pxydir = 0
+set pxypath = "/usr/local/etc/plotxy /usr/nrts/etc/plotxy"
+set pxypath = "$pxypath ~/etc/plotxy ~/port/etc/plotxy"
+
+foreach dir ($pxypath)
+    if ( -e $dir) set pxydir = $dir
+end
+
+if ($pxydir == 0) then
+    echo "Cannot find PLOTXY templates in any of the following places:"
+    echo $pxypath
+    echo "qdspect aborts.
+    exit 1
+endif
+
+set spectlist = ""
+
+# Convert to SAC format and get start/end times
+
+echo "Converting $input from CSS to SAC format"
+
+css2sac < $input
+set sta = `cat $input | head -1 | wdecho sta`
+set beg = `cat $input | head -1 | wdecho time`
+set beg = `lttoa $beg`
+set beg = $beg[1]
+set end = `cat $input | head -1 | wdecho endtime`
+set end = `lttoa $end`
+set end = $end[1]
+set title = "$sta $beg to $end"
+
+# Rename from SAC to NIO convention
+
+echo "Renaming files from SAC to NIO convention"
+
+set sta = `echo $sta | lcase`
+if ( -e $sta.blz) mv $sta.blz S101.D
+if ( -e $sta.bln) mv $sta.bln S102.D
+if ( -e $sta.ble) mv $sta.ble S103.D
+if ( -e $sta.mlz) mv $sta.mlz S104.D
+if ( -e $sta.mln) mv $sta.mln S105.D
+if ( -e $sta.mle) mv $sta.mle S106.D
+if ( -e $sta.llz) mv $sta.llz S104.D
+if ( -e $sta.lln) mv $sta.lln S105.D
+if ( -e $sta.lle) mv $sta.lle S106.D
+if ( -e $sta.vlz) mv $sta.vlz S107.D
+if ( -e $sta.vln) mv $sta.vln S108.D
+if ( -e $sta.vle) mv $sta.vle S109.D
+if ( -e $sta.bhz) mv $sta.bhz S111.D
+if ( -e $sta.bhn) mv $sta.bhn S112.D
+if ( -e $sta.bhe) mv $sta.bhe S113.D
+if ( -e $sta.mhz) mv $sta.mhz S114.D
+if ( -e $sta.mhn) mv $sta.mhn S115.D
+if ( -e $sta.mhe) mv $sta.mhe S116.D
+if ( -e $sta.lhz) mv $sta.lhz S114.D
+if ( -e $sta.lhn) mv $sta.lhn S115.D
+if ( -e $sta.lhe) mv $sta.lhe S116.D
+if ( -e $sta.vhz) mv $sta.vhz S117.D
+if ( -e $sta.vhn) mv $sta.vhn S118.D
+if ( -e $sta.vhe) mv $sta.vhe S119.D
+if ( -e $sta.vmz) mv $sta.vmz S121.D
+if ( -e $sta.vmn) mv $sta.vmn S122.D
+if ( -e $sta.vme) mv $sta.vme S123.D
+if ( -e $sta.slz) mv $sta.slz S131.D
+if ( -e $sta.sln) mv $sta.sln S132.D
+if ( -e $sta.sle) mv $sta.sle S133.D
+if ( -e $sta.shz) mv $sta.shz S134.D
+if ( -e $sta.shn) mv $sta.shn S135.D
+if ( -e $sta.she) mv $sta.she S136.D
+if ( -e $sta.elz) mv $sta.elz S171.D
+if ( -e $sta.eln) mv $sta.eln S172.D
+if ( -e $sta.ele) mv $sta.ele S173.D
+if ( -e $sta.ehz) mv $sta.ehz S174.D
+if ( -e $sta.ehn) mv $sta.ehn S175.D
+if ( -e $sta.ehe) mv $sta.ehe S176.D
+if ( -e $sta.egz) mv $sta.egz S161.D
+if ( -e $sta.egn) mv $sta.egn S162.D
+if ( -e $sta.ege) mv $sta.ege S163.D
+if ( -e $sta.lgz) mv $sta.lgz S164.D
+if ( -e $sta.lgn) mv $sta.lgn S165.D
+if ( -e $sta.lge) mv $sta.lge S166.D
+
+# Compute spectra for each type of data present
+
+set tmp = /var/tmp/qdspect.$$
+
+set potential_streams = ""
+
+set slxchans = "31 32 33"  #  40 Hz  SP, continuous lo-gain
+set potential_streams = "$potential_streams slx"
+
+set shxchans = "34 35 36"  #  40 Hz  SP, continuous hi-gain
+set potential_streams = "$potential_streams shx"
+
+set elxchans = "71 72 73"  # 100 Hz  SP, continuous lo-gain
+set potential_streams = "$potential_streams elx"
+
+set ehxchans = "74 75 76"  # 100 Hz  SP, continuous hi-gain
+set potential_streams = "$potential_streams ehx"
+
+set blxchans = "01 02 03"  #  20 HZ  BB, continuous lo-gain
+set potential_streams = "$potential_streams blx"
+
+set bhxchans = "11 12 13"  #  20 HZ  BB, continuous hi-gain
+set potential_streams = "$potential_streams bhx"
+
+set llxchans = "04 05 06"  #   1 HZ  LP, continuous lo-gain
+set potential_streams = "$potential_streams llx"
+
+set lhxchans = "14 15 16"  #   1 HZ  LP, continuous hi-gain
+set potential_streams = "$potential_streams lhx"
+
+set vlxchans = "07 08 09"  # 0.1 Hz VLP, continuous lo-gain
+set potential_streams = "$potential_streams vlx"
+
+set vhxchans = "17 18 19"  # 0.1 Hz VLP, continuous hi-gain
+set potential_streams = "$potential_streams vhx"
+
+set vmxchans = "21 22 23"  # 0.1 Hz MASS, continuous hi-gain
+set potential_streams = "$potential_streams vmx"
+
+set egxchans = "61 62 63"  # 100 Hz FBA, triggered
+set potential_streams = "$potential_streams egx"
+
+set lgxchans = "64 65 66"  #   1 Hz FBA, continuous
+set potential_streams = "$potential_streams lgx"
+
+foreach stream ($potential_streams)
+
+    set STREAM = `echo $stream | ucase`
+
+    if ($stream == slx) then
+        set chanlist = "$slxchans"
+        set winlen   = 2000
+        set taper    = 5
+    else if ($stream == shx) then
+        set chanlist = "$shxchans"
+        set winlen   = 2000
+        set taper    = 5
+    else if ($stream == elx) then
+        set chanlist = "$elxchans"
+        set winlen   = 5000
+        set taper    = 5
+    else if ($stream == ehx) then
+        set chanlist = "$ehxchans"
+        set winlen   = 5000
+        set taper    = 5
+    else if ($stream == blx) then
+        set chanlist = "$blxchans"
+        set winlen   = 10000
+        set taper    = 5
+    else if ($stream == bhx) then
+        set chanlist = "$bhxchans"
+        set winlen   = 10000
+        set taper    = 5
+    else if ($stream == llx) then
+        set chanlist = "$llxchans"
+        set winlen   = 2000
+        set taper    = 5
+    else if ($stream == lhx) then
+        set chanlist = "$lhxchans"
+        set winlen   = 2000
+        set taper    = 5
+    else if ($stream == vlx) then
+        set chanlist = "$vlxchans"
+        set winlen   = 1000
+        set taper    = 5
+    else if ($stream == vhx) then
+        set chanlist = "$vhxchans"
+        set winlen   = 1000
+        set taper    = 5
+    else if ($stream == vmx) then
+        set chanlist = "$vhxchans"
+        set winlen   = 1000
+        set taper    = 5
+    else if ($stream == egx) then
+        set chanlist = "$egxchans"
+        set winlen   = 2000
+        set taper    = 5
+    else if ($stream == lgx) then
+        set chanlist = "$lgxchans"
+        set winlen   = 2000
+        set taper    = 5
+    else
+        echo "ERROR IN QDSPECT... CONTACT D. CHAVEZ FOR ASSISTANCE"
+        exit 1
+    endif
+
+    set first = 1
+    foreach chan ($chanlist)
+        set nionum = 1$chan
+        set file = S$nionum.D
+        if ( -e $file) then
+            if ($first) then
+                echo "Computing $STREAM spectra"
+                set first = 0
+                set spectlist = "$spectlist $stream"
+            endif
+            rm R$nionum.D >& /dev/null
+            set npts = `sacecho npts $file`
+            echo "$file npts = $npts"
+            cp /dev/null $tmp
+            echo 2$nionum >> $tmp
+            echo 1 $npts  >> $tmp
+            echo $winlen  >> $tmp
+            echo y        >> $tmp
+            echo $taper   >> $tmp
+            echo -$nionum >> $tmp
+            power < $tmp > /dev/null
+            rm $file
+        endif
+    end
+end
+
+rm $tmp
+
+# Generate spectral plots
+
+@ numplots = 0
+set plotlist = ""
+set plots = ""
+
+echo -n "Generating plots using $pxydir templates:"
+foreach spectid ($spectlist)
+    set template = $pxydir/$spectid.pxy
+    set noise    = $pxydir/$spectid.noise
+    if ( -e $template) then
+        if ( -e $noise ) then
+            cp /dev/null $spectid.noise
+            cat $noise >> $spectid.noise
+        endif
+        set pxyfile = $spectid.pxy
+        set psfile  = $spectid.ps
+        cp /dev/null $pxyfile
+        echo "output $psfile" >> $pxyfile
+        cat $template >> $pxyfile
+        echo "title $title ($spectid)" >> $pxyfile
+        echo "plot 0 3.0"              >> $pxyfile
+        echo "stop"                    >> $pxyfile
+        plotxy < $pxyfile > /dev/null
+        @ numplots = $numplots + 1
+        set plotlist = "$plotlist $psfile"
+        echo -n " $psfile"
+    else
+        echo "Missing $spectid plotxy template... no plot produced."
+    endif
+end
+echo ""
+
+exit 0
+
+# Revision History
+#
+# $Log: qdspect,v $
+# Revision 1.1.1.1  2000/02/08 20:20:45  dec
+# import existing IDA/NRTS sources
+#

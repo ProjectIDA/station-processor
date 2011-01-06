@@ -1,0 +1,21 @@
+nrts_pushd Release Notes
+
+1.2.3  12/23/2003 (cvs rtag nrts_push_1_2_3 nrts_push)
+       Fixed zombies following rework of util_bground in libutil 2.2.0
+
+1.2.2  04/21/2001 (cvs rtag nrts_push_1_2_0 nrts_push)
+       Added AutoDRM support
+
+1.2.0  04/21/2001 (cvs rtag nrts_push_1_2_0 nrts_push)
+       Added AutoDRM support
+
+1.1.0  04/17/2001 (cvs rtag nrts_push_1_1_0 nrts_push)
+       Fixed lingering BOUND sockets problem. Server signals
+       handled by dedicated thread.
+
+1.0.0  02/26/2001 (cvs rtag nrts_push_1_0_0 nrts_push)
+       First production release, uses client IP address
+       instead of name
+
+0.9.0  10/12/2000 (cvs rtag nrts_push_0_9_0 nrts_push)
+       initial minimal release

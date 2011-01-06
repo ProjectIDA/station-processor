@@ -1,0 +1,53 @@
+# Microsoft Developer Studio Generated Dependency File, included by qtmain.mak
+
+kernel\qtmain_win.cpp : \
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\include\qapplication.h"\
+	"..\include\qasciidict.h"\
+	"..\include\qbrush.h"\
+	"..\include\qcolor.h"\
+	"..\include\qconfig.h"\
+	"..\include\qcstring.h"\
+	"..\include\qdatastream.h"\
+	"..\include\qdesktopwidget.h"\
+	"..\include\qevent.h"\
+	"..\include\qfeatures.h"\
+	"..\include\qfont.h"\
+	"..\include\qfontinfo.h"\
+	"..\include\qfontmetrics.h"\
+	"..\include\qgarray.h"\
+	"..\include\qgdict.h"\
+	"..\include\qglist.h"\
+	"..\include\qglobal.h"\
+	"..\include\qiodevice.h"\
+	"..\include\qmap.h"\
+	"..\include\qmemarray.h"\
+	"..\include\qmime.h"\
+	"..\include\qmodules.h"\
+	"..\include\qnamespace.h"\
+	"..\include\qobject.h"\
+	"..\include\qobjectdefs.h"\
+	"..\include\qpaintdevice.h"\
+	"..\include\qpair.h"\
+	"..\include\qpalette.h"\
+	"..\include\qpoint.h"\
+	"..\include\qptrcollection.h"\
+	"..\include\qptrlist.h"\
+	"..\include\qrect.h"\
+	"..\include\qregion.h"\
+	"..\include\qshared.h"\
+	"..\include\qsize.h"\
+	"..\include\qsizepolicy.h"\
+	"..\include\qstring.h"\
+	"..\include\qstringlist.h"\
+	"..\include\qstrlist.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qtextstream.h"\
+	"..\include\qtl.h"\
+	"..\include\qtranslator.h"\
+	"..\include\qvaluelist.h"\
+	"..\include\qwidget.h"\
+	"..\include\qwindowdefs.h"\
+	"..\include\qwindowdefs_win.h"\
+	"..\include\qwinexport.h"\
+	

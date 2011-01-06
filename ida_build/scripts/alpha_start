@@ -1,0 +1,67 @@
+#!/bin/csh -f
+# $Id: alpha_start,v 1.4 2005/02/18 03:16:39 dechavez Exp $
+#
+# Start up GSETT Alpha Protocol support
+
+unalias cp rm
+
+set myname = alpha_start
+
+if ($#argv < 3) then
+    echo "usage: $myname system sname destination [nrts_alpha options]" 
+    exit 1
+endif
+logger -t $myname -p user.info -i "begin $argv"
+
+set sys   = $argv[1]
+shift
+set sname = $argv[1]
+shift
+set dest  = $argv[1]
+shift
+set opts  = "$argv"
+set net   = `echo $sname | ucase`
+
+if ($?NRTS_HOME) then
+    set nrts_home = $NRTS_HOME
+else
+    echo "NRTS_HOME is not defined"
+    exit 1
+endif
+
+set path = ($path /usr/local/bin)
+
+set buffer = $nrts_home/alpha/$sname
+if (! -e $buffer) then
+    logger -t $myname -p user.info -i "abort: missing $buffer"
+    exit 1
+endif
+    
+set command = "nrts_alpha "
+set command = "$command if=$sys of=$buffer log=syslogd debug=1 "
+set command = "$command net=$net +cr sname=$sname +suc +cuc $opts"
+logger -t $myname -p user.info -i "$command"
+$command
+
+set command = "AlphaSend cmgr_host=$dest buffer=$buffer nchan=3 "
+set command = "$command net=$net log-name={$sname}_AlphaSend.log "
+set command = "$command log-directory=$nrts_home/alpha/log log-alpha &"
+logger -t $myname -p user.info -i "$command"
+$command &
+
+logger -t $myname -p user.info -i "complete"
+
+exit 0
+
+# Revision History
+#
+# $Log: alpha_start,v $
+# Revision 1.4  2005/02/18 03:16:39  dechavez
+# replace with versions from nrts@idahub
+#
+# Revision 1.2  2003/04/24 19:51:43  nrts
+# replace obsolete +uc argument with +cuc and +suc
+#
+# Revision 1.1.1.1  2003/04/18 22:44:17  nrts
+# initial (imported) release
+#

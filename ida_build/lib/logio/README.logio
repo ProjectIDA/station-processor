@@ -1,0 +1,44 @@
+The logio library is a facility for logging to a file, syslog, or via
+a user supplied function.
+
+The user needs to initialize a LOGIO handle via a call to logioInit()
+
+#include "logio.h"
+
+LOGIO lp;
+
+	logioInit(LOGIO *lp, char *spec, void(*func) (char *string), char *prefix)
+
+The caller must specify either spec or func, leaving the other NULL.
+
+ spec = pathname for logging to a file
+        "-" or "stdout" for logging to stdout
+        "stderr" for logging to stderr
+        "syslog:FACILITY" for logging via syslog using specified 
+        facility
+
+ func = pointer to user supplied function for delivering the 
+        message string: void func(char *string)
+
+ pname = name of calling process
+
+ Returns a TRUE if successful, otherwise FALSE.
+
+ Examples:
+
+ LOGIO lp; // user provides handle space
+
+ To log to stdout:  status = logioInit(&lp, "-", NULL, argv[0]);
+ To log via syslog: status = logioInit(&lp, "syslog:LOG_LOCAL0", NULL, argv[0]);
+ To log via user supplied function:
+
+         void myfunc(char *string)
+         {
+             printf("%s\n", string);
+         }
+
+         status = logioInit(&lp, NULL, myfunc, argv[0]);
+
+Messages are logged via logioMsg()
+
+	logioMsg(LOGIO *lp, char *format, ...)

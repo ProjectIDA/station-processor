@@ -1,0 +1,5968 @@
+# Microsoft Developer Studio Generated Dependency File, included by qt_mt.mak
+
+3rdparty\zlib\adler32.c : \
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\zlib\compress.c : \
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\zlib\crc32.c : \
+	".\3rdparty\zlib\crc32.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	".\3rdparty\zlib\zutil.h"\
+	
+
+3rdparty\zlib\deflate.c : \
+	".\3rdparty\zlib\deflate.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	".\3rdparty\zlib\zutil.h"\
+	
+
+3rdparty\zlib\gzio.c : \
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	".\3rdparty\zlib\zutil.h"\
+	
+
+3rdparty\zlib\inffast.c : \
+	".\3rdparty\zlib\inffast.h"\
+	".\3rdparty\zlib\inflate.h"\
+	".\3rdparty\zlib\inftrees.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	".\3rdparty\zlib\zutil.h"\
+	
+
+3rdparty\zlib\inflate.c : \
+	".\3rdparty\zlib\inffast.h"\
+	".\3rdparty\zlib\inffixed.h"\
+	".\3rdparty\zlib\inflate.h"\
+	".\3rdparty\zlib\inftrees.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	".\3rdparty\zlib\zutil.h"\
+	
+
+3rdparty\zlib\inftrees.c : \
+	".\3rdparty\zlib\inftrees.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	".\3rdparty\zlib\zutil.h"\
+	
+
+3rdparty\libjpeg\jcapimin.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jcapistd.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jccoefct.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jccolor.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jcdctmgr.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jdct.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jchuff.c : \
+	".\3rdparty\libjpeg\jchuff.h"\
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jcinit.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jcmainct.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jcmarker.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jcmaster.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jcomapi.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jcparam.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jcphuff.c : \
+	".\3rdparty\libjpeg\jchuff.h"\
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jcprepct.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jcsample.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jctrans.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdapimin.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdapistd.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdatadst.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdatasrc.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdcoefct.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdcolor.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jddctmgr.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jdct.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdhuff.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jdhuff.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdinput.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdmainct.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdmarker.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdmaster.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdmerge.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdphuff.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jdhuff.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdpostct.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdsample.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jdtrans.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jerror.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	".\3rdparty\libjpeg\jversion.h"\
+	
+
+3rdparty\libjpeg\jfdctflt.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jdct.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jfdctfst.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jdct.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jfdctint.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jdct.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jidctflt.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jdct.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jidctfst.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jdct.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jidctint.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jdct.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jidctred.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jdct.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jmemmgr.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmemsys.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jmemnobs.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmemsys.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jquant1.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jquant2.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libjpeg\jutils.c : \
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jerror.h"\
+	".\3rdparty\libjpeg\jinclude.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	
+
+3rdparty\libpng\png.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngerror.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngget.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngmem.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngpread.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngread.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngrio.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngrtran.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngrutil.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngset.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngtrans.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngwio.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngwrite.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngwtran.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\libpng\pngwutil.c : \
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+kernel\qabstractlayout.cpp : \
+	"..\include\qabstractlayout.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qframe.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qmenubar.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qsignal.h"\
+	"..\include\qtoolbar.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qlayoutengine_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qaccel.cpp : \
+	"..\include\qaccel.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qgvector.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignal.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qstatusbar.h"\
+	"..\include\qvariant.h"\
+	"..\include\qwhatsthis.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qaccessible.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\private\qgpluginmanager_p.h"\
+	"..\include\private\qpluginmanager_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qdict.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qptrdict.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qaccessible_win.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qdialog.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qmessagebox.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qaction.cpp : \
+	"..\include\qaccel.h"\
+	"..\include\qaction.h"\
+	"..\include\qbutton.h"\
+	"..\include\qcombobox.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qframe.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qsignal.h"\
+	"..\include\qstatusbar.h"\
+	"..\include\qtoolbar.h"\
+	"..\include\qtoolbutton.h"\
+	"..\include\qtooltip.h"\
+	"..\include\qvariant.h"\
+	"..\include\qwhatsthis.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qapplication.cpp : \
+	"..\include\qcleanuphandler.h"\
+	"..\include\qclipboard.h"\
+	"..\include\qdialog.h"\
+	"..\include\qdir.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qeventloop.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qintdict.h"\
+	"..\include\qmessagebox.h"\
+	"..\include\qmutex.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qsemaphore.h"\
+	"..\include\qsessionmanager.h"\
+	"..\include\qsocketnotifier.h"\
+	"..\include\qstylefactory.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qtextcodec.h"\
+	"..\include\qthread.h"\
+	"..\include\qwaitcondition.h"\
+	"..\include\qwidgetintdict.h"\
+	"..\include\qwidgetlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qeventloop_p.h"\
+	".\kernel\qfontdata_p.h"\
+	".\kernel\qinputcontext_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qapplication_win.cpp : \
+	"..\include\private\qapplication_p.h"\
+	"..\include\private\qcom_p.h"\
+	"..\include\private\qcriticalsection_p.h"\
+	"..\include\private\qinputcontext_p.h"\
+	"..\include\private\qinternal_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qclipboard.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qintdict.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qmutex.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qpixmapcache.h"\
+	"..\include\qsemaphore.h"\
+	"..\include\qsessionmanager.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qthread.h"\
+	"..\include\qwaitcondition.h"\
+	"..\include\qwhatsthis.h"\
+	"..\include\qwidgetintdict.h"\
+	"..\include\qwidgetlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qasyncimageio.cpp : \
+	"..\include\qasyncimageio.h"\
+	"..\include\qgif.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qasyncio.cpp : \
+	"..\include\qasyncio.h"\
+	"..\include\qsignal.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+codecs\qbig5codec.cpp : \
+	"..\include\qbig5codec.h"\
+	"..\include\qtextcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qbitarray.cpp : \
+	"..\include\qbitarray.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qbitmap.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qbuffer.cpp : \
+	"..\include\qbuffer.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qbutton.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccel.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qbutton.h"\
+	"..\include\qbuttongroup.h"\
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qpixmapcache.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qradiobutton.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qinternal_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qbuttongroup.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qbuttongroup.h"\
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qradiobutton.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+canvas\qcanvas.cpp : \
+	"..\include\qcanvas.h"\
+	"..\include\qframe.h"\
+	"..\include\qpolygonscanner.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qcheckbox.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qcheckbox.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qpixmapcache.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qclipboard.cpp : \
+	"..\include\qclipboard.h"\
+	"..\include\qdragobject.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qclipboard_win.cpp : \
+	"..\include\qclipboard.h"\
+	"..\include\qeventloop.h"\
+	"..\include\qsocketnotifier.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qcolor.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qcolor_p.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qcolor_win.cpp : \
+	"..\include\private\qcolor_p.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+dialogs\qcolordialog.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qcolordialog.h"\
+	"..\include\qdialog.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qgridview.h"\
+	"..\include\qgvector.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qlayout.h"\
+	"..\include\qlineedit.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qregexp.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsettings.h"\
+	"..\include\qsignal.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvalidator.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qcolordialog.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qcombobox.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qcombobox.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlineedit.h"\
+	"..\include\qlistbox.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignal.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qeffects_p.h"\
+	
+
+tools\qcomlibrary.cpp : \
+	"..\include\qcleanuphandler.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qmutex.h"\
+	"..\include\qsettings.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\tools\qcom_p.h"\
+	".\tools\qcomlibrary_p.h"\
+	".\tools\qmutexpool_p.h"\
+	
+
+styles\qcommonstyle.cpp : \
+	"..\include\private\qdialogbuttons_p.h"\
+	"..\include\qbutton.h"\
+	"..\include\qcheckbox.h"\
+	"..\include\qcommonstyle.h"\
+	"..\include\qdockarea.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qheader.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qlayout.h"\
+	"..\include\qlistview.h"\
+	"..\include\qmenubar.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qprogressbar.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qradiobutton.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignal.h"\
+	"..\include\qslider.h"\
+	"..\include\qspinbox.h"\
+	"..\include\qtabbar.h"\
+	"..\include\qtoolbar.h"\
+	"..\include\qtoolbox.h"\
+	"..\include\qtoolbutton.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qtitlebar_p.h"\
+	
+
+tools\qcomponentfactory.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\private\qcomlibrary_p.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qsettings.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\tools\qcom_p.h"\
+	".\tools\qcomponentfactory_p.h"\
+	
+
+tools\qconfig.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qconnection.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qcriticalsection_p.cpp : \
+	"..\include\private\qcriticalsection_p.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qcstring.cpp : \
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\qmutex.h"\
+	"..\include\qregexp.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qcursor.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qcursor_win.cpp : \
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qdatabrowser.cpp : \
+	"..\include\qdatabrowser.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqlcursor.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlform.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qsqlresult.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\sql\qsqlmanager_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qdatastream.cpp : \
+	"..\include\qbuffer.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qdatatable.cpp : \
+	"..\include\qdatatable.h"\
+	"..\include\qeditorfactory.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qgvector.h"\
+	"..\include\qheader.h"\
+	"..\include\qiconset.h"\
+	"..\include\qintdict.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignal.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqlcursor.h"\
+	"..\include\qsqldriver.h"\
+	"..\include\qsqleditorfactory.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlpropertymap.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qtable.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\sql\qsqlmanager_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qdataview.cpp : \
+	"..\include\qdataview.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqlcursor.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\sql\qsqlmanager_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qdatetime.cpp : \
+	"..\include\qregexp.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qdatetimeedit.cpp : \
+	"..\include\qdatetimeedit.h"\
+	"..\include\qdict.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qintdict.h"\
+	"..\include\qlayout.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qvaluestack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qinternal_p.h"\
+	".\kernel\qrichtext_p.h"\
+	".\tmp\moc\release_mt_shared\qdatetimeedit.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qdeepcopy.cpp : \
+	"..\include\qdeepcopy.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qdesktopwidget_win.cpp : \
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qdial.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qdial.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qrangecontrol.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+dialogs\qdialog.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qbutton.h"\
+	"..\include\qdialog.h"\
+	"..\include\qfocusdata.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qsignal.h"\
+	"..\include\qsizegrip.h"\
+	"..\include\qvariant.h"\
+	"..\include\qwhatsthis.h"\
+	"..\include\qwidgetlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qdialogbuttons.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qdialog.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qdialogbuttons_p.h"\
+	
+
+tools\qdir.cpp : \
+	"..\include\private\qdir_p.h"\
+	"..\include\qdeepcopy.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qregexp.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qdir_win.cpp : \
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qmutex.h"\
+	"..\include\qregexp.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\tools\qdir_p.h"\
+	".\tools\qfiledefs_p.h"\
+	
+
+kernel\qdnd_win.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qbuffer.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+network\qdns.cpp : \
+	"..\include\qcleanuphandler.h"\
+	"..\include\qdict.h"\
+	"..\include\qdns.h"\
+	"..\include\qfile.h"\
+	"..\include\qgvector.h"\
+	"..\include\qhostaddress.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsocketdevice.h"\
+	"..\include\qsocketnotifier.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qdockarea.cpp : \
+	"..\include\qdockarea.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qgvector.h"\
+	"..\include\qlayout.h"\
+	"..\include\qmainwindow.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsplitter.h"\
+	"..\include\qtoolbar.h"\
+	"..\include\qwidgetlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qdockwindow.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qdockarea.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qlayout.h"\
+	"..\include\qmainwindow.h"\
+	"..\include\qtoolbar.h"\
+	"..\include\qtoolbutton.h"\
+	"..\include\qtooltip.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qdockwindow.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qtitlebar_p.h"\
+	".\widgets\qwidgetresizehandler_p.h"\
+	
+
+xml\qdom.cpp : \
+	"..\include\qbuffer.h"\
+	"..\include\qdict.h"\
+	"..\include\qdom.h"\
+	"..\include\qfile.h"\
+	"..\include\qregexp.h"\
+	"..\include\qtextcodec.h"\
+	"..\include\qvaluevector.h"\
+	"..\include\qxml.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qdragobject.cpp : \
+	"..\include\qbuffer.h"\
+	"..\include\qdir.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qgif.h"\
+	"..\include\qregexp.h"\
+	"..\include\qtextcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qdrawutil.cpp : \
+	"..\include\qdrawutil.h"\
+	"..\include\qpixmapcache.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qdropsite.cpp : \
+	"..\include\qdropsite.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qeditorfactory.cpp : \
+	"..\include\qcleanuphandler.h"\
+	"..\include\qcombobox.h"\
+	"..\include\qdatetimeedit.h"\
+	"..\include\qeditorfactory.h"\
+	"..\include\qframe.h"\
+	"..\include\qlabel.h"\
+	"..\include\qlineedit.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qspinbox.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qeffects.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qeffects.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qeffects_p.h"\
+	
+
+dialogs\qerrormessage.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qcheckbox.h"\
+	"..\include\qdialog.h"\
+	"..\include\qdict.h"\
+	"..\include\qerrormessage.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qlayout.h"\
+	"..\include\qmessagebox.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qtextedit.h"\
+	"..\include\qtextview.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+codecs\qeucjpcodec.cpp : \
+	"..\include\qeucjpcodec.h"\
+	"..\include\qjpunicode.h"\
+	"..\include\qtextcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+codecs\qeuckrcodec.cpp : \
+	"..\include\qeuckrcodec.h"\
+	"..\include\qtextcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qevent.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qeventloop.cpp : \
+	"..\include\qeventloop.h"\
+	"..\include\qsocketnotifier.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qeventloop_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qeventloop_win.cpp : \
+	"..\include\private\qinputcontext_p.h"\
+	"..\include\qeventloop.h"\
+	"..\include\qgvector.h"\
+	"..\include\qintdict.h"\
+	"..\include\qmutex.h"\
+	"..\include\qptrqueue.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsocketnotifier.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qeventloop_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qfile.cpp : \
+	"..\include\qfile.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qfile_win.cpp : \
+	"..\include\qfile.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\tools\qfiledefs_p.h"\
+	
+
+dialogs\qfiledialog.cpp : \
+	"..\include\private\qapplication_p.h"\
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\qbutton.h"\
+	"..\include\qbuttongroup.h"\
+	"..\include\qcheckbox.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qcombobox.h"\
+	"..\include\qdialog.h"\
+	"..\include\qdict.h"\
+	"..\include\qdir.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qfile.h"\
+	"..\include\qfiledialog.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qgvector.h"\
+	"..\include\qhbox.h"\
+	"..\include\qheader.h"\
+	"..\include\qiconset.h"\
+	"..\include\qintdict.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qlayout.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qlineedit.h"\
+	"..\include\qlistbox.h"\
+	"..\include\qlistview.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qmessagebox.h"\
+	"..\include\qmutex.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qprogressbar.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qregexp.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsemimodal.h"\
+	"..\include\qsignal.h"\
+	"..\include\qsplitter.h"\
+	"..\include\qtoolbutton.h"\
+	"..\include\qtooltip.h"\
+	"..\include\qurl.h"\
+	"..\include\qurlinfo.h"\
+	"..\include\qurloperator.h"\
+	"..\include\qvariant.h"\
+	"..\include\qvbox.h"\
+	"..\include\qwidgetstack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qfiledialog.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+dialogs\qfiledialog_win.cpp : \
+	"..\include\private\qapplication_p.h"\
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\qbuffer.h"\
+	"..\include\qdialog.h"\
+	"..\include\qdict.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfiledialog.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qmutex.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qregexp.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qurl.h"\
+	"..\include\qurlinfo.h"\
+	"..\include\qurloperator.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qfileinfo.cpp : \
+	"..\include\qdeepcopy.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\tools\qfiledefs_p.h"\
+	
+
+tools\qfileinfo_win.cpp : \
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qmutex.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\tools\qfiledefs_p.h"\
+	
+
+kernel\qfocusdata.cpp : \
+	"..\include\qfocusdata.h"\
+	"..\include\qwidgetlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qfont.cpp : \
+	"..\include\private\qfontdata_p.h"\
+	"..\include\private\qunicodetables_p.h"\
+	"..\include\qcache.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qdict.h"\
+	"..\include\qfontdatabase.h"\
+	"..\include\qgcache.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qfontdata_p.h"\
+	".\kernel\qfontengine_p.h"\
+	".\kernel\qpainter_p.h"\
+	".\kernel\qtextengine_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qfont_win.cpp : \
+	"..\include\private\qfontdata_p.h"\
+	"..\include\private\qunicodetables_p.h"\
+	"..\include\qcache.h"\
+	"..\include\qdict.h"\
+	"..\include\qfontdatabase.h"\
+	"..\include\qgcache.h"\
+	"..\include\qpaintdevicemetrics.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\kernel\qfontdata_p.h"\
+	".\kernel\qfontengine_p.h"\
+	".\kernel\qtextengine_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qfontdatabase.cpp : \
+	"..\include\private\qfontdata_p.h"\
+	"..\include\private\qunicodetables_p.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qfontdatabase.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\kernel\qfontdata_p.h"\
+	".\kernel\qfontdatabase_win.cpp"\
+	".\kernel\qfontengine_p.h"\
+	".\kernel\qtextengine_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+dialogs\qfontdialog.cpp : \
+	"..\include\private\qfontdata_p.h"\
+	"..\include\qbutton.h"\
+	"..\include\qcheckbox.h"\
+	"..\include\qcombobox.h"\
+	"..\include\qdialog.h"\
+	"..\include\qfontdatabase.h"\
+	"..\include\qfontdialog.h"\
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qhgroupbox.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qlayout.h"\
+	"..\include\qlineedit.h"\
+	"..\include\qlistbox.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qregexp.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qvalidator.h"\
+	"..\include\qvgroupbox.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qfontengine_win.cpp : \
+	"..\include\private\qfontdata_p.h"\
+	"..\include\private\qunicodetables_p.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\kernel\qfontengine_p.h"\
+	".\kernel\qtextengine_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qframe.cpp : \
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+network\qftp.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qftp.h"\
+	"..\include\qgvector.h"\
+	"..\include\qhostaddress.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qregexp.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qsocket.h"\
+	"..\include\qsocketdevice.h"\
+	"..\include\qtextcodec.h"\
+	"..\include\qurl.h"\
+	"..\include\qurlinfo.h"\
+	"..\include\qurloperator.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qftp.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qgarray.cpp : \
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\qmutex.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+codecs\qgb18030codec.cpp : \
+	"..\include\qgb18030codec.h"\
+	"..\include\qtextcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qgcache.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qgcache.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qgdict.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+opengl\qgl.cpp : \
+	"..\include\qcleanuphandler.h"\
+	"..\include\qgl.h"\
+	"..\include\qglcolormap.h"\
+	"..\include\qpaintdevicemetrics.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+opengl\qgl_win.cpp : \
+	"..\include\qgl.h"\
+	"..\include\qglcolormap.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+opengl\qglcolormap.cpp : \
+	"..\include\qglcolormap.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qglist.cpp : \
+	"..\include\qgvector.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qglobal.cpp : \
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qgplugin.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qgplugin.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qgpluginmanager.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qlibrary.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\tools\qcom_p.h"\
+	".\tools\qcomlibrary_p.h"\
+	".\tools\qgpluginmanager_p.h"\
+	
+
+widgets\qgrid.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qgrid.h"\
+	"..\include\qlayout.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qgridview.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qgridview.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qgroupbox.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccel.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qbutton.h"\
+	"..\include\qcheckbox.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qfocusdata.h"\
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qradiobutton.h"\
+	"..\include\qwidgetlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qguardedptr.cpp : \
+	"..\include\qguardedptr.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qgvector.cpp : \
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\qgvector.h"\
+	"..\include\qmutex.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qhbox.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qhbox.h"\
+	"..\include\qlayout.h"\
+	"..\include\qobjectlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qhbuttongroup.cpp : \
+	"..\include\qbuttongroup.h"\
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qhbuttongroup.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qheader.cpp : \
+	"..\include\qbitarray.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qgvector.h"\
+	"..\include\qheader.h"\
+	"..\include\qiconset.h"\
+	"..\include\qptrvector.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qhgroupbox.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qhgroupbox.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+network\qhostaddress.cpp : \
+	"..\include\qhostaddress.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+network\qhttp.cpp : \
+	"..\include\private\qinternal_p.h"\
+	"..\include\qbuffer.h"\
+	"..\include\qdict.h"\
+	"..\include\qhostaddress.h"\
+	"..\include\qhttp.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qsocket.h"\
+	"..\include\qurl.h"\
+	"..\include\qurlinfo.h"\
+	"..\include\qurloperator.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qiconset.cpp : \
+	"..\include\qcleanuphandler.h"\
+	"..\include\qiconset.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+iconview\qiconview.cpp : \
+	"..\include\private\qrichtext_p.h"\
+	"..\include\qbuffer.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qdict.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qhbox.h"\
+	"..\include\qiconview.h"\
+	"..\include\qintdict.h"\
+	"..\include\qlayout.h"\
+	"..\include\qpicture.h"\
+	"..\include\qpixmapcache.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qtextedit.h"\
+	"..\include\qtooltip.h"\
+	"..\include\qvaluestack.h"\
+	"..\include\qvbox.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qimage.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\private\qgpluginmanager_p.h"\
+	"..\include\private\qpluginmanager_p.h"\
+	"..\include\qasyncimageio.h"\
+	"..\include\qbuffer.h"\
+	"..\include\qdict.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qfile.h"\
+	"..\include\qjpegio.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qmngio.h"\
+	"..\include\qpngio.h"\
+	"..\include\qregexp.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qimageformatinterface_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qimageformatplugin.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qgplugin.h"\
+	"..\include\qimageformatplugin.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qimageformatinterface_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qinputcontext_win.cpp : \
+	"..\include\qlibrary.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qinputcontext_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+dialogs\qinputdialog.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qcombobox.h"\
+	"..\include\qdialog.h"\
+	"..\include\qframe.h"\
+	"..\include\qiconset.h"\
+	"..\include\qinputdialog.h"\
+	"..\include\qintdict.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qlayout.h"\
+	"..\include\qlineedit.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qregexp.h"\
+	"..\include\qspinbox.h"\
+	"..\include\qvalidator.h"\
+	"..\include\qwidgetstack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qinternal.cpp : \
+	"..\include\private\qinternal_p.h"\
+	"..\include\qcleanuphandler.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qiodevice.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+codecs\qisciicodec.cpp : \
+	"..\include\qtextcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\codecs\qisciicodec_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+codecs\qjiscodec.cpp : \
+	"..\include\qjiscodec.h"\
+	"..\include\qjpunicode.h"\
+	"..\include\qtextcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qjpegio.cpp : \
+	"..\include\qjpegio.h"\
+	".\3rdparty\libjpeg\jconfig.h"\
+	".\3rdparty\libjpeg\jmorecfg.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libjpeg\jpeglib.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+codecs\qjpunicode.cpp : \
+	"..\include\qjpunicode.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qkeysequence.cpp : \
+	"..\include\qaccel.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qregexp.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qlabel.cpp : \
+	"..\include\qaccel.h"\
+	"..\include\qbuffer.h"\
+	"..\include\qdict.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qmovie.h"\
+	"..\include\qpicture.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsimplerichtext.h"\
+	"..\include\qstylesheet.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qlayout.cpp : \
+	"..\include\qabstractlayout.h"\
+	"..\include\qlayout.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qlayoutengine_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qlayoutengine.cpp : \
+	"..\include\private\qlayoutengine_p.h"\
+	"..\include\qabstractlayout.h"\
+	"..\include\qlayout.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qlcdnumber.cpp : \
+	"..\include\qbitarray.h"\
+	"..\include\qframe.h"\
+	"..\include\qlcdnumber.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qlibrary.cpp : \
+	"..\include\private\qlibrary_p.h"\
+	"..\include\qfile.h"\
+	"..\include\qlibrary.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qlibrary_win.cpp : \
+	"..\include\private\qlibrary_p.h"\
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\qfile.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qmutex.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qlineedit.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\private\qtextlayout_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qclipboard.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlineedit.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qregexp.h"\
+	"..\include\qsignal.h"\
+	"..\include\qvalidator.h"\
+	"..\include\qvaluevector.h"\
+	"..\include\qvariant.h"\
+	"..\include\qwhatsthis.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qinternal_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qlistbox.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlistbox.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignal.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qlistview.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qgvector.h"\
+	"..\include\qhbox.h"\
+	"..\include\qheader.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlineedit.h"\
+	"..\include\qlistview.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpixmapcache.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qptrstack.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignal.h"\
+	"..\include\qtooltip.h"\
+	"..\include\qvariant.h"\
+	"..\include\qvbox.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qinternal_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qlocale.cpp : \
+	"..\include\qlocale.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\tools\qlocale_p.h"\
+	
+
+kernel\qlocalfs.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qlocalfs.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qurl.h"\
+	"..\include\qurlinfo.h"\
+	"..\include\qurloperator.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qmainwindow.cpp : \
+	"..\include\qdockarea.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qintdict.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qmainwindow.h"\
+	"..\include\qmenubar.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignal.h"\
+	"..\include\qstatusbar.h"\
+	"..\include\qtoolbar.h"\
+	"..\include\qtooltip.h"\
+	"..\include\qvariant.h"\
+	"..\include\qwhatsthis.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qmainwindow.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qmap.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qmenubar.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccel.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qmainwindow.h"\
+	"..\include\qmenubar.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qsignal.h"\
+	"..\include\qtoolbar.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qinternal_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qmenudata.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qmenubar.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qsignal.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+dialogs\qmessagebox.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccel.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qbutton.h"\
+	"..\include\qdialog.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qmessagebox.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qpushbutton.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qmessagebox.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qmetaobject.cpp : \
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\qmutex.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qmime.cpp : \
+	"..\include\qcleanuphandler.h"\
+	"..\include\qclipboard.h"\
+	"..\include\qdir.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qmime_win.cpp : \
+	"..\include\qbuffer.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qregexp.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qtextcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qmngio.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qmovie.cpp : \
+	"..\include\qasyncimageio.h"\
+	"..\include\qasyncio.h"\
+	"..\include\qbuffer.h"\
+	"..\include\qfile.h"\
+	"..\include\qgvector.h"\
+	"..\include\qmovie.h"\
+	"..\include\qpixmapcache.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignal.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qmovie.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qmultilineedit.cpp : \
+	"..\include\qclipboard.h"\
+	"..\include\qdict.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qiconset.h"\
+	"..\include\qintdict.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qmultilineedit.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qregexp.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignal.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qtextedit.h"\
+	"..\include\qvaluestack.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qrichtext_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qmutex_win.cpp : \
+	"..\include\private\qcriticalsection_p.h"\
+	"..\include\private\qmutex_p.h"\
+	"..\include\qmutex.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qmutexpool.cpp : \
+	"..\include\qmutex.h"\
+	"..\include\qsemaphore.h"\
+	"..\include\qthread.h"\
+	"..\include\qwaitcondition.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\tools\qmutexpool_p.h"\
+	
+
+network\qnetwork.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qftp.h"\
+	"..\include\qhttp.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qurlinfo.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qnetworkprotocol.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qlocalfs.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qptrqueue.h"\
+	"..\include\qurl.h"\
+	"..\include\qurlinfo.h"\
+	"..\include\qurloperator.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qobject.cpp : \
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\qgvector.h"\
+	"..\include\qmutex.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qregexp.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qucomextra_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qobjectcleanuphandler.cpp : \
+	"..\include\qobjectcleanuphandler.h"\
+	"..\include\qobjectlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qole_win.c : \
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+kernel\qpaintdevice_win.cpp : \
+	"..\include\qpaintdevicemetrics.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qpaintdevicemetrics.cpp : \
+	"..\include\qpaintdevicemetrics.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qpainter.cpp : \
+	"..\include\private\qfontdata_p.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qdict.h"\
+	"..\include\qgvector.h"\
+	"..\include\qintdict.h"\
+	"..\include\qlayout.h"\
+	"..\include\qpaintdevicemetrics.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qptrstack.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qregexp.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qvaluestack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qfontengine_p.h"\
+	".\kernel\qpainter_p.h"\
+	".\kernel\qrichtext_p.h"\
+	".\kernel\qtextengine_p.h"\
+	".\kernel\qtextlayout_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qpainter_win.cpp : \
+	"..\include\private\qfontdata_p.h"\
+	"..\include\qpaintdevicemetrics.h"\
+	"..\include\qpixmapcache.h"\
+	"..\include\qprinter.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\kernel\qfontdata_p.h"\
+	".\kernel\qfontengine_p.h"\
+	".\kernel\qtextengine_p.h"\
+	".\kernel\qtextlayout_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qpalette.cpp : \
+	"..\include\qcleanuphandler.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qpicture.cpp : \
+	"..\include\private\qsvgdevice_p.h"\
+	"..\include\qbuffer.h"\
+	"..\include\qdom.h"\
+	"..\include\qfile.h"\
+	"..\include\qpaintdevicemetrics.h"\
+	"..\include\qpicture.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qpixmap.cpp : \
+	"..\include\private\qinternal_p.h"\
+	"..\include\qbuffer.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qfile.h"\
+	"..\include\qobjectlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qpixmap_win.cpp : \
+	"..\include\qpaintdevicemetrics.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qpixmapcache.cpp : \
+	"..\include\qcache.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qgcache.h"\
+	"..\include\qpixmapcache.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qpngio.cpp : \
+	"..\include\qasyncimageio.h"\
+	"..\include\qpngio.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\3rdparty\libpng\png.h"\
+	".\3rdparty\libpng\pngconf.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qpoint.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qpointarray.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qpolygonscanner.cpp : \
+	"..\include\qpolygonscanner.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qpopupmenu.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccel.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qmenubar.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qpixmapcache.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qsignal.h"\
+	"..\include\qvariant.h"\
+	"..\include\qwhatsthis.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qeffects_p.h"\
+	
+
+kernel\qprinter.cpp : \
+	"..\include\qprinter.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qprinter_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qprinter_win.cpp : \
+	"..\include\qlibrary.h"\
+	"..\include\qpaintdevicemetrics.h"\
+	"..\include\qprinter.h"\
+	"..\include\qsettings.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\kernel\qprinter_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qprocess.cpp : \
+	"..\include\private\qinternal_p.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qprocess.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qprocess_win.cpp : \
+	"..\include\private\qinternal_p.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qprocess.h"\
+	"..\include\qptrqueue.h"\
+	"..\include\qregexp.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qprogressbar.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qprogressbar.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qinternal_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+dialogs\qprogressdialog.cpp : \
+	"..\include\qaccel.h"\
+	"..\include\qbutton.h"\
+	"..\include\qdialog.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qprogressbar.h"\
+	"..\include\qprogressdialog.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qsemimodal.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qptrcollection.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qpushbutton.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qbutton.h"\
+	"..\include\qdialog.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qsignal.h"\
+	"..\include\qtoolbar.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qradiobutton.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qbuttongroup.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qpixmapcache.h"\
+	"..\include\qradiobutton.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qrangecontrol.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qrangecontrol.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qrect.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qregexp.cpp : \
+	"..\include\private\qthreadinstance_p.h"\
+	"..\include\qbitarray.h"\
+	"..\include\qcache.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qgcache.h"\
+	"..\include\qgvector.h"\
+	"..\include\qintdict.h"\
+	"..\include\qmutex.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qregexp.h"\
+	"..\include\qthreadstorage.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qregion.cpp : \
+	"..\include\qbuffer.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qregion_win.cpp : \
+	"..\include\qbuffer.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qrichtext.cpp : \
+	"..\include\private\qfontdata_p.h"\
+	"..\include\private\qunicodetables_p.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qdict.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qgvector.h"\
+	"..\include\qintdict.h"\
+	"..\include\qlayout.h"\
+	"..\include\qpaintdevicemetrics.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qptrstack.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qvaluestack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qrichtext_p.h"\
+	".\kernel\qtextengine_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qrichtext_p.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qgvector.h"\
+	"..\include\qintdict.h"\
+	"..\include\qlayout.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qvaluestack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qrichtext_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+codecs\qrtlcodec.cpp : \
+	"..\include\private\qfontdata_p.h"\
+	"..\include\private\qtextengine_p.h"\
+	"..\include\qrtlcodec.h"\
+	"..\include\qtextcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qscriptengine.cpp : \
+	"..\include\private\qfontdata_p.h"\
+	"..\include\private\qunicodetables_p.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qfontengine_p.h"\
+	".\kernel\qscriptengine_p.h"\
+	".\kernel\qscriptengine_win.cpp"\
+	".\kernel\qtextengine_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qscrollbar.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qscrollview.cpp : \
+	"..\include\qfocusdata.h"\
+	"..\include\qframe.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qwidgetlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qscrollview.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qsemaphore.cpp : \
+	"..\include\qmutex.h"\
+	"..\include\qsemaphore.h"\
+	"..\include\qwaitcondition.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+network\qserversocket.cpp : \
+	"..\include\qhostaddress.h"\
+	"..\include\qserversocket.h"\
+	"..\include\qsocketdevice.h"\
+	"..\include\qsocketnotifier.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qsettings.cpp : \
+	"..\include\private\qsettings_p.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qregexp.h"\
+	"..\include\qsettings.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qvaluestack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qsettings_win.cpp : \
+	"..\include\private\qsettings_p.h"\
+	"..\include\qregexp.h"\
+	"..\include\qsettings.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qvaluestack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qsignal.cpp : \
+	"..\include\qguardedptr.h"\
+	"..\include\qsignal.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qsignalmapper.cpp : \
+	"..\include\qptrdict.h"\
+	"..\include\qsignalmapper.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qsimplerichtext.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qgvector.h"\
+	"..\include\qintdict.h"\
+	"..\include\qlayout.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsimplerichtext.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qvaluestack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qrichtext_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qsize.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qsizegrip.cpp : \
+	"..\include\qobjectlist.h"\
+	"..\include\qsizegrip.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+codecs\qsjiscodec.cpp : \
+	"..\include\qjpunicode.h"\
+	"..\include\qsjiscodec.h"\
+	"..\include\qtextcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qslider.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qslider.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+network\qsocket.cpp : \
+	"..\include\private\qinternal_p.h"\
+	"..\include\qdns.h"\
+	"..\include\qhostaddress.h"\
+	"..\include\qsocket.h"\
+	"..\include\qsocketdevice.h"\
+	"..\include\qsocketnotifier.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+network\qsocketdevice.cpp : \
+	"..\include\qhostaddress.h"\
+	"..\include\qsocketdevice.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+network\qsocketdevice_win.cpp : \
+	"..\include\qhostaddress.h"\
+	"..\include\qsocketdevice.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qsocketnotifier.cpp : \
+	"..\include\qeventloop.h"\
+	"..\include\qsocketnotifier.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qsound.cpp : \
+	"..\include\qsound.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qsound_win.cpp : \
+	"..\include\qdeepcopy.h"\
+	"..\include\qfile.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qsound.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\tmp\moc\release_mt_shared\qsound_win.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qspinbox.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qbutton.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlineedit.h"\
+	"..\include\qpixmapcache.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qregexp.h"\
+	"..\include\qspinbox.h"\
+	"..\include\qvalidator.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qspinwidget.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qrangecontrol.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qsplashscreen.cpp : \
+	"..\include\qsplashscreen.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qsplitter.cpp : \
+	"..\include\qabstractlayout.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qlayout.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qsplitter.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qlayoutengine_p.h"\
+	".\tmp\moc\release_mt_shared\qsplitter.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\drivers\odbc\qsql_odbc.cpp : \
+	"..\include\private\qinternal_p.h"\
+	"..\include\private\qsqlextension_p.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqldriver.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qsqlresult.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qvaluevector.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\sql\drivers\odbc\qsql_odbc.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\drivers\cache\qsqlcachedresult.cpp : \
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlresult.h"\
+	"..\include\qvaluevector.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\sql\drivers\cache\qsqlcachedresult.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqlcursor.cpp : \
+	"..\include\qptrdict.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqlcursor.h"\
+	"..\include\qsqldatabase.h"\
+	"..\include\qsqldriver.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qsqlresult.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqldatabase.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\private\qgpluginmanager_p.h"\
+	"..\include\private\qpluginmanager_p.h"\
+	"..\include\private\qsqlextension_p.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qdict.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqldatabase.h"\
+	"..\include\qsqldriver.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qsqlresult.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qvaluevector.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\sql\drivers\odbc\qsql_odbc.h"\
+	".\sql\qsqldriverinterface_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqldriver.cpp : \
+	"..\include\qptrdict.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqldriver.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qvaluevector.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\sql\qsqlextension_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqldriverplugin.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qgplugin.h"\
+	"..\include\qsqldriverplugin.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\sql\qsqldriverinterface_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqleditorfactory.cpp : \
+	"..\include\qcleanuphandler.h"\
+	"..\include\qcombobox.h"\
+	"..\include\qdatetimeedit.h"\
+	"..\include\qeditorfactory.h"\
+	"..\include\qframe.h"\
+	"..\include\qlabel.h"\
+	"..\include\qlineedit.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qspinbox.h"\
+	"..\include\qsqleditorfactory.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqlerror.cpp : \
+	"..\include\qdialog.h"\
+	"..\include\qmessagebox.h"\
+	"..\include\qsqlerror.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqlextension_p.cpp : \
+	"..\include\qsql.h"\
+	"..\include\qvaluevector.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\sql\qsqlextension_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqlfield.cpp : \
+	"..\include\qsqlfield.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqlform.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlform.h"\
+	"..\include\qsqlpropertymap.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqlindex.cpp : \
+	"..\include\qsql.h"\
+	"..\include\qsqlcursor.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqlmanager_p.cpp : \
+	"..\include\qbitarray.h"\
+	"..\include\qdialog.h"\
+	"..\include\qmessagebox.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqlcursor.h"\
+	"..\include\qsqldriver.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlform.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\sql\qsqlmanager_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqlpropertymap.cpp : \
+	"..\include\qcleanuphandler.h"\
+	"..\include\qsqlpropertymap.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqlquery.cpp : \
+	"..\include\private\qsqlextension_p.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qregexp.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqldatabase.h"\
+	"..\include\qsqldriver.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qsqlresult.h"\
+	"..\include\qvaluevector.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqlrecord.cpp : \
+	"..\include\qregexp.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qvaluevector.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqlresult.cpp : \
+	"..\include\private\qsqlextension_p.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlresult.h"\
+	"..\include\qvaluevector.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+sql\qsqlselectcursor.cpp : \
+	"..\include\qptrdict.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqlcursor.h"\
+	"..\include\qsqldriver.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qsqlselectcursor.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qstatusbar.cpp : \
+	"..\include\qdrawutil.h"\
+	"..\include\qlayout.h"\
+	"..\include\qsizegrip.h"\
+	"..\include\qstatusbar.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qstring.cpp : \
+	"..\include\qcleanuphandler.h"\
+	"..\include\qlocale.h"\
+	"..\include\qregexp.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qtextcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\tools\qlocale_p.h"\
+	".\tools\qunicodetables_p.h"\
+	
+
+tools\qstringlist.cpp : \
+	"..\include\qregexp.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qstyle.cpp : \
+	"..\include\qpixmapcache.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+styles\qstylefactory.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\private\qgpluginmanager_p.h"\
+	"..\include\private\qpluginmanager_p.h"\
+	"..\include\qcdestyle.h"\
+	"..\include\qcommonstyle.h"\
+	"..\include\qcompactstyle.h"\
+	"..\include\qdict.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qmotifplusstyle.h"\
+	"..\include\qmotifstyle.h"\
+	"..\include\qplatinumstyle.h"\
+	"..\include\qsgistyle.h"\
+	"..\include\qstylefactory.h"\
+	"..\include\qwindowsstyle.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\styles\qstyleinterface_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+styles\qstyleplugin.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qgplugin.h"\
+	"..\include\qobjectcleanuphandler.h"\
+	"..\include\qstyleplugin.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\styles\qstyleinterface_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qstylesheet.cpp : \
+	"..\include\private\qrichtext_p.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qdict.h"\
+	"..\include\qgvector.h"\
+	"..\include\qintdict.h"\
+	"..\include\qlayout.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qvaluestack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+xml\qsvgdevice.cpp : \
+	"..\include\private\qsvgdevice_p.h"\
+	"..\include\qdom.h"\
+	"..\include\qfile.h"\
+	"..\include\qpaintdevicemetrics.h"\
+	"..\include\qregexp.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qsyntaxhighlighter.cpp : \
+	"..\include\private\qrichtext_p.h"\
+	"..\include\private\qsyntaxhighlighter_p.h"\
+	"..\include\qdict.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qintdict.h"\
+	"..\include\qlayout.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qsyntaxhighlighter.h"\
+	"..\include\qtextedit.h"\
+	"..\include\qvaluestack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qrichtext_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qtabbar.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccel.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qbutton.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qtabbar.h"\
+	"..\include\qtoolbutton.h"\
+	"..\include\qtooltip.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qinternal_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+dialogs\qtabdialog.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qdialog.h"\
+	"..\include\qframe.h"\
+	"..\include\qiconset.h"\
+	"..\include\qintdict.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qtabbar.h"\
+	"..\include\qtabdialog.h"\
+	"..\include\qtabwidget.h"\
+	"..\include\qwidgetstack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+table\qtable.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qcheckbox.h"\
+	"..\include\qcombobox.h"\
+	"..\include\qdatatable.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qeditorfactory.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qgvector.h"\
+	"..\include\qheader.h"\
+	"..\include\qiconset.h"\
+	"..\include\qintdict.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlineedit.h"\
+	"..\include\qlistbox.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qregexp.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqlcursor.h"\
+	"..\include\qsqleditorfactory.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qtable.h"\
+	"..\include\qvalidator.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qtable.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qtabwidget.cpp : \
+	"..\include\qaccel.h"\
+	"..\include\qbutton.h"\
+	"..\include\qframe.h"\
+	"..\include\qiconset.h"\
+	"..\include\qintdict.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qtabbar.h"\
+	"..\include\qtabwidget.h"\
+	"..\include\qtoolbutton.h"\
+	"..\include\qwidgetstack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qtextbrowser.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qfile.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qintdict.h"\
+	"..\include\qlayout.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsimplerichtext.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qtextbrowser.h"\
+	"..\include\qtextedit.h"\
+	"..\include\qurl.h"\
+	"..\include\qvaluestack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qrichtext_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+codecs\qtextcodec.cpp : \
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\qbig5codec.h"\
+	"..\include\qeucjpcodec.h"\
+	"..\include\qeuckrcodec.h"\
+	"..\include\qfile.h"\
+	"..\include\qgb18030codec.h"\
+	"..\include\qjiscodec.h"\
+	"..\include\qjpunicode.h"\
+	"..\include\qmutex.h"\
+	"..\include\qrtlcodec.h"\
+	"..\include\qsjiscodec.h"\
+	"..\include\qtextcodec.h"\
+	"..\include\qtextcodecfactory.h"\
+	"..\include\qtsciicodec.h"\
+	"..\include\qutfcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\codecs\qisciicodec_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\tools\qlocale_p.h"\
+	
+
+codecs\qtextcodecfactory.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\private\qgpluginmanager_p.h"\
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\private\qpluginmanager_p.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qdict.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qmutex.h"\
+	"..\include\qtextcodecfactory.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\codecs\qtextcodecinterface_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+codecs\qtextcodecplugin.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qgplugin.h"\
+	"..\include\qtextcodecplugin.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\codecs\qtextcodecinterface_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qtextedit.cpp : \
+	"..\include\private\qrichtext_p.h"\
+	"..\include\private\qsyntaxhighlighter_p.h"\
+	"..\include\qclipboard.h"\
+	"..\include\qcolordialog.h"\
+	"..\include\qdialog.h"\
+	"..\include\qdict.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qfontdialog.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qgvector.h"\
+	"..\include\qhbox.h"\
+	"..\include\qiconset.h"\
+	"..\include\qintdict.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qlistbox.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qptrstack.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qregexp.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignal.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qsyntaxhighlighter.h"\
+	"..\include\qtextbrowser.h"\
+	"..\include\qtextedit.h"\
+	"..\include\qurl.h"\
+	"..\include\qvaluestack.h"\
+	"..\include\qvariant.h"\
+	"..\include\qvbox.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qrichtext_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qtextengine.cpp : \
+	"..\include\private\qfontdata_p.h"\
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\private\qunicodetables_p.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qmutex.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qfontdata_p.h"\
+	".\kernel\qfontengine_p.h"\
+	".\kernel\qscriptengine_p.h"\
+	".\kernel\qtextengine_p.h"\
+	".\kernel\qtextengine_win.cpp"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qtextlayout.cpp : \
+	"..\include\private\qfontdata_p.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qtextengine_p.h"\
+	".\kernel\qtextlayout_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qtextstream.cpp : \
+	"..\include\qbuffer.h"\
+	"..\include\qfile.h"\
+	"..\include\qregexp.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qtextcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qtextview.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qtextedit.h"\
+	"..\include\qtextview.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qthread.cpp : \
+	"..\include\private\qthreadinstance_p.h"\
+	"..\include\qmutex.h"\
+	"..\include\qsemaphore.h"\
+	"..\include\qthread.h"\
+	"..\include\qwaitcondition.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qthread_win.cpp : \
+	"..\include\private\qcriticalsection_p.h"\
+	"..\include\private\qmutexpool_p.h"\
+	"..\include\private\qthreadinstance_p.h"\
+	"..\include\qmutex.h"\
+	"..\include\qsemaphore.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qthread.h"\
+	"..\include\qthreadstorage.h"\
+	"..\include\qwaitcondition.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qthreadstorage_win.cpp : \
+	"..\include\private\qcriticalsection_p.h"\
+	"..\include\private\qthreadinstance_p.h"\
+	"..\include\qmutex.h"\
+	"..\include\qthreadstorage.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qtimer.cpp : \
+	"..\include\qobjectlist.h"\
+	"..\include\qsignal.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qtitlebar.cpp : \
+	"..\include\private\qapplication_p.h"\
+	"..\include\private\qinternal_p.h"\
+	"..\include\qbutton.h"\
+	"..\include\qframe.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qtooltip.h"\
+	"..\include\qwidgetlist.h"\
+	"..\include\qworkspace.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qtitlebar_p.h"\
+	
+
+widgets\qtoolbar.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qcombobox.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qmainwindow.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qsignal.h"\
+	"..\include\qtoolbar.h"\
+	"..\include\qtoolbutton.h"\
+	"..\include\qtooltip.h"\
+	"..\include\qvariant.h"\
+	"..\include\qwidgetlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qtoolbar.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qtoolbox.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qeventloop.h"\
+	"..\include\qframe.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsocketnotifier.h"\
+	"..\include\qtoolbox.h"\
+	"..\include\qtooltip.h"\
+	"..\include\qwidgetlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qtoolbutton.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qmainwindow.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qsignal.h"\
+	"..\include\qtoolbar.h"\
+	"..\include\qtoolbutton.h"\
+	"..\include\qtooltip.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qtooltip.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qlabel.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qtooltip.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qtooltip.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qeffects_p.h"\
+	
+
+kernel\qtranslator.cpp : \
+	"..\include\qbuffer.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qintdict.h"\
+	"..\include\qwidgetlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+codecs\qtsciicodec.cpp : \
+	"..\include\qtextcodec.h"\
+	"..\include\qtsciicodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qucom.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\tools\qucom_p.h"\
+	
+
+kernel\qucomextra.cpp : \
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qucomextra_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qunicodetables.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\tools\qunicodetables_p.h"\
+	
+
+kernel\qurl.cpp : \
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qurl.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qurlinfo.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qurl.h"\
+	"..\include\qurlinfo.h"\
+	"..\include\qurloperator.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qurloperator.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qurl.h"\
+	"..\include\qurlinfo.h"\
+	"..\include\qurloperator.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+codecs\qutfcodec.cpp : \
+	"..\include\qtextcodec.h"\
+	"..\include\qutfcodec.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\quuid.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qvalidator.cpp : \
+	"..\include\qregexp.h"\
+	"..\include\qvalidator.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qvariant.cpp : \
+	"..\include\qbitarray.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qvbox.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qhbox.h"\
+	"..\include\qvbox.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qvbuttongroup.cpp : \
+	"..\include\qbuttongroup.h"\
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qvbuttongroup.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qvgroupbox.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qvgroupbox.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tools\qwaitcondition_win.cpp : \
+	"..\include\private\qcriticalsection_p.h"\
+	"..\include\private\qmutex_p.h"\
+	"..\include\qmutex.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qwaitcondition.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qwhatsthis.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qbutton.h"\
+	"..\include\qdict.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qgvector.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qpaintdevicemetrics.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsimplerichtext.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qtoolbutton.h"\
+	"..\include\qtooltip.h"\
+	"..\include\qwhatsthis.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qwhatsthis.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qwidget.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qaccessible.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qfocusdata.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qintdict.h"\
+	"..\include\qlayout.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qstylefactory.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qwidgetintdict.h"\
+	"..\include\qwidgetlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\kernel\qfontdata_p.h"\
+	".\kernel\qinputcontext_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qwidget_win.cpp : \
+	"..\include\private\qapplication_p.h"\
+	"..\include\private\qinputcontext_p.h"\
+	"..\include\qaccel.h"\
+	"..\include\qfocusdata.h"\
+	"..\include\qintdict.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qlibrary.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qpaintdevicemetrics.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qwidgetintdict.h"\
+	"..\include\qwidgetlist.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qapplication_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+widgets\qwidgetplugin.cpp : \
+	"..\include\private\qcom_p.h"\
+	"..\include\qgplugin.h"\
+	"..\include\qiconset.h"\
+	"..\include\qobjectcleanuphandler.h"\
+	"..\include\qwidgetplugin.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qwidgetinterface_p.h"\
+	
+
+widgets\qwidgetresizehandler.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qsizegrip.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qwidgetresizehandler_p.h"\
+	
+
+widgets\qwidgetstack.cpp : \
+	"..\include\qabstractlayout.h"\
+	"..\include\qbutton.h"\
+	"..\include\qbuttongroup.h"\
+	"..\include\qfocusdata.h"\
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qintdict.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlayout.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qwidgetlist.h"\
+	"..\include\qwidgetstack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qlayoutengine_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+styles\qwindowsstyle.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qcleanuphandler.h"\
+	"..\include\qcombobox.h"\
+	"..\include\qcommonstyle.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qdrawutil.h"\
+	"..\include\qframe.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qlistbox.h"\
+	"..\include\qlistview.h"\
+	"..\include\qmenubar.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignal.h"\
+	"..\include\qslider.h"\
+	"..\include\qt_windows.h"\
+	"..\include\qtabbar.h"\
+	"..\include\qtabwidget.h"\
+	"..\include\qvariant.h"\
+	"..\include\qwindowsstyle.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+dialogs\qwizard.cpp : \
+	"..\include\qaccel.h"\
+	"..\include\qbutton.h"\
+	"..\include\qdialog.h"\
+	"..\include\qframe.h"\
+	"..\include\qiconset.h"\
+	"..\include\qintdict.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qlayout.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qwidgetstack.h"\
+	"..\include\qwizard.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+kernel\qwmatrix.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+workspace\qworkspace.cpp : \
+	"..\include\qaccel.h"\
+	"..\include\qbutton.h"\
+	"..\include\qdockarea.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qfocusdata.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qgvector.h"\
+	"..\include\qhbox.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qlayout.h"\
+	"..\include\qmainwindow.h"\
+	"..\include\qmenubar.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qobjectlist.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qsignal.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qstatusbar.h"\
+	"..\include\qtoolbar.h"\
+	"..\include\qtoolbutton.h"\
+	"..\include\qtooltip.h"\
+	"..\include\qvariant.h"\
+	"..\include\qvbox.h"\
+	"..\include\qwidgetlist.h"\
+	"..\include\qworkspace.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\moc\release_mt_shared\qworkspace.moc"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qtitlebar_p.h"\
+	".\widgets\qwidgetresizehandler_p.h"\
+	
+
+xml\qxml.cpp : \
+	"..\include\qbuffer.h"\
+	"..\include\qfile.h"\
+	"..\include\qptrstack.h"\
+	"..\include\qregexp.h"\
+	"..\include\qtextcodec.h"\
+	"..\include\qvaluestack.h"\
+	"..\include\qvaluevector.h"\
+	"..\include\qxml.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+3rdparty\zlib\trees.c : \
+	".\3rdparty\zlib\deflate.h"\
+	".\3rdparty\zlib\trees.h"\
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	".\3rdparty\zlib\zutil.h"\
+	
+
+3rdparty\zlib\uncompr.c : \
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	
+
+3rdparty\zlib\zutil.c : \
+	".\3rdparty\zlib\zconf.h"\
+	".\3rdparty\zlib\zlib.h"\
+	".\3rdparty\zlib\zutil.h"\
+	
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+tmp\moc\release_mt_shared\moc_qaccel.cpp : \
+	"..\include\qaccel.h"\
+	"..\include\qkeysequence.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qaction.cpp : \
+	"..\include\qaction.h"\
+	"..\include\qgvector.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qapplication.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qasyncio.cpp : \
+	"..\include\qasyncio.h"\
+	"..\include\qsignal.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qbutton.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qbuttongroup.cpp : \
+	"..\include\qbuttongroup.h"\
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qcanvas.cpp : \
+	"..\include\qcanvas.h"\
+	"..\include\qframe.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qcheckbox.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qcheckbox.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qclipboard.cpp : \
+	"..\include\qclipboard.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qcolordialog.cpp : \
+	"..\include\qcolordialog.h"\
+	"..\include\qdialog.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qcombobox.cpp : \
+	"..\include\qcombobox.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qcommonstyle.cpp : \
+	"..\include\qcommonstyle.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qdatabrowser.cpp : \
+	"..\include\qdatabrowser.h"\
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqlcursor.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qdatatable.cpp : \
+	"..\include\qdatatable.h"\
+	"..\include\qeditorfactory.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qgvector.h"\
+	"..\include\qheader.h"\
+	"..\include\qiconset.h"\
+	"..\include\qintdict.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqlcursor.h"\
+	"..\include\qsqleditorfactory.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qtable.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qdataview.cpp : \
+	"..\include\qdataview.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qdatetimeedit.cpp : \
+	"..\include\qdatetimeedit.h"\
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qdesktopwidget.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qdial.cpp : \
+	"..\include\qdial.h"\
+	"..\include\qframe.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qdialog.cpp : \
+	"..\include\qdialog.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qdialogbuttons_p.cpp : \
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qdialogbuttons_p.h"\
+	
+
+tmp\moc\release_mt_shared\moc_qdns.cpp : \
+	"..\include\qdns.h"\
+	"..\include\qhostaddress.h"\
+	"..\include\qsocketnotifier.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qdockarea.cpp : \
+	"..\include\qdockarea.h"\
+	"..\include\qdockwindow.h"\
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qlayout.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qdockwindow.cpp : \
+	"..\include\qdockwindow.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qdragobject.cpp : \
+	"..\include\qdragobject.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qerrormessage.cpp : \
+	"..\include\qdialog.h"\
+	"..\include\qerrormessage.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qeventloop.cpp : \
+	"..\include\qeventloop.h"\
+	"..\include\qsocketnotifier.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qfiledialog.cpp : \
+	"..\include\qdialog.h"\
+	"..\include\qdict.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfiledialog.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qgvector.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qurl.h"\
+	"..\include\qurlinfo.h"\
+	"..\include\qurloperator.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qfontdialog.cpp : \
+	"..\include\qdialog.h"\
+	"..\include\qfontdialog.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qframe.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qftp.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qftp.h"\
+	"..\include\qgvector.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qurlinfo.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qgl.cpp : \
+	"..\include\qgl.h"\
+	"..\include\qglcolormap.h"\
+	"..\include\qt_windows.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qgplugin.cpp : \
+	"..\include\qgplugin.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qgrid.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qgrid.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qgridview.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qgridview.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qgroupbox.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qguardedptr.cpp : \
+	"..\include\qguardedptr.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qhbox.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qhbox.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qhbuttongroup.cpp : \
+	"..\include\qbuttongroup.h"\
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qhbuttongroup.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qheader.cpp : \
+	"..\include\qgvector.h"\
+	"..\include\qheader.h"\
+	"..\include\qiconset.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qhgroupbox.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qhgroupbox.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qhttp.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qgvector.h"\
+	"..\include\qhttp.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qurlinfo.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qiconview.cpp : \
+	"..\include\qbuffer.h"\
+	"..\include\qdragobject.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qiconview.h"\
+	"..\include\qpicture.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qimageformatplugin.cpp : \
+	"..\include\qgplugin.h"\
+	"..\include\qimageformatplugin.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qinputdialog.cpp : \
+	"..\include\qdialog.h"\
+	"..\include\qframe.h"\
+	"..\include\qinputdialog.h"\
+	"..\include\qlineedit.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qlabel.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qlabel.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qlayout.cpp : \
+	"..\include\qlayout.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qlcdnumber.cpp : \
+	"..\include\qbitarray.h"\
+	"..\include\qframe.h"\
+	"..\include\qlcdnumber.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qlineedit.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qlineedit.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qlistbox.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qlistbox.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qlistview.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qlistview.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qlocalfs.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qlocalfs.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qurlinfo.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qmainwindow.cpp : \
+	"..\include\qdockwindow.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qmainwindow.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qtoolbar.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qmenubar.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qmenubar.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qsignal.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qmessagebox.cpp : \
+	"..\include\qdialog.h"\
+	"..\include\qmessagebox.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qmultilineedit.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qmultilineedit.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qtextedit.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qnetworkprotocol.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qgvector.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qurlinfo.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qobject.cpp : \
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qobjectcleanuphandler.cpp : \
+	"..\include\qobjectcleanuphandler.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qpopupmenu.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qmenudata.h"\
+	"..\include\qpopupmenu.h"\
+	"..\include\qsignal.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qprocess.cpp : \
+	"..\include\qdir.h"\
+	"..\include\qfile.h"\
+	"..\include\qfileinfo.h"\
+	"..\include\qprocess.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qprogressbar.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qprogressbar.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qprogressdialog.cpp : \
+	"..\include\qdialog.h"\
+	"..\include\qframe.h"\
+	"..\include\qlabel.h"\
+	"..\include\qprogressbar.h"\
+	"..\include\qprogressdialog.h"\
+	"..\include\qsemimodal.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qpushbutton.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qpushbutton.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qradiobutton.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qradiobutton.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qrangecontrol.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qrangecontrol.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qrichtext_p.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qgvector.h"\
+	"..\include\qintdict.h"\
+	"..\include\qlayout.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qvaluestack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\kernel\qrichtext_p.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qscrollbar.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qscrollview.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsemimodal.cpp : \
+	"..\include\qdialog.h"\
+	"..\include\qsemimodal.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qserversocket.cpp : \
+	"..\include\qhostaddress.h"\
+	"..\include\qserversocket.h"\
+	"..\include\qsocketdevice.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsessionmanager.cpp : \
+	"..\include\qsessionmanager.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsignal.cpp : \
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignal.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsignalmapper.cpp : \
+	"..\include\qsignalmapper.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsizegrip.cpp : \
+	"..\include\qsizegrip.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qslider.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qslider.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsocket.cpp : \
+	"..\include\qhostaddress.h"\
+	"..\include\qsocket.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsocketnotifier.cpp : \
+	"..\include\qsocketnotifier.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsound.cpp : \
+	"..\include\qsound.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qspinbox.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qspinbox.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsplashscreen.cpp : \
+	"..\include\qsplashscreen.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsplitter.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qsplitter.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsqldatabase.cpp : \
+	"..\include\qsql.h"\
+	"..\include\qsqldatabase.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsqldriver.cpp : \
+	"..\include\qptrdict.h"\
+	"..\include\qsql.h"\
+	"..\include\qsqldriver.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlindex.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qsqlrecord.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsqldriverplugin.cpp : \
+	"..\include\qgplugin.h"\
+	"..\include\qsqldriverplugin.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsqlform.cpp : \
+	"..\include\qsqlform.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qsqlquery.cpp : \
+	"..\include\qsql.h"\
+	"..\include\qsqlerror.h"\
+	"..\include\qsqlfield.h"\
+	"..\include\qsqlquery.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qstatusbar.cpp : \
+	"..\include\qstatusbar.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qstyle.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qstyleplugin.cpp : \
+	"..\include\qgplugin.h"\
+	"..\include\qstyleplugin.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qstylesheet.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qstylesheet.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtabbar.cpp : \
+	"..\include\qtabbar.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtabdialog.cpp : \
+	"..\include\qdialog.h"\
+	"..\include\qgvector.h"\
+	"..\include\qiconset.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qtabdialog.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtable.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qguardedptr.h"\
+	"..\include\qgvector.h"\
+	"..\include\qheader.h"\
+	"..\include\qiconset.h"\
+	"..\include\qintdict.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qtable.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtabwidget.cpp : \
+	"..\include\qgvector.h"\
+	"..\include\qiconset.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qtabwidget.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtextbrowser.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qtextbrowser.h"\
+	"..\include\qtextedit.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtextcodecplugin.cpp : \
+	"..\include\qgplugin.h"\
+	"..\include\qtextcodecplugin.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtextedit.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qtextedit.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtextview.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qrangecontrol.h"\
+	"..\include\qscrollbar.h"\
+	"..\include\qscrollview.h"\
+	"..\include\qstylesheet.h"\
+	"..\include\qtextedit.h"\
+	"..\include\qtextview.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtimer.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtitlebar_p.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qlabel.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qtitlebar_p.h"\
+	
+
+tmp\moc\release_mt_shared\moc_qtoolbar.cpp : \
+	"..\include\qdockwindow.h"\
+	"..\include\qframe.h"\
+	"..\include\qtoolbar.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtoolbox.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qiconset.h"\
+	"..\include\qtoolbox.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtoolbutton.cpp : \
+	"..\include\qbutton.h"\
+	"..\include\qiconset.h"\
+	"..\include\qkeysequence.h"\
+	"..\include\qtoolbutton.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtooltip.cpp : \
+	"..\include\qtooltip.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qtranslator.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qurloperator.cpp : \
+	"..\include\qdict.h"\
+	"..\include\qgvector.h"\
+	"..\include\qnetworkprotocol.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qurl.h"\
+	"..\include\qurlinfo.h"\
+	"..\include\qurloperator.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qvalidator.cpp : \
+	"..\include\qregexp.h"\
+	"..\include\qvalidator.h"\
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qvbox.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qhbox.h"\
+	"..\include\qvbox.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qvbuttongroup.cpp : \
+	"..\include\qbuttongroup.h"\
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qvbuttongroup.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qvgroupbox.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qgroupbox.h"\
+	"..\include\qvgroupbox.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qwidget.cpp : \
+	"..\include\qvariant.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qwidgetplugin.cpp : \
+	"..\include\qgplugin.h"\
+	"..\include\qiconset.h"\
+	"..\include\qwidgetplugin.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qwidgetresizehandler_p.cpp : \
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	".\widgets\qwidgetresizehandler_p.h"\
+	
+
+tmp\moc\release_mt_shared\moc_qwidgetstack.cpp : \
+	"..\include\qframe.h"\
+	"..\include\qgvector.h"\
+	"..\include\qintdict.h"\
+	"..\include\qptrdict.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qwidgetstack.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qwindowsstyle.cpp : \
+	"..\include\qcommonstyle.h"\
+	"..\include\qwindowsstyle.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qwizard.cpp : \
+	"..\include\qdialog.h"\
+	"..\include\qvariant.h"\
+	"..\include\qwizard.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+tmp\moc\release_mt_shared\moc_qworkspace.cpp : \
+	"..\include\qgvector.h"\
+	"..\include\qptrvector.h"\
+	"..\include\qsignalslotimp.h"\
+	"..\include\qvariant.h"\
+	"..\include\qwidgetlist.h"\
+	"..\include\qworkspace.h"\
+	".\3rdparty\libjpeg\jpegint.h"\
+	".\tmp\obj\release_mt_shared\jcinit.obj"\
+	
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+
+!IF  "$(CFG)" == "qtmt - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "qtmt - Win32 Debug"
+
+!ENDIF 
+

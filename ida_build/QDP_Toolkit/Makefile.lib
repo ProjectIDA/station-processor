@@ -1,0 +1,59 @@
+# $Id$
+
+OSNAME  = SOLARIS
+#OSNAME  = LINUX
+
+CC      = gcc
+RANLIB  = ranlib
+LIBDIR  = .
+INCDIR  = ../include
+OPTMIZ  = -g
+INCS    = -I$(INCDIR)
+DEFS    = -D$(OSNAME)
+CFLAGS  = $(OPTMIZ) $(INCS) $(DEFS)
+ARCHIVE = libqdp.a
+OUTPUT  = $(LIBDIR)/$(ARCHIVE)
+OBJS    = $(OUTPUT)(logio_dump.o)
+OBJS   += $(OUTPUT)(logio_init.o)
+OBJS   += $(OUTPUT)(logio_msg.o)
+OBJS   += $(OUTPUT)(logio_string.o)
+OBJS   += $(OUTPUT)(logio_threshold.o)
+OBJS   += $(OUTPUT)(md5.o)
+OBJS   += $(OUTPUT)(msgq.o)
+OBJS   += $(OUTPUT)(qdp_action.o)
+OBJS   += $(OUTPUT)(qdp_cmds.o)
+OBJS   += $(OUTPUT)(qdp_connect.o)
+OBJS   += $(OUTPUT)(qdp_crc.o)
+OBJS   += $(OUTPUT)(qdp_debug.o)
+OBJS   += $(OUTPUT)(qdp_decode.o)
+OBJS   += $(OUTPUT)(qdp_encode.o)
+OBJS   += $(OUTPUT)(qdp_fsa.o)
+OBJS   += $(OUTPUT)(qdp_init.o)
+OBJS   += $(OUTPUT)(qdp_io.o)
+OBJS   += $(OUTPUT)(qdp_md5.o)
+OBJS   += $(OUTPUT)(qdp_mem.o)
+OBJS   += $(OUTPUT)(qdp_misc.o)
+OBJS   += $(OUTPUT)(qdp_msgq.o)
+OBJS   += $(OUTPUT)(qdp_par.o)
+OBJS   += $(OUTPUT)(qdp_pkts.o)
+OBJS   += $(OUTPUT)(qdp_print.o)
+OBJS   += $(OUTPUT)(qdp_reorder.o)
+OBJS   += $(OUTPUT)(qdp_stats.o)
+OBJS   += $(OUTPUT)(qdp_string.o)
+OBJS   += $(OUTPUT)(udpio.o)
+OBJS   += $(OUTPUT)(util_etoh.o)
+OBJS   += $(OUTPUT)(util_hexdump.o)
+OBJS   += $(OUTPUT)(util_htoe.o)
+OBJS   += $(OUTPUT)(util_list.o)
+OBJS   += $(OUTPUT)(util_misc.o)
+OBJS   += $(OUTPUT)(util_pack.o)
+OBJS   += $(OUTPUT)(util_parse.o)
+OBJS   += $(OUTPUT)(util_swap.o)
+OBJS   += $(OUTPUT)(util_timefunc.o)
+OBJS   += $(OUTPUT)(util_timer.o)
+
+.PRECIOUS : $(OUTPUT)
+
+all: $(OBJS)
+	$(RANLIB) $(OUTPUT)
+	touch makestamp

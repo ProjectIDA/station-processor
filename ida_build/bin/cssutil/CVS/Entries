@@ -1,0 +1,19 @@
+/Makefile/1.8/Wed Oct 31 17:23:29 2007//
+/css2gse.c/1.2/Wed Dec 10 06:15:37 2003//
+/css2sac.c/1.2/Wed Dec 10 06:15:37 2003//
+/wdbytes.c/1.2/Wed Dec 10 06:15:37 2003//
+/wdc.c/1.2/Wed Dec 10 06:15:38 2003//
+/wdcat.c/1.2/Wed Dec 10 06:15:38 2003//
+/wdchk.c/1.2/Wed Dec 10 06:15:38 2003//
+/wdconvert.c/1.2/Wed Dec 10 06:15:38 2003//
+/wdcut.c/1.2/Wed Dec 10 06:15:38 2003//
+/wddel.c/1.2/Wed Dec 10 06:15:38 2003//
+/wdecho.c/1.2/Wed Dec 10 06:15:38 2003//
+/wdedit.c/1.2/Wed Dec 10 06:15:38 2003//
+/wdjdays.c/1.2/Wed Dec 10 06:15:38 2003//
+/wdlist.c/1.3/Thu Jul 22 22:26:09 2004//
+/wdprint.c/1.2/Wed Dec 10 06:15:38 2003//
+/wdread.c/1.2/Wed Dec 10 06:15:38 2003//
+/wdspan.c/1.2/Wed Dec 10 06:15:38 2003//
+/wdtst.c/1.2/Wed Dec 10 06:15:38 2003//
+D

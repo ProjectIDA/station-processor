@@ -1,0 +1,99 @@
+# $Id: mspCreateIsoImage,v 1.2 2002/03/18 23:39:57 dec Exp $
+# 
+# Helper code sourced by mspZipTeeFiles for building ISO images
+
+set InitialDirectory = `pwd`
+
+# Freeze stage directory
+
+set MyStageDir = $StageDir.$$
+
+set command = "mv $StageDir $MyStageDir"
+if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+$command
+if ($status != 0) then
+    echo "FAILED: $command"
+    logger -t $myname"[$$]" -p user.info "ERROR: $command failed"
+    set exitstatus = 1
+    goto EndOfCreateIsoImage
+endif
+
+# Generate image name
+
+cd $MyStageDir
+foreach YearTag (????)
+    cd $YearTag
+    foreach DayTag (???)
+        cd $DayTag
+        foreach HrTag (??)
+            goto breakout
+        end
+    end
+end
+breakout: 
+set ImageName = $YearTag$DayTag$HrTag
+
+# Copy the text files
+
+cp $TextDir/* $MyStageDir
+if ($status != 0) then
+    echo "ERROR: failed to copy text files"
+    logger -t $myname"[$$]" -p user.info "ERROR: failed to copy text files"
+    set exitstatus = 1
+    goto EndOfCreateIsoImage
+endif
+
+# Generate ISO image
+
+cd $InitialDirectory
+
+set WorkImgName = $IsoDir/$ImageName
+set DoneImgName = $WorkImgName.iso
+set command = "mkisofs -quiet -o $WorkImgName $MyStageDir"
+logger -t $myname"[$$]" -p user.info "$command"
+$command >& /dev/null
+if ($status != 0) then
+    echo "FAILED: $command"
+    logger -t $myname"[$$]" -p user.info "FAILED"
+    set exitstatus = 1
+    goto EndOfCreateIsoImage
+endif
+
+set command = "mv $WorkImgName $DoneImgName"
+if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+$command
+if ($status != 0) then
+    echo "FAILED: $command"
+    logger -t $myname"[$$]" -p user.info "FAILED"
+    set exitstatus = 1
+    goto EndOfCreateIsoImage
+endif
+
+if ($NotifyAddress != $Nobody) echo $DoneImgName | $mail -s "ISO image ready to burn" $NotifyAddress
+
+# Delete frozen stage directory
+
+cd $InitialDirectory
+set command = "rm -rf $MyStageDir"
+if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+$command
+if ($status != 0) then
+    echo "FAILED: $command"
+    logger -t $myname"[$$]" -p user.info "FAILED"
+    set exitstatus = 1
+    goto EndOfCreateIsoImage
+endif
+
+set exitstatus = 0
+
+EndOfCreateIsoImage:
+
+# Revision History
+# 
+# $Log: mspCreateIsoImage,v $
+# Revision 1.2  2002/03/18 23:39:57  dec
+# added cleanup and helper task error detection
+#
+# Revision 1.1  2002/03/18 22:48:50  dec
+# created
+#

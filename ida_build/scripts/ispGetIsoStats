@@ -1,0 +1,91 @@
+#!/bin/csh
+# $Id: ispGetIsoStats,v 1.3 2005/02/11 22:13:51 dechavez Exp $
+#
+# Generate cdrom stats for use by ispd
+
+set debug  = 0
+set myname = ispGetIsoStats
+
+# This only works if there is a "tee" subdir and we are
+# sitting right above it
+
+set StartingDir = `pwd`
+set TeeDir = "$StartingDir/tee"
+if (! -e $TeeDir) then
+    set message = "bad StartingDir: $StartingDir"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    exit 1
+endif
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    set message = "missing $setup"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    exit 2
+endif
+source $setup
+
+# Command line setup
+
+if ($#argv != 1) then
+    logger -t $myname"[$$]" -p user.info "bad command line"
+    echo "usage: $myname StatsFile"
+    exit 1
+endif
+set StatsFile  = $argv[1]
+rm -f $StatsFile
+echo "-1 -1 -1" > $StatsFile
+chmod 666 $StatsFile
+
+# Set up subdirectories
+
+set IsoDir   = "$StartingDir/iso"
+set StageDir = "$IsoDir/stage"
+
+foreach dir ($IsoDir $StageDir)
+    if (! -e $dir) then
+        set message = "missing $dir"
+        logger -t $myname"[$$]" -p user.info "$message"
+        echo "${myname}: $message"
+        exit 0
+    endif
+end
+
+@ bytes  = `du -sk $StageDir | awk '{print $1}'`
+@ bytes /= 1024
+
+set dummy = $StageDir/Dummy.gz
+touch $dummy
+@ files = `ls $StageDir/*.gz | wc -l`
+@ files -= 1
+rm $dummy
+
+set dummy = $IsoDir/Dummy.iso
+touch $dummy
+@ images = `ls $IsoDir/*.iso | wc -l`
+@ images -= 1
+rm $dummy
+
+rm -f $StatsFile
+echo "$files $bytes $images" > $StatsFile
+chmod 666 $StatsFile
+if ($debug) logger -t $myname"[$$]" -p user.info "$files $bytes $images"
+
+exit 0
+
+# Revision History
+#
+# $Log: ispGetIsoStats,v $
+# Revision 1.3  2005/02/11 22:13:51  dechavez
+# *** empty log message ***
+#
+# Revision 1.2  2002/02/22 21:18:37  dec
+# log all abnormal exits, add debug option
+#
+# Revision 1.1  2001/10/24 22:57:52  dec
+# created
+#

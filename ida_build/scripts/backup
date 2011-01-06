@@ -1,0 +1,102 @@
+#!/bin/csh
+#
+# $Id: backup,v 1.7 2008/02/01 22:56:02 dechavez Exp $
+
+set iam = `/usr/ucb/whoami`
+
+if ($iam != nrts) then
+    echo "This script may only be run as user nrts"
+    goto failure
+endif
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    echo "${myname}: missing $setup"
+    goto failure
+endif
+source $setup
+
+set tgz      = $NRTS_HOME/etc/EtcBackup.tgz
+set tar      = /usr/sbin/tar
+set chown    = /bin/chown
+set tmp      = $NRTS_HOME/tmp
+set nodename = `uname -n`
+
+if (! -d $tmp) mkdir $tmp
+if (! -d $tmp) then
+    echo "${myname}: can't create $tmp"
+    goto failure
+endif
+
+# First backup selected files in /etc
+
+if (-e $tgz) then
+    echo "Deleting pre-existing $tgz file."
+    rm -f $tgz
+endif
+
+cd /
+
+set list = ""
+set list = "etc/rc?.d $list"
+set list = "etc/host* $list"
+set list = "etc/inet $list"
+set list = "etc/group $list"
+set list = "etc/mail $list"
+set list = "etc/netmasks $list"
+set list = "etc/passwd $list"
+set list = "etc/ppp $list"
+set list = "etc/shadow $list"
+set list = "etc/nodename $list"
+set list = "etc/init.d $list"
+set list = "var/spool/cron $list"
+
+set digi_config = opt/realport/drp.conf
+if (-e $digi_config) then
+    set list = "$digi_config $list"
+endif
+
+sudo $tar cf - $list | gzip -c > $tgz
+if ($status != 0) goto failure
+sudo $chown nrts:nrts $tgz
+
+# Now backup site specific files in $NRTS_HOME
+
+set today = `date -u +20%y%j`
+set tgz = $NRTS_HOME/tmp/$nodename-$today.tgz
+
+if (-e $tgz) then
+    echo "Deleting a pre-existing $tgz file."
+    rm -f $tgz
+endif
+
+cd $NRTS_HOME
+set list = ".ssh etc"
+
+foreach sys ($SystemsList)
+    set candidate = "$sys/cnf"
+    set candidate = "$candidate $sys/iso/config"
+    set candidate = "$candidate $sys/isp/run"
+    set candidate = "$candidate $sys/isp/run.rt303"
+    set candidate = "$candidate $sys/isp/run.rt593"
+    set candidate = "$candidate $sys/isp/cnf"
+    set candidate = "$candidate $sys/isp/cnf.def"
+    set candidate = "$candidate $sys/isp/cnf.bak"
+    foreach file ($candidate)
+        if (-e $file) set list = "$list $file"
+    end
+end
+
+$tar cf - $list | gzip -c > $tgz
+if ($status != 0) goto failure
+
+echo "Files backed up to $tgz"
+
+exit 0
+
+failure:
+
+echo "Files NOT backed up"
+exit 1

@@ -1,0 +1,77 @@
+#!/bin/csh -f
+# $Id: isp_start,v 1.4 2004/09/29 19:12:02 dechavez Exp $
+#
+# ISP boot startup script
+#
+
+setenv NRTS_HOME  /usr/nrts
+setenv IRIS_HOME  $NRTS_HOME
+setenv IDA_DBPATH $NRTS_HOME
+
+if (-e $NRTS_HOME/UNCONFIGURED) exit 0
+
+set path = ($NRTS_HOME/bin /usr/local/bin $path)
+
+set systems_file = $NRTS_HOME/etc/Systems
+if ( -e $systems_file ) then
+    set systems = `stripcat $systems_file`
+else
+    echo "error: missing $systems_file"
+    exit 1
+endif
+
+# Start ISI daemon, if present
+ 
+set isid = $NRTS_HOME/bin/isid
+if ( -e $isid) then
+    chmod 4555 $isid
+    isid db=$IDA_DBPATH log=syslog:local3 -bd
+endif
+
+# Start DRM if present
+
+set drmd      = $NRTS_HOME/bin/drmd
+set drm_spool = $NRTS_HOME/bin/drm_spool
+if ( -d $NRTS_HOME/drm && -e $drmd && -e $drm_spool) then
+    chmod 4555 $drmd $drm_spool
+    drmd
+endif
+
+# Start boot manager
+
+set bootmgr = $NRTS_HOME/bin/isp_bootmgr
+if ( -e $bootmgr) then
+    chmod 555 $bootmgr
+    isp_bootmgr
+endif
+
+# Start ISP daemon(s)
+
+set ispd = $NRTS_HOME/bin/ispd
+if ( -e $ispd) then
+    chmod 555 $ispd
+    foreach system ($systems)
+        set ispdir = $NRTS_HOME/$system/isp
+        if ( -e $ispdir) then
+            set teedir = $ispdir/tee
+            if ( -e $teedir) chmod 644 $teedir/* >& /dev/null
+            ispd $system
+        endif
+    end
+endif
+
+# Revision History
+#
+# $Log: isp_start,v $
+# Revision 1.4  2004/09/29 19:12:02  dechavez
+# added isid and changed IDA_DBDIR
+#
+# Revision 1.3  2002/02/27 00:58:30  dec
+# remove setuid for ispd
+#
+# Revision 1.2  2001/05/31 16:39:52  dec
+# remove $platform from path (finally)
+#
+# Revision 1.1.1.1  2000/02/08 20:20:44  dec
+# import existing IDA/NRTS sources
+#

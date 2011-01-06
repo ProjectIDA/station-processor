@@ -1,0 +1,93 @@
+#!/bin/csh -f
+# $Id: nrtsSeedToCss,v 1.1 2005/11/04 01:05:37 dechavez Exp $
+#
+# Take most recent dataless SEED and produce a directory with
+# Antelope CSS3.0 tables
+
+set path = (/opt/nrts/bin /opt/nrts/Scripts $path)
+
+set myname = "nrtsSeedToCss"
+set SEEDReferenceDir = /home/response/Seed/reference_vols
+
+# User must specify database name on the command line
+
+if ($#argv != 1) then
+    echo "usage: $myname db_name"
+    exit 1
+endif
+set dbname = $argv[1]
+
+# Make sure we've got a dataless SEED to work with
+
+set srcZ = `ls $SEEDReferenceDir/*.Z | tail -1`
+if ($srcZ == "") then
+    echo "unable to locate source file"
+    exit 1
+endif
+
+# Output is written to a directory with the same name as the database.
+# It must not already exist.
+
+set destdir = $dbname
+if (-e $destdir) then
+    echo "output directory ./$destdir already exists"
+    exit 1
+endif
+
+mkdir $destdir
+if ($status != 0) then
+    echo "unable to create $destdir"
+    exit 1
+endif
+
+cd $destdir
+if ($status != 0) then
+    echo "can't chdir $destdir"
+    exit 1
+endif
+
+# Get uncompressed copy of source file
+
+echo "decompress $srcZ into working dir ./$destdir"
+set dataless = "DatalessSeed"
+zcat $srcZ > $dataless
+if ($status != 0) then
+    echo "can't zcat $srcZ"
+    exit 1
+endif
+
+# Run the conversion program
+
+set beg = `attol 1988`
+set end = `attol 2038`
+set log = psd2db.log
+
+echo -n "building $dbname database with psd2db..."
+psd2db -time $beg $end $dataless $dbname >& $log
+echo "done"
+echo "psd2db log is $log"
+rm -f dataless
+
+# Generate the descriptor
+
+echo "$ANTELOPE/data/schemas/css3.0" > $dbname
+echo "{$dbname}" >> $dbname
+
+# Verify the database
+
+set log = dbverify.log
+echo -n "verifying $dbname database with dbverify..."
+dbverify IDA >& $log
+echo "done"
+echo "dbverify log is $log"
+
+ls -l
+
+exit 0
+
+# Revision History
+#
+# $Log: nrtsSeedToCss,v $
+# Revision 1.1  2005/11/04 01:05:37  dechavez
+# initial release
+#

@@ -1,0 +1,39 @@
+drm_service Release Notes
+
+2.15.2 06/24/2005
+       accomodate changes in ISI_DATA_REQUEST structure
+
+2.15.1 05/04/2004
+       updated spam triggers
+
+2.15.0 04/24/2004
+       Use libz to write native data in gzip format directly
+       Improved spam detection
+
+2.14.2 01/29/2004
+       Fix error parsing CHAN_LIST when multiple channels were given
+
+2.14.2 01/29/2004
+       Print wait interval when determining a message is to be held
+
+2.14.0 01/23/2004
+       Added DRM_NATIVE (uuencoded gzip) support
+
+2.13.0 04/23/2002
+       Anti-spam checks added
+
+2.12.0 04/25/2002 (cvs rtag drm_2_12_0 drm)
+       Relink with libxfer.a to correct infinite loop read error
+
+2.11.1 02/07/2002 (cvs rtag drm_2_11_1 drm)
+       Relink with libxfer.a to split long channel names into 3-char
+       chan and (up to) 4-char auxid
+
+2.11.0 01/23/2002 (cvs rtag drm_2_11_0 drm)
+       Eliminated hard-coded channel list
+
+2.10.2 10/17/2000 (cvs rtag drm_2_10_2 drm)
+       Fixed zero length file bug in Xfer_ToGSE
+
+2.10.1 02/17/2000 (cvs rtag drm_2_10_1 drm)
+       Started sane version numbering and release notes after 5 years!

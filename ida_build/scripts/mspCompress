@@ -1,0 +1,80 @@
+#!/bin/csh 
+# $Id: mspCompress,v 1.2 2002/03/18 23:39:57 dec Exp $
+#
+# Helper code sourced by mspZipTeeFiles to do the compression
+# We are in the tee directory when this code is executed
+
+if ($debug) logger -t $myname"[$$]" -p user.info "working directory is $TeeDir"
+
+set dummy = YYYY:DDD-HH:00
+touch $dummy     # to make sure the directory is not empty
+chmod 777 $dummy # so we won't examine it in the next step
+set raw_files = ????:???-??:00 > & /dev/null
+if ($status == 0) then
+    foreach file ($raw_files)
+        if (! -x $file) then
+
+        # determine name of output directory and insure it exists
+
+            set year = `$expr substr $file  1 4`
+            set day  = `$expr substr $file  6 3`
+            set hr   = `$expr substr $file 10 2`
+            set zipd = $ZipDir/$year/$day/$hr
+            if (! -e $zipd) then
+                set command = "mkdir -p $zipd"
+                if ($debug) echo $command
+                if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+                 $command
+                if ($status != 0) then
+                    echo "FAILED: $command"
+                    logger -t $myname"[$$]" -p user.info "FAILED"
+                    set exitstatus = 1
+                    goto EndOfCompress
+                endif
+            endif
+
+        # rename from yyyy:ddd-hh:00 to $ZIPDIR/YYYY/DDD/hh/system
+ 
+            set newname = $zipd/$system
+            set command = "mv $file $newname"
+            if ($debug) echo $command
+            if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+            $command
+            if ($status != 0) then
+                echo "FAILED: $command"
+                logger -t $myname"[$$]" -p user.info "FAILED"
+                goto abort
+            endif
+
+        # compress
+
+            set command = "gzip -f $newname"
+            if ($debug) echo $command
+            if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+            $command
+            if ($status != 0) then
+                echo "FAILED: $command"
+                logger -t $myname"[$$]" -p user.info "FAILED"
+                set exitstatus = 1
+                goto EndOfCompress
+            endif
+
+        endif
+    end
+endif
+
+set exitstatus = 0
+
+EndOfCompress:
+
+rm -f $dummy
+
+# Revision History
+#
+# $Log: mspCompress,v $
+# Revision 1.2  2002/03/18 23:39:57  dec
+# added cleanup and helper task error detection
+#
+# Revision 1.1  2002/03/18 22:48:50  dec
+# created
+#

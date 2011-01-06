@@ -1,0 +1,66 @@
+#!/bin/csh -f
+# $Id: nrts_tipars,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+
+set host = `uname -n`
+setenv NRTS_HOME ~nrts
+
+set platformrc = $NRTS_HOME/.platform
+if ( -e $platformrc ) then
+    source $platformrc
+else
+    echo "error: missing $platformrc"
+    exit 1
+endif
+
+set path = ($NRTS_HOME/bin/$platform $NRTS_HOME/scripts /usr/local/bin $path)
+if ( -e /usr/local/bin/kermit) then
+    set kermit = /usr/local/bin/kermit
+else
+    echo "missing /usr/local/bin/kermit"
+    exit 1
+endif
+
+# Get desired system for those hosts which serve multiple data loggers
+
+determine_system:
+
+if ($host == kiv) then
+    echo -n "Which ARS, kiv or kivma? "
+    set system = $<
+    if ($system != kiv && $system != kivma) then
+        echo "Must specifiy one of kiv or kivma."
+        goto determine_system
+    endif
+else if ($host == pfo) then
+    echo -n "Which ARS, pfo or xpf? "
+    set system = $<
+    if ($system != pfo && $system != xpf) then
+        echo "Must specifiy one of pfo or xpf."
+        goto determine_system
+    endif
+else
+    set system = $host
+endif
+
+set parameters = `nrts_devices $system console`
+if ($status != 0) then
+    echo "Can't determine $system ARS console port parameters."
+    echo "This is a bug.  Please contact David Chavez for help."
+    exit 1
+endif
+
+set port  = $parameters[1]
+set speed = $parameters[2]
+
+clear
+$kermit -l /dev/$port -b $speed -c
+if ($status == 0) clear
+
+exit 0
+
+# Revision History
+#
+# $Log: nrts_tipars,v $
+# Revision 1.1.1.1  2000/02/08 20:20:45  dec
+# import existing IDA/NRTS sources
+#

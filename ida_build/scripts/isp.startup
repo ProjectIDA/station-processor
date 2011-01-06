@@ -1,0 +1,34 @@
+#!/bin/sh
+# $Id: isp.startup,v 1.2 2004/09/29 19:13:24 dechavez Exp $
+
+# Start/stop ISP processes
+
+case "$1" in
+'start')
+
+    ISPSTART="/usr/nrts/scripts/isp_start"
+    if [ -f ${ISPSTART} ]; then
+            csh ${ISPSTART} > /dev/null &
+    fi
+    ;;
+        
+'stop')
+    pkill -TERM -u nrts nrts_edes
+    pkill -TERM -u nrts isid
+    pkill -TERM -u nrts ispd
+    pkill -TERM -u nrts drmd
+    ;;
+*)
+    echo "Usage: /etc/init.d/isp { start | stop }"
+    ;;
+esac
+
+# Revision History
+#
+# $Log: isp.startup,v $
+# Revision 1.2  2004/09/29 19:13:24  dechavez
+# use pkill instead of killproc(), added isid to kill list
+#
+# Revision 1.1.1.1  2000/02/08 20:20:44  dec
+# import existing IDA/NRTS sources
+#

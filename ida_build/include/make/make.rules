@@ -1,0 +1,9 @@
+#  $Id: make.rules,v 1.1.1.1 2000/02/08 20:20:23 dec Exp $
+#  Personal make.rules file
+#  Includes macros to ease compiling MKS Make makefiles
+
+include /usr/share/lib/make/make.rules
+A = .a
+F = .f
+L = lib
+O = .o

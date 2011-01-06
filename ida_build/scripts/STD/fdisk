@@ -1,0 +1,24 @@
+* $Id: fdisk,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+* /dev/rdsk/c0d0p0 default fdisk table
+* Dimensions:
+*    512 bytes/sector
+*     63 sectors/track
+*     64 tracks/cylinder
+*    784 cylinders
+*
+* systid:
+*   1:  DOSOS12
+*   2:  PCIXOS
+*   4:  DOSOS16
+*   5:  EXTDOS
+*   6:  DOSBIG
+*   65: PPCBOOT
+*   86: DOSDATA
+*   98: OTHEROS
+*   99: UNIXOS
+*  130: SUNIXOS
+*  190: X86BOOT
+*
+ 
+* Id    Act  Bhead  Bsect  Bcyl    Ehead  Esect  Ecyl    Rsect    Numsect
+  130   128  0      1      1       63     63     783     4032     3157056

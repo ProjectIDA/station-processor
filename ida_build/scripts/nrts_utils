@@ -1,0 +1,58 @@
+#!/bin/csh -f
+#
+# $Id: nrts_utils,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+#
+# Generate a new release of utilities for NRTS systems
+
+unalias cp rm
+
+set output = "`pwd`/nrtsutils.tar.Z"
+if ( -e $output) rm -f $output
+if ($status != 0) goto abort
+
+# Determine which binaries are needed for this host
+
+set cssutil  = "wdconvert wdcut wdlist wdcat wdspan"
+set sacutil  = "css2sac cutsac sac2css saca2b sacb2a sacecho saclh sactimes"
+set idautil  = "idadmx idalst idasync"
+set mtutil   = "mtread mtwrite mttest ttc"
+set miscutil = "amount attol calib downtime gmt lcase locate"
+set miscutil = "$miscutil lttoa minavemax mkcalib modtime physpeed revcode"
+set miscutil = "$miscutil stability stream trim ucase"
+set miscutil = "$miscutil ydtodmdy readtty writetty validate"
+set miscutil = "$miscutil elapsed etoh stripcat"
+set igpputil = "power plotxy"
+
+set masterlist = "$cssutil $sacutil $idautil $mtutil $miscutil $igpputil"
+
+set bindir = ~dec/bin/`arch`
+cd $bindir
+if ($status != 0) then
+    echo "Can't cd to $bindir"
+    goto abort
+endif
+set utilities = ""
+foreach file ($masterlist)
+    if (-e $file) set utilities = "$utilities $file"
+end
+
+#  Make a compressed tar file of the distribution
+
+tar cvfFF - $utilities | compress > $output
+
+if ($status != 0) goto abort
+
+exit 0
+
+abort:
+
+echo "failed to create distribution"
+
+exit 1
+
+# Revision History
+#
+# $Log: nrts_utils,v $
+# Revision 1.1.1.1  2000/02/08 20:20:45  dec
+# import existing IDA/NRTS sources
+#

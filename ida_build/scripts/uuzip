@@ -1,0 +1,17 @@
+#!/bin/csh -f
+#
+# Convert a file into a uuenoded equivalent
+
+if ($#argv != 3) then
+        echo "usage: uuzip input output name"
+        exit 1
+endif
+
+set input  = $argv[1]
+set output = $argv[2]
+set gzname = $argv[3].gz
+cp -f /dev/null $output
+echo "UUZIP of $gzname" >> $output
+cat $input | gzip -c | uuencode $gzname >> $output
+
+exit $status

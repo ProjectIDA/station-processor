@@ -1,0 +1,90 @@
+#!/bin/csh
+# $Id: isiDistributeZipFiles,v 1.1 2005/08/17 21:06:56 dechavez Exp $
+#
+# Distribute the compressed ISI tee files
+
+set debug  = 0
+set myname = isiDistributeZipFiles
+
+if ($debug) logger -t $myname"[$$]" -p user.info "begin"
+
+# This only works if there is a "tee" subdir and we are
+# sitting right above it
+
+set StartingDir = `pwd`
+set TeeDir = "$StartingDir/tee"
+if (! -e $TeeDir) then
+    set message = "bad StartingDir: $StartingDir"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    exit 1
+endif
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    set message = "missing $setup"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    goto abort
+endif
+source $setup
+
+# Get the list of all compressed files
+
+set dummy = $TeeDir/dummy.gz
+touch $dummy
+set CompressedFiles = `ls $TeeDir/*.gz`
+
+# Copy files to the usual places
+
+set DistributionList = "$StartingDir/incoming $StartingDir/iso/zip"
+
+foreach destination ($DistributionList)
+    if (-d $destination) then
+        find $destination -atime $IsiGzTeeFindValue -a -exec rm -f {} \;
+        foreach file ($CompressedFiles)
+            if ($file == $dummy) continue
+            set command = "cp $file $destination"
+            if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+            $command
+            if ($status != 0) then
+                logger -t $myname"[$$]" -p user.info "$command FAILED"
+                goto failure
+            endif
+        end
+    endif
+end
+
+# Delete the compressed files from the tee area
+
+finish:
+foreach file ($CompressedFiles)
+    set command = "rm -f $file"
+    if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+    $command
+    if ($status != 0) then
+        logger -t $myname"[$$]" -p user.info "$command FAILED"
+        goto failure
+    endif
+end
+
+# Normal exit
+
+success:
+if ($debug) logger -t $myname"[$$]" -p user.info "completed OK"
+exit 0
+
+# Error exit
+
+failure:
+logger -t $myname"[$$]" -p user.info "exit 1"
+exit 1
+
+# Revision History
+#
+# $Log: isiDistributeZipFiles,v $
+# Revision 1.1  2005/08/17 21:06:56  dechavez
+# initial release
+#

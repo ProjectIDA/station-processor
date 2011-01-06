@@ -1,0 +1,77 @@
+#!/bin/csh
+# $Id: isiCompressTeeFiles,v 1.1 2005/08/17 21:06:56 dechavez Exp $
+#
+# Compress ISI tee files
+
+set debug  = 0
+set myname = isiCompressTeeFiles
+
+if ($debug) logger -t $myname"[$$]" -p user.info "begin"
+
+# This only works if there is a "tee" subdir and we are
+# sitting right above it
+
+set StartingDir = `pwd`
+set TeeDir = "$StartingDir/tee"
+if (! -e $TeeDir) then
+    set message = "bad StartingDir: $StartingDir"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    goto failure
+endif
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    set message = "missing $setup"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    goto failure
+endif
+source $setup
+
+# Compress all inactive files in the tee subdirectory
+
+cd $TeeDir
+if ($status != 0) then
+    logger -t $myname"[$$]" -p user.info "can't cd to $TeeDir"
+    goto failure
+endif
+
+set dummy = 000000000000000000000000
+touch $dummy
+if (! -e $dummy) then
+    logger -t $myname"[$$]" -p user.info "can't create dummy $dir/$dummy"
+    goto failure
+endif
+chmod 777 $dummy
+foreach file (????????????????????????)
+    if (! -x $file) then
+        set command = "gzip $file"
+        if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+        $command
+        if ($status != 0) then
+            logger -t $myname"[$$]" -p user.info "$command FAILED"
+            goto failure
+        endif
+    endif
+end
+rm $dummy
+
+# Normal exit
+
+success:
+if ($debug) logger -t $myname"[$$]" -p user.info "completed OK"
+exit 0
+
+failure:
+logger -t $myname"[$$]" -p user.info "exit 1"
+exit 1
+
+# Revision History
+#
+# $Log: isiCompressTeeFiles,v $
+# Revision 1.1  2005/08/17 21:06:56  dechavez
+# initial release
+#

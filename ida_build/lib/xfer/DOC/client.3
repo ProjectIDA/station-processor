@@ -1,0 +1,187 @@
+.\" $Id: client.3,v 1.1.1.1 2000/02/08 20:20:43 dec Exp $
+.TH XFER_CLIENT 3 "June 1996" "IDA Data Exchange Routines"
+.SH NAME
+Xfer_Connect, Xfer_RecvWav, Xfer_ErrStr, Xfer_Exit \- client side routines for dialog with an IDA data server
+.SH SYNOPSIS
+.B cc
+.RI "[ " "flag" " \|.\|.\|. ] " "file" " \|.\|.\|."
+.B \-lxfer \-lutil
+.RI "[ " "library" " \|.\|.\|. ]"
+.LP
+.B #include "xfer.h"
+.ft
+.fi
+.LP
+.nf
+.ft B
+int Xfer_Connect(host, service, port, proto, request, cnf)
+char *host;
+char *service;
+int port;
+int proto;
+struct xfer_req *request;
+struct xfer_cnf *cnf;
+.ft
+.fi
+.LP
+.nf
+.ft B
+int Xfer_RecvWav(sd, wav)
+int sd;
+struct xfer_wav *wav;
+.ft
+.fi
+.LP
+.nf
+.ft B
+char *Xfer_ErrStr()
+.ft
+.fi
+.LP
+.nf
+.ft B
+void Xfer_Exit(sd, status)
+int sd;
+int status;
+.ft
+.fi
+.SH DESCRIPTION
+These functions support dialog with an IDA data server, following
+the \fInrts_xfer2\fR protocol.  The
+information provided here assumes familiarity with the protocol and
+the implementation specific data structures, described
+\fBIDA Data Exchange Protocol\fR document.
+.sp
+.B Xfer_Connect(\|)
+initiates a socket connection with \fIhost\fR, where \fIhost\fR is
+a null-terminated string containing the remote hostname or IP address
+in the conventional \fB` . '\fR notation.  
+The argument
+\fIproto\fR determines the communication protocol to be
+used.  Currently, this \fImust\fR be the null-terminated string `\fBtcp\fR'.
+One of \fIservice\fR or \fIport\fR
+is used to determine the port number at which to connect.  
+If \fIservice\fR
+is not \fBNULL\fR, then it is taken to be the name of a service defined
+on the local host, and is used with \fIproto\fR and 
+\fIgetservbyname\fR(3N)
+to look up the port number.  If \fIservice\fR is \fBNULL\fR then \fIport\fR
+is taken to be the port number.  Once the connection is established
+then the request message pointed to by \fIrequest\fR is sent to the
+server.
+If the server accepts the connection and the request, then
+it will return the remote configuration which will be stored in the
+structure pointed to by \fIcnf\fR.
+.sp
+All socket I/O is set to time out according to the value of the
+\fItimeout\fR field in the \fIrequest\fR structure.  This value
+is silently forced to be no less than the
+the system wide default of \fBXFER_DEFTO\fR (normally 60 seconds).
+.sp
+If the request was for a remote configuration, then all dialog
+with the server is complete after the function returns.  If the
+request was for waveform data, then the program should loop around
+calls to \fBXfer_RecvWav(\|)\fR.
+.sp
+.B Xfer_RecvWav(\|)
+retrieves a waveform message from the server connected via the socket
+\fIsd\fR, decompressing if necessary, and stores it in the structure pointed to by \fIwav\fR.  
+Unless a raw waveform format was requested, the data will be in the 
+host's native byte order.
+.sp
+.B Xfer_ErrStr(\|)
+returns a null-terminated string describing the error condition 
+reflected by the current value of the global variable \fIxfer_errno\fR.
+.sp
+\fBXfer_Exit(\|)\fR does a \fIshutdown\fR(2) on the socket \fIsd\fR (if it
+is a positive, non-zero descriptor), logs a message indicating the
+exit \fIstatus\fR and exits.  If you have the socket descriptor available,
+then you should pass it to the routine. Otherwise (if you just want to
+get the logged exit) set \fIsd\fR to be zero or negative.
+.SH SIGNALS
+\fBXfer_Connect(\|)\fR installs signal handlers to trap
+\fBSIGPIPE\fR (for writes to a server which has died) and
+\fBSIGALRM\fR (to handle socket I/O timeouts).  In addition,
+\fBSIGUSR1\fR and \fBSIGUSR2\fR are trapped by the logging facility
+if it is enabled (see NOTES).
+.SH RETURN VALUES
+.B Xfer_Connect(\|)
+returns the socket descriptor of the connection if it was successfully
+established \fIand\fR the request accepted by the server, and a negative
+number in case of error.
+.sp
+\fBXfer_RecvWav(\|)\fR,
+returns either \fBXFER_OK\fR or \fBXFER_FINISHED\fR upon success and
+\fBXFER_ERROR\fR in case of failure.  If \fBXFER_FINISHED\fR is returned
+then the server has provided all requested data.
+.sp
+\fBXfer_ErrStr(\|)\fR returns a pointer to a null-terminated string.  The
+pointer is to static data whose contents are overwritten by each call.
+.sp
+\fBXfer_Exit(\|)\fR
+does not return.
+.sp
+In case of failure, all functions set the global variable \fIxfer_errno\fR
+to indicate the reason.  The possible values of \fIxfer_errno\fR are
+given below.
+.SH ERRORS
+.TP 18
+.SM XFER_EBUSY
+The server is too busy to accept the connection.
+.TP
+.SM XFER_ECONNECT
+No connection with peer.
+.TP
+.SM XFER_EFORMAT
+Unsupported format.
+.TP
+.SM XFER_EHANDLER
+Unable to install signal handler.
+Refer to the global variable \fIerrno\fR for the cause.
+.TP
+.SM XFER_EINVAL
+Illegal data were received.  
+This indicates a bug in the server, should it ever occur
+in \fBXfer_Connect\fR() or \fBXfer_RecvWav\fR().
+.TP
+.SM XFER_EIO
+An I/O error occured.  
+Refer to the global variable \fIerrno\fR for the cause.
+.TP
+.SM XFER_ELIMIT
+An implementation defined limit was exceeded.
+.TP
+.SM XFER_EPIPE
+The server died.
+.TP
+.SM XFER_EPROTOCOL
+The server does not support the specified protocol version.
+.TP
+.SM XFER_ENOSUCH
+None of the requested stations/channels are available.
+.TP
+.SM XFER_EREFUSED
+The request was sent by an unauthorized client and the server refused
+to accept the connection.
+.TP
+.SM XFER_EREJECTED
+The request was rejected by the server, due to invalid contents.
+.TP
+.SM XFER_ETIMEDOUT
+The socket I/O time limit expired.
+.TP
+.SM XFER_ETOOBIG
+An incoming message exceeded the implementation message size limit.
+This indicates a bug in the server, should it ever occur.
+.SH NOTES
+It is possible to enable informational and error messages which are
+logged (via \fIutil_log\fR(3)) to a file or to the \fIsyslogd\fR(8)
+daemon by calling \fIutil_loginit\fR(3) during program initialization,
+if desired.
+.sp
+The connection with the server is made using the general purpose
+function \fIutil_connect\fR(3).
+.sp
+.SH SEE ALSO
+.BR util_loginit (3),
+.BR util_log (3)

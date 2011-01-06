@@ -1,0 +1,84 @@
+#!/bin/csh -f
+# $Id: sunosstart,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+#
+# General purpose NRTS 2.0 data acquistion start-up
+
+unalias cp rm
+
+if ($#argv < 2) goto help
+
+set input  = $argv[1]
+shift
+set sys    = $argv[1]
+shift
+set args   = "$argv"
+set date   = `date +%m/%d-%H:%M:%S`
+set tmp    = /tmp/nrts_start.$$
+
+cp /dev/null $tmp
+
+if ($?NRTS_HOME) then
+    set nrts_home = $NRTS_HOME
+else
+    echo "NRTS_HOME is not defined"
+    echo "$date NRTS_HOME is not defined" >> $tmp
+    goto abort
+endif
+
+set wrtdl = nrts_wrtdl home=$nrts_home
+
+echo "starting $sys NRTS 2.0 data acquistion"
+
+echo "$date NRTS 2.0 $sys startup" >> $tmp
+
+if ($input == "tty") then
+    set command = "nrts_devices $sys data"
+    set port_info = `$command`
+    set exitstatus = $status
+    if ($exitstatus != 0 || $#port_info != 2) then
+        set message = "can't determine serial port parameters:"
+        set message = "$message status $exitstatus"
+        echo "$date $message" >> $tmp
+        echo "ERROR: $message"
+        goto abort
+    endif
+    set modem_port = /dev/$port_info[1]
+    set speed      = $port_info[2]
+    set command = "$wrtdl if=$modem_port,$speed $sys"
+else
+    set command = "$wrtdl if=$input $sys +keepup ++retry to=30 tto=5"
+endif
+set command = "$command log=syslogd $args"
+
+echo "$date $command" >> $tmp
+$command
+set exitstatus = $status
+if ($exitstatus != 0) then
+    set message = "can't start data acquistion: status $exitstatus"
+    echo "$date $message" >> $tmp
+    echo "ERROR: $message"
+    goto abort
+endif
+
+set message = "$sys startup complete"
+echo "$date $message" >> $tmp
+echo "$message"
+
+rm $tmp
+exit 0
+
+help:
+
+echo "usage: nrts_start [tty | sys@host] sys [nrts_wrtdl options]"
+exit 1
+
+abort:
+
+rm $tmp
+
+# Revision History
+#
+# $Log: sunosstart,v $
+# Revision 1.1.1.1  2000/02/08 20:20:45  dec
+# import existing IDA/NRTS sources
+#

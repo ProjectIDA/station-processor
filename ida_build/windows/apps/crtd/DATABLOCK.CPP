@@ -1,0 +1,27 @@
+// DataBlock.cpp: implementation of the CDataBlock class.
+//
+//////////////////////////////////////////////////////////////////////
+
+#include "stdafx.h"
+#include "crtd.h"
+#include "DataBlock.h"
+
+#ifdef _DEBUG
+#undef THIS_FILE
+static char THIS_FILE[]=__FILE__;
+#define new DEBUG_NEW
+#endif
+
+//////////////////////////////////////////////////////////////////////
+// Construction/Destruction
+//////////////////////////////////////////////////////////////////////
+
+CDataBlock::CDataBlock()
+{
+
+}
+
+CDataBlock::~CDataBlock()
+{
+
+}

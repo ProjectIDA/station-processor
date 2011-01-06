@@ -1,0 +1,44 @@
+#!/bin/csh
+# $Id: nrts_idalst,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+#
+# Run idalst on the disk loop
+
+if ($?NRTS_HOME) then
+    set nrts_home = $NRTS_HOME
+else
+    set nrts_home = /usr/nrts
+endif
+
+set platformrc = $nrts_home/.platform
+if ( -e $platformrc ) then
+    source $platformrc
+else
+    echo "error: missing $platformrc"
+    exit 1
+endif
+
+set mail = /usr/ucb/mail
+
+if ($#argv == 0) then
+        @ ndays = 7
+else
+        @ ndays = $argv[1]
+endif
+@ span = $ndays * 86400
+
+set dest = dec@essw.com
+@ end = `gmt raw`
+@ beg = $end - $span
+
+set beg = `etoh code=0 $beg`
+set end = `etoh code=0 $end`
+
+nrts_tap if=nil@nil cooked=0 beg=$beg end=$end | \
+idalst rev=8 +tag | sort | trim | $mail -s "NIL idalst" $dest
+
+# Revision History
+#
+# $Log: nrts_idalst,v $
+# Revision 1.1.1.1  2000/02/08 20:20:45  dec
+# import existing IDA/NRTS sources
+#

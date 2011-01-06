@@ -1,0 +1,35 @@
+# $Id: Makefile.bin,v 1.1 2006/05/17 23:29:57 dechavez Exp $
+# Makefile for QDP toolkit and test program
+
+# uncomment the appropriate
+OSNAME = SOLARIS
+#OSNAME = LINUX
+
+# define socket and thread libraries as required (Solaris libs given here)
+SOCKLIBS = -lsocket -lnsl
+MTLIBS = -lpthread -lrt
+
+CC     = gcc
+VPATH  =
+INCDIR = ../include
+BINDIR = .
+OPTMIZ = -g
+INCS   = -I$(INCDIR)
+DEFS   = -D$(OSNAME)
+CFLAGS = $(OPTMIZ) $(INCS) -L$(LIBDIR) $(DEFS)
+LIB    = libqdp.a
+LIBDIR = ../lib
+OUTPUT = q330
+
+all: $(OUTPUT)
+
+$(LIB): FORCE
+	cd $(LIBDIR); $(MAKE) OSNAME=$(OSNAME)
+
+q330: ReleaseNotes.c main.c $(LIB)
+	$(CC) $(CFLAGS) -o $@ ReleaseNotes.c main.c -lqdp $(MTLIBS) $(SOCKLIBS)
+
+clean: FORCE
+	rm -f $(LIB) $(OUTPUT)
+
+FORCE:

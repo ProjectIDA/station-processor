@@ -1,0 +1,24 @@
+/Makefile/1.4/Thu Jan 29 18:50:30 2004//
+/add_cbs.c/1.1.1.1/Tue Feb  8 20:20:14 2000//
+/draw_cb.c/1.1.1.1/Tue Feb  8 20:20:14 2000//
+/getsys.c/1.1.1.1/Tue Feb  8 20:20:14 2000//
+/help_cb.c/1.1.1.1/Tue Feb  8 20:20:14 2000//
+/info.xbm/1.1.1.1/Tue Feb  8 20:20:14 2000//
+/init.c/1.2/Tue Apr 30 16:24:55 2002//
+/libtap.c/1.1.1.1/Tue Feb  8 20:20:14 2000//
+/main.c/1.1.1.1/Tue Feb  8 20:20:14 2000//
+/main_menu.c/1.1.1.1/Tue Feb  8 20:20:14 2000//
+/options.h/1.1.1.1/Tue Feb  8 20:20:14 2000//
+/resources.h/1.1.1.1/Tue Feb  8 20:20:14 2000//
+/syslist.c/1.1.1.1/Tue Feb  8 20:20:14 2000//
+/tap.c/1.2/Tue Apr 30 16:24:39 2002//
+/tapinit.c/1.1.1.1/Tue Feb  8 20:20:15 2000//
+/tocss.c/1.1.1.1/Tue Feb  8 20:20:15 2000//
+/togse.c/1.1.1.1/Tue Feb  8 20:20:15 2000//
+/tosac.c/1.1.1.1/Tue Feb  8 20:20:15 2000//
+/usage.c/1.1.1.1/Tue Feb  8 20:20:15 2000//
+/utils.c/1.1.1.1/Tue Feb  8 20:20:15 2000//
+/view.h/1.2/Tue Apr 30 16:24:23 2002//
+/viewer.c/1.1.1.1/Tue Feb  8 20:20:15 2000//
+/viewer_menu.c/1.1.1.1/Tue Feb  8 20:20:15 2000//
+D

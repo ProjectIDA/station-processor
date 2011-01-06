@@ -1,0 +1,48 @@
+#!/bin/csh -f
+# $Id: makerelease,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+
+set stamp = `date +%y%m%d`
+
+tar cf - \
+./scripts/isp_flushlog \
+./scripts/isp_start \
+./scripts/ppp \
+./scripts/setperms \
+./bin/solaris.i86pc/drm_check \
+./bin/solaris.i86pc/drm_makeinfo \
+./bin/solaris.i86pc/drm_service \
+./bin/solaris.i86pc/drm_spool \
+./bin/solaris.i86pc/drmd \
+./bin/solaris.i86pc/eztap \
+./bin/solaris.i86pc/idadmx \
+./bin/solaris.i86pc/idalst \
+./bin/solaris.i86pc/isp \
+./bin/solaris.i86pc/isp_bootmgr \
+./bin/solaris.i86pc/isp_inject \
+./bin/solaris.i86pc/isp_logpkt \
+./bin/solaris.i86pc/ispd \
+./bin/solaris.i86pc/lcase \
+./bin/solaris.i86pc/nrts_edes \
+./bin/solaris.i86pc/nrts_mkdl \
+./bin/solaris.i86pc/nrts_xfer \
+./bin/solaris.i86pc/paro \
+./bin/solaris.i86pc/paro_tocss \
+./bin/solaris.i86pc/rtty \
+./bin/solaris.i86pc/stripcat \
+./bin/solaris.i86pc/trim \
+./bin/solaris.i86pc/test_gps \
+./bin/solaris.i86pc/ucase \
+./bin/solaris.i86pc/wtty \
+./bin/solaris.i86pc/xfer_prt \
+./bin/solaris.i86pc/xfer_tap \
+./bin/solaris.i86pc/xfer_tocss \
+./bin/solaris.i86pc/xfer_togse \
+./bin/solaris.i86pc/xfer_tosac \
+./bin/solaris.i86pc/xfer_toseed | compress > ISP-$stamp.tar.Z
+
+# Revision History
+#
+# $Log: makerelease,v $
+# Revision 1.1.1.1  2000/02/08 20:20:45  dec
+# import existing IDA/NRTS sources
+#

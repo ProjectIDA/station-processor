@@ -1,0 +1,16 @@
+drmd Release Notes
+
+2.13.1 01/29/2003
+       Fixed signal handling following libutil updates, maxhold default=0
+
+2.12.1 04/25/2002
+       Turned off all logging in signal handlers (deadlocks?)
+
+2.12.0 04/24/2002
+       Increased DRM_MAXQUEUE to 8192
+
+2.11.0 04/21/2001 (cvs rtag drm_2_11_0 drm)
+       Added -once option
+
+2.10.1 02/17/2000 (cvs rtag drm_2_10_1 drm)
+       Started sane version numbering and release notes after 5 years!

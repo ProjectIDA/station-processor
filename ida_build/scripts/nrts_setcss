@@ -1,0 +1,30 @@
+#! /bin/csh -f
+# $Id: nrts_setcss,v 1.2 2005/02/18 03:06:20 dechavez Exp $
+#
+# script to set up descriptor file for dbpick program
+#
+if ( $#argv > 0 ) then
+    set DIR=$argv
+    set list=`ls $DIR/*.wfdisc`
+else
+    set list=`ls *wfdisc`
+endif
+
+foreach s ($list)
+    set FILE=`echo $s | sed 's/.wfdisc//'`
+    if (! -e $FILE) then
+        echo "css3.0" >! $FILE
+        echo "/home/response/CSS/{IDA}" >> $FILE
+        chmod 666 $FILE
+    endif
+end
+
+# Revision History
+#
+# $Log: nrts_setcss,v $
+# Revision 1.2  2005/02/18 03:06:20  dechavez
+# replaced with idahub copy
+#
+# Revision 1.1.1.1  2003/04/18 22:44:18  nrts
+# initial (imported) release
+#

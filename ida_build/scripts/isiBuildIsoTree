@@ -1,0 +1,38 @@
+#!/bin/csh
+# $Id: isiBuildIsoTree,v 1.1 2005/08/17 21:06:56 dechavez Exp $
+#
+# Build the ISO tree
+
+if ($#argv != 1) then
+    echo "usage: isiBuildIsoTree RootDir"
+    exit 1
+endif
+
+set RootDir = $argv[1]
+
+set SubDirList = "iso"
+set SubDirList = "$SubDirList iso/zip"
+set SubDirList = "$SubDirList iso/stage"
+set SubDirList = "$SubDirList iso/done"
+set SubDirList = "$SubDirList iso/done/gziped"
+set SubDirList = "$SubDirList iso/done/images"
+
+foreach SubDir ($SubDirList)
+    set target = $RootDir/$SubDir
+    if (! -d $target) then
+        mkdir $target
+        if ($status != 0) then
+            echo "isiBuildIsoTree: Unable to mkdir $target"
+            exit 1
+        endif
+    endif
+end
+
+exit 0
+
+# Revision History
+#
+# $Log: isiBuildIsoTree,v $
+# Revision 1.1  2005/08/17 21:06:56  dechavez
+# initial release
+#

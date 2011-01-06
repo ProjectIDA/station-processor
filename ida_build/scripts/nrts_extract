@@ -1,0 +1,190 @@
+#!/bin/csh
+# $Id: nrts_extract,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+#
+# Extract chunks of data from disk loop (to feed nrts_ftp)
+
+if ($?NRTS_HOME) then
+    set nrts_home = $NRTS_HOME
+else
+    set nrts_home = /usr/nrts
+endif
+
+unalias cd cp rm cat ls mkdir mv
+
+set myname    = nrts_extract
+set expr      = /usr/ucb/expr
+set tempdir   = $nrts_home/tmp/$myname
+set timesfile = $nrts_home/etc/extract
+set undefined = -1
+
+logger -t $myname"[$$]" -p user.info "begin"
+
+if ($#argv != 3) then
+    echo "usage: $myname sys_code chan_list ftp_dir"
+    logger -t $myname"[$$]" -p user.info "incorrect command line: $argv"
+    goto abort
+endif
+
+set sys      = $argv[1]
+set chanlist = $argv[2]
+set ftpdir   = $argv[3]
+
+# Make sure no other instance of this script is currently running
+
+if (-e /vmunix) then
+    set psopts = "-ax"
+else
+    set psopts = "-ef"
+endif
+
+ps $psopts | fgrep $myname |       \
+    fgrep -v fgrep | fgrep -v $$ | \
+    fgrep -v "sh -c" > /dev/null
+
+if ($status == 0) then
+    logger -t $myname"[$$]" -p user.info "quit (instance of $myname already running)"
+    goto done
+endif
+
+# Make sure temp directory exists
+
+if (! -e $tempdir) then
+    set command = "mkdir -p $tempdir"
+    logger -t $myname"[$$]" -p user.info "$command"
+    $command
+    set exitstatus = $status
+    if ($exitstatus != 0) then
+        logger -t $myname"[$$]" -p user.info "command failed with status $exitstatus"
+        goto abort
+    endif
+endif
+
+# Make sure ftp directory exists
+
+if (! -e $ftpdir) then
+    set command = "mkdir -p $ftpdir"
+    logger -t $myname"[$$]" -p user.info "$command"
+    $command
+    set exitstatus = $status
+    if ($exitstatus != 0) then
+        logger -t $myname"[$$]" -p user.info "command failed with status $exitstatus"
+        goto abort
+    endif
+endif
+
+# Figure out the start/end times
+
+if (! -e $timesfile) then
+    logger -t $myname"[$$]" -p user.info "missing $timesfile - default to current time"
+    set beg_str = $undefined
+    set end_str = $undefined
+else
+    logger -t $myname"[$$]" -p user.info "determining extract window from $timesfile"
+    source $timesfile
+endif
+
+if ($beg_str == $undefined || $end_str == $undefined) then
+    @ now        = `gmt raw`
+    @ start_time = $now - 3600
+    set tmpstr   = `etoh code=3 $start_time`
+    set yyyy     = `$expr substr $tmpstr 1 4`
+    set day      = `$expr substr $tmpstr 5 3`
+    set hr       = `$expr substr $tmpstr 8 2`
+    set beg_str  = "$yyyy,$day,$hr,00,00,000"
+    set end_str  = "$yyyy,$day,$hr,59,59,999"
+endif
+
+# Extract the data
+
+set command = "xfer_tap"
+set command = "$command if=$sys@localhost"
+set command = "$command chan=$chanlist"
+set command = "$command format=raw"
+set command = "$command beg=$beg_str"
+set command = "$command end=$end_str"
+set command = "$command debug=3 log=syslogd"
+
+set output  = $tempdir/$beg_str.Z
+
+logger -t $myname"[$$]" -p user.info "$command | compress > $output"
+$command | compress > $output
+
+set exitstatus = $status
+if ($exitstatus != 0) then
+    logger -t $myname"[$$]" -p user.info "extract failed with status $exitstatus (ignored)"
+endif
+
+# Copy the data to the output directory
+
+set command = "cp $output $ftpdir"
+logger -t $myname"[$$]" -p user.info "$command"
+$command
+
+set exitstatus = $status
+if ($exitstatus != 0) then
+    logger -t $myname"[$$]" -p user.info "copy failed with status $exitstatus (ignored)"
+endif
+
+set command = "rm $output"
+logger -t $myname"[$$]" -p user.info "$command"
+$command
+
+set exitstatus = $status
+if ($exitstatus != 0) then
+    logger -t $myname"[$$]" -p user.info "remove failed with status $exitstatus (ignored)"
+endif
+
+# Figure out times for next pass
+#
+# HERE WE ASSUME THAT PASSES ARE ONE HOUR APART.  YOU MUST MAKE CERTAIN
+# THAT THE CRON JOB WHICH RUNS THIS RUNS IT AT ONE HOUR INTERVALS!
+
+@ increment = 3600
+@ old = `attol $beg_str`
+@ new = $old + $increment
+set tmpstr = `etoh code=3 $new`
+set yyyy = `$expr substr $tmpstr 1 4`
+set day  = `$expr substr $tmpstr 5 3`
+set hr   = `$expr substr $tmpstr 8 2`
+set beg_str = "$yyyy,$day,$hr,00,00,000"
+set end_str = "$yyyy,$day,$hr,59,59,999"
+
+rm -f $timesfile
+echo -n "# This file is automatically created by $myname.  " > $timesfile
+echo    "DO NOT EDIT BY HAND\!"                             >> $timesfile
+echo    ""                                                  >> $timesfile
+echo    "set beg_str = $beg_str"                            >> $timesfile
+echo    "set end_str = $end_str"                            >> $timesfile
+
+set exitstatus = $status
+if ($exitstatus != 0) then
+    logger -t $myname"[$$]" -p user.info "unable to update $timesfile"
+    set command = "rm $timesfile"
+    logger -t $myname"[$$]" -p user.info "$command"
+    $command
+    set exitstatus = $status
+    if ($exitstatus != 0) then
+        logger -t $myname"[$$]" -p user.info "remove failed with status $exitstatus (ignored)"
+    endif
+endif
+
+# All done!
+
+done:
+
+logger -t $myname"[$$]" -p user.info "completed OK"
+exit 0
+
+# Come here when giving up
+
+abort:
+
+logger -t $myname"[$$]" -p user.info "aborted"
+exit 1
+
+# Revision History
+#
+# $Log: nrts_extract,v $
+# Revision 1.1.1.1  2000/02/08 20:20:45  dec
+# import existing IDA/NRTS sources
+#

@@ -1,0 +1,117 @@
+# $Id: ispCreateIsoImage,v 1.6 2005/02/11 22:11:16 dechavez Exp $
+# 
+# Helper code sourced by ispZipArchive for building ISO images
+
+set InitialDirectory = `pwd`
+
+# Freeze stage directory
+
+set MyStageDir = $StageDir.$$
+
+set command = "mv $StageDir $MyStageDir"
+$command
+if ($status != 0) then
+    logger -t $myname"[$$]" -p user.info "ERROR: $command failed"
+    exit 1
+endif
+
+set command = "mkdir $StageDir"
+$command
+if ($status != 0) then
+    logger -t $myname"[$$]" -p user.info "ERROR: $command failed"
+    exit 1
+endif
+
+# Determine how many data files are in the stage dir
+
+set command = "cd $MyStageDir"
+$command
+if ($status != 0) then
+    logger -t $myname"[$$]" -p user.info "ERROR: $command failed"
+    exit 1
+endif
+
+set dummy = Dummy.gz
+touch $dummy
+@ numfiles = `ls *.gz | wc -l`
+@ numfiles -= 1
+rm $dummy
+if ($numfiles == 0) goto cleanup
+
+# Generate README and yydddhh used to name image file
+
+source $ispGenerateIsoLabel
+
+# Generate ISO image
+
+cd $InitialDirectory
+
+set WorkImgName = $IsoDir/$yydddhh
+set DoneImgName = $IsoDir/$yydddhh.iso
+set command = "mkisofs -V $VolId -quiet -o $WorkImgName $MyStageDir"
+logger -t $myname"[$$]" -p user.info "$command"
+$command >& /dev/null
+if ($status != 0) then
+    logger -t $myname"[$$]" -p user.info "FAILED"
+    exit 1
+endif
+
+# e-mail notice (if so configured)
+
+if (-e $ispIsoNotify) $ispIsoNotify $DoneImgName
+
+set command = "mv $WorkImgName $DoneImgName"
+if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+$command
+if ($status != 0) then
+    logger -t $myname"[$$]" -p user.info "FAILED"
+    exit 1
+endif
+
+# Move the data files to pre-delete area
+
+set command = "mv $MyStageDir/*.gz $DoneZips"
+if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+$command
+if ($status != 0) then
+    logger -t $myname"[$$]" -p user.info "FAILED"
+    exit 1
+endif
+
+cleanup:
+
+# Delete frozen stage directory
+
+cd $InitialDirectory
+set command = "rm -rf $MyStageDir"
+if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+$command
+if ($status != 0) then
+    logger -t $myname"[$$]" -p user.info "FAILED"
+    exit 1
+endif
+
+set status = 0
+
+# Revision History
+# 
+# $Log: ispCreateIsoImage,v $
+# Revision 1.6  2005/02/11 22:11:16  dechavez
+# general cleanup and mods to support NRTS-based CD writers
+#
+# Revision 1.5  2003/03/18 19:30:23  dechavez
+# added optional call to ispIsoNotify
+#
+# Revision 1.4  2002/02/22 21:19:45  dec
+# generate label info, use frozen dir for mkisofs
+#
+# Revision 1.3  2002/01/02 19:20:12  dec
+# changed $verbose to $debug
+#
+# Revision 1.2  2001/12/20 18:10:27  dec
+# User verbose flag for logging decisions, move completed files to
+# DoneIso
+#
+# Revision 1.1  2001/10/24 22:57:32  dec
+# created
+#

@@ -1,0 +1,10 @@
+#!/bin/csh -f
+#
+# $Id: nrts_shutdown,v 1.2 2005/02/11 22:13:51 dechavez Exp $
+#
+# Kill every running nrts_wrtdl.  Period.
+
+set list = `ps ax | grep nrts_wrtdl | grep -v grep | awk '{print $1}'`
+foreach pid ($list)
+    kill -TERM $pid
+end

@@ -1,0 +1,71 @@
+#!/bin/csh -f
+# $Id: reiso,v 1.2 2008/03/20 19:07:51 dechavez Exp $
+#
+# Restore any "done" ISO images to their respective homes.  This is
+# useful if you ever want to re-copy an ISO images
+
+set debug  = 0
+set myname = resiso
+
+if ($debug) logger -t $myname"[$$]" -p user.info "begin"
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    echo "${myname}: missing $setup"
+    goto failure
+endif
+source $setup
+
+# Command line setup
+
+set error = 0
+if ($#argv == 0) then
+    set SiteList = "$SystemsList"
+else if ($#argv == 1) then
+    if ($argv[1] == "all") then
+        set SiteList = "$SystemsList"
+    else
+        set SiteList = "$argv[1]"
+    endif
+else 
+    set SiteList = "$argv"
+endif
+
+# Loop over all sites
+
+@ count = 0
+
+foreach site ($SiteList)
+
+    set SiteDir = $NRTS_HOME/$site
+    set IsoDir  = $SiteDir/iso
+    set DoneIsos = "$IsoDir/done/images"
+    if (-e $IsoDir) then
+        set dummy = $DoneIsos/Dummy.iso
+        touch $dummy
+        set images = `ls $DoneIsos/*.iso`
+        rm -rf $dummy
+    else
+        set images = $dummy
+    endif
+
+    foreach image ($images)
+        if ($image == $dummy) continue
+        mv $image $IsoDir
+    end
+end
+
+pkill -HUP -x -u nrts ispd
+isiReportIsoStats
+
+# Revision History
+#
+# $Log: reiso,v $
+# Revision 1.2  2008/03/20 19:07:51  dechavez
+# HUP ispd so that isp display stats reflect presence of new image
+#
+# Revision 1.1  2008/03/19 19:43:33  dechavez
+# initial release
+#

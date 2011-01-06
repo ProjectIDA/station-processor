@@ -1,0 +1,19 @@
+/Makefile/1.11/Thu May 14 16:33:13 2009//
+/cnf.c/1.6/Tue Jan 23 02:50:43 2007//
+/datreq.c/1.28/Fri Jan 25 23:10:01 2008//
+/ezio.c/1.16/Tue Jan 23 02:50:43 2007//
+/fileio.c/1.1/Thu May 14 16:32:26 2009//
+/log.c/1.2/Mon Jan  8 15:58:18 2007//
+/netutil.c/1.1/Thu Feb  9 00:09:20 2006//
+/open.c/1.6/Thu Jan 11 17:50:35 2007//
+/pack.c/1.14/Fri Jan 25 21:49:52 2008//
+/raw.c/1.7/Fri Sep 30 22:11:35 2005//
+/read.c/1.6/Fri Sep 29 19:45:39 2006//
+/seqno.c/1.13/Wed Oct 31 23:10:27 2007//
+/soh.c/1.8/Tue Jan 23 02:50:43 2007//
+/string.c/1.27/Thu May 14 16:32:06 2009//
+/ts.c/1.21/Tue Jan 23 02:50:43 2007//
+/utils.c/1.16/Sun Feb  3 17:20:17 2008//
+/version.c/1.59/Thu May 14 16:33:53 2009//
+/wfdisc.c/1.9/Wed Oct 31 16:45:30 2007//
+D

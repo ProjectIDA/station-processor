@@ -1,0 +1,46 @@
+#!/bin/csh 
+#
+# $Id: RunZipTeeFiles,v 1.1 2005/05/06 22:34:31 dechavez Exp $
+
+if ($#argv != 4) then
+    echo "usage: $myname MaxMBytesPerArchive StaName PktRev PktLen"
+    exit 1
+endif
+
+# General setup
+
+set myname = RunZipTeeFiles
+
+set sys = `nrtsDefaultSystem`
+if ($status != 0) then
+    echo "Unable to determine default system name"
+    exit 1
+endif
+
+set StartingDir = $NRTS_HOME/$sys/isp
+if (-d $StartingDir) then
+    cd $StartingDir
+    if ($status != 0) then
+        echo "Unable to chdir to $StartingDir"
+        exit 1
+    endif
+else
+    echo "Missing $StartingDir"
+    exit 1
+endif
+
+ispZipTeeFiles $argv[1] $argv[2] $argv[3] $argv[4]
+
+if ($argv[1] == FORCE) then
+    set count = `CountIsoImages $StartingDir/iso`
+    echo "$count ISO images ready to burn"
+endif
+
+exit 0
+
+# Revision History
+#
+# $Log: RunZipTeeFiles,v $
+# Revision 1.1  2005/05/06 22:34:31  dechavez
+# added to repository
+#

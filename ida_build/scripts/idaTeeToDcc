@@ -1,0 +1,166 @@
+#!/bin/csh -f
+# $Id: idaTeeToDcc,v 1.3 2009/01/26 22:17:53 dechavez Exp $
+#
+# Compress and move ISI tee files from one site into DCC incoming area
+
+set myname = idaTeeToDcc
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    set message = "missing $setup"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    goto failure
+endif
+source $setup
+
+# Check for debug flag
+
+if (-e $DebugDir/$myname) then
+    set debug = 1
+else
+    set debug = 0
+endif
+
+if ($debug) logger -t $myname"[$$]" -p user.info "begin"
+
+# Command line setup
+
+set error = 0
+if ($#argv == 2) then
+    set site = $argv[1]
+    set destdir = $argv[2]
+else
+    set error = 1
+endif
+
+if ($error) then
+    set message = "bad command line, error $error"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    echo "usage: $myname site dest_dir"
+    goto failure
+endif
+
+# Get the full path names
+
+set SiteDir  = $NRTS_HOME/$site
+set TeeDir   = $SiteDir/tee
+set StopFlag = $TeeDir/STOP
+set LockFile = $TeeDir/lock
+
+# Nothing to do if there isn't a tee directory
+
+if (! -d $TeeDir) then
+    if ($debug) logger -t $myname"[$$]" -p user.info "no such tee dir $TeeDir"
+    goto success
+endif
+
+# Make sure no other instance of this script is running
+
+filelock $LockFile $$
+if ($status != 0) then
+    set active = `cat $LockFile`
+    if ($debug) logger -t $myname"[$$]" -p user.info "$site tee directory locked by process $active"
+    goto success
+endif
+
+# Nothing to do if the STOP flag is set in the tee directory
+
+if (-e $StopFlag) then
+    if ($debug) logger -t $myname"[$$]" -p user.info "quit: $site STOP flag set"
+    goto success
+endif
+
+# Nothing to do if there isn't a destination directory
+
+if (! -d $destdir) then
+    if ($debug) logger -t $myname"[$$]" -p user.info "no such destination dir $destdir"
+    goto success
+endif
+
+# Get a list of all but the most recent uncompressed tee files
+
+cd $TeeDir
+set tmp = /tmp/$myname.$$
+/usr/bin/ls 4??????????????????????? >& $tmp
+if ($status != 0) then
+    rm $tmp
+    if ($debug) logger -t $myname"[$$]" -p user.info "no uncompressed files found in $TeeDir"
+    goto copygz
+endif
+set NumFiles = `cat $tmp | wc -l`
+if ($NumFiles <= 1) then
+    rm $tmp
+    if ($debug) logger -t $myname"[$$]" -p user.info "no uncompressed files found in $TeeDir"
+    goto copygz
+endif
+@ NumFiles -= 1
+set UncompressedFileList = `head -$NumFiles $tmp`
+rm $tmp
+
+# Compress each file in the list
+
+if ($debug) logger -t $myname"[$$]" -p user.info "compressing files in $TeeDir"
+if ($status == 0) then
+    foreach file ($UncompressedFileList)
+        set output = $file.gz
+        rm -f $output
+        set command = "gzip $file"
+        if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+        $command
+        if (-e $file && -e $output) then
+            logger -t $myname"[$$]" -p user.info "$command failed"
+            rm -f $output
+            goto failure
+        endif
+    end
+endif
+
+# Move zipped files into DCC area
+
+copygz:
+
+set dummy = 4_______________________.gz
+touch $dummy
+foreach file (4???????????????????????.gz)
+    if ($file != $dummy) then
+        set destpath = `uniqpath suflen=3 $file $destdir`
+        set command = "mv $file $destpath"
+        if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+        $command
+        if ($status != 0) then
+            logger -t $myname"[$$]" -p user.info "FAILED: $command"
+            rm $dummy
+            goto failure
+        endif
+    endif
+end
+rm $dummy
+
+# Normal exit
+
+success:
+pkill -HUP -x ispd
+if ($debug) logger -t $myname"[$$]" -p user.info "completed OK"
+exit 0
+
+failure:
+pkill -HUP -x ispd
+logger -t $myname"[$$]" -p user.info "exit 1"
+exit 1
+
+# Revision History
+#
+# $Log: idaTeeToDcc,v $
+# Revision 1.3  2009/01/26 22:17:53  dechavez
+# Don't ignore previously gziped files
+#
+# Revision 1.2  2009/01/26 22:06:49  dechavez
+# Set debug flag based on DebugDir file, use uniqpath to ensure files are not clobbered
+#
+# Revision 1.1  2008/03/13 21:49:50  dechavez
+# initial release (not really, but new to this CVS)
+#

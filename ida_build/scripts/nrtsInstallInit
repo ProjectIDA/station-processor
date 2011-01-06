@@ -1,0 +1,89 @@
+#!/bin/csh -f
+#
+# Install /etc/init.d files
+# $Id: nrtsInstallInit,v 1.4 2005/10/13 20:01:48 dechavez Exp $
+
+# Root only script
+
+set path = (/usr/ucb /usr/bin $path)
+
+set iam = `whoami`
+if ($status != 0) then
+    echo "FATAL ERROR: whoami not working"
+    exit 1
+endif
+if ($iam != root) then
+    echo "Must be run as root."
+    exit 1
+endif
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    set message = "missing $setup"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    goto failure
+endif
+source $setup
+
+set src = $NRTS_HOME/etc/init.d
+set dest = /etc/init.d
+
+if (! -d $src) then
+    echo "missing $src"
+    exit 1
+endif
+
+if (! -d $dest) then
+    echo "missing $dest (you are screwed)"
+    exit 1
+endif
+
+cd $src
+if ($status != 0) then
+    echo "can't chdir $src"
+    exit 1
+endif
+
+foreach file (*)
+
+    if (-e $dest/$file) then
+        set command = "rm -f $dest/$file"
+        echo $command
+        $command
+        if ($status != 0) then
+            echo "command failed"
+            exit 1
+        endif
+    endif
+
+    set command = "ln -s $src/$file $dest"
+    echo $command
+    $command
+    if ($status != 0) then
+        echo "command failed"
+        exit 1
+    endif
+
+end
+
+rm -f /etc/rc*.d/K??isp >& /dev/null
+rm -f /etc/rc*.d/K??isid >& /dev/null
+rm -f /etc/rc*.d/K??nrts >& /dev/null
+rm -f /etc/rc*.d/S??isp >& /dev/null
+rm -f /etc/rc*.d/S??isid >& /dev/null
+rm -f /etc/rc*.d/S??nrts >& /dev/null
+
+foreach file (/etc/rc0.d/K10nrts /etc/rc1.d/K10nrts /etc/rc3.d/S90nrts)
+    set command = "ln -s $src/nrts $file"
+    echo $command
+    $command
+    if ($status != 0) then
+        echo "command failed"
+        exit 1
+    endif
+end
+
+exit 0

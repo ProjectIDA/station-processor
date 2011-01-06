@@ -1,0 +1,62 @@
+#!/bin/csh -f
+# $Id: ClearClientmqueue,v 1.1 2009/02/25 19:36:31 dechavez Exp $
+#
+# Clear out /var/spool/clientmqueue
+
+set myname = ClearClientmqueue
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    set message = "missing $setup"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    goto failure
+endif
+source $setup
+
+# Check for debug flag
+
+if (-e $DebugDir/$myname) then
+    set debug = 1
+else
+    set debug = 0
+endif
+
+if ($debug) logger -t $myname"[$$]" -p user.info "begin"
+
+set spool  = /var/spool
+set queue  = clientmqueue
+set owner  = smmsp
+set group  = smmsp
+set mode   = 770
+set tmp    = $myname.$$
+@ maxfiles = 50
+
+cd $spool
+if ($status != 0) exit 0
+if (! -e $queue) exit 0
+
+@ numfiles = `ls $queue | wc -l`
+if ($debug) logger -t $myname"[$$]" -p user.info "$spool/$queue numfiles=$numfiles, maxfiles=$maxfiles"
+if ($numfiles < $maxfiles) goto finish
+
+logger -t $myname"[$$]" -p user.info "clearing $spool/$queue (numfiles=$numfiles, maxfiles=$maxfiles)"
+mv $queue $tmp
+mkdir $queue
+chmod $mode $queue
+chown ${owner}:${group} $queue
+
+finish:
+
+rm -rf $tmp
+if ($debug) logger -t $myname"[$$]" -p user.info "finished"
+exit 0
+
+# Revision History
+#
+# $Log: ClearClientmqueue,v $
+# Revision 1.1  2009/02/25 19:36:31  dechavez
+# initial release
+#

@@ -1,0 +1,24 @@
+Send a DAS flush log command whenever a trigger or calibration flag
+transition is noted.
+
+Need a way to see what streams are being acquired by the ISP, other than
+the "nrts" command which only shows streams going into the nrts.  Say a
+"vs" command that shows something like this:
+
+                            DAS Packet Latency
+
+Strm Chan Filt Mode Name   Latency      Strm Chan Filt Mode Name   Latency
+  0   22   11  cont  bhz 000-00:00:00     12    3   16 cont  shz 000-00:00:00
+  1   23   11  cont  bhn 000-00:00:00     13    4   16 cont  shn 000-00:00:00
+  2   24   11  cont  bhe 000-00:00:00     14    5   16 cont  she 000-00:00:00
+  3   22   13  cont  lhz 000-00:00:00     15    9   16 cont  slz 000-00:00:00
+  4   23   13  cont  lhn 000-00:00:00     16   10   16 cont  sln 000-00:00:00
+  5   24   13  cont  lhe 000-00:00:00     17   11   16 cont  sle 000-00:00:00
+  6   22   15  cont  vhz 000-00:00:00     18    6   10 trig  egz 000-00:00:00
+  7   23   15  cont  vhn 000-00:00:00     19    7   10 trig  egn 000-00:00:00
+  8   24   15  cont  vhe 000-00:00:00     20    8   10 trig  ege 000-00:00:00
+  9   12   15  cont  vmz 000-00:00:00     21    6   13 cont  lgz 000-00:00:00
+ 10   13   15  cont  vmn 000-00:00:00     22    7   13 cont  lgn 000-00:00:00
+ 11   14   15  cont  vme 000-00:00:00     23    8   13 cont  lge 000-00:00:00
+                                          24  n/a  n/a  n/a  n/a 
+

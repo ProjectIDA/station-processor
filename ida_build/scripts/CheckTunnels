@@ -1,0 +1,82 @@
+#!/bin/csh -f
+# "$Id: CheckTunnels,v 1.2 2008/05/06 20:44:48 dechavez Exp $"
+#
+# Manage SSH tunnels
+
+set debug  = 0
+set myname = CheckTunnels
+set lock   = /var/tmp/$myname.lock
+
+if ($debug) logger -t $myname"[$$]" -p user.info "begin"
+
+# These are not expected to need to be changed, so we hardcode them here
+
+set MyData     = 39136
+set MyShell    = 22
+set TunnelUser = tunnel
+set RemoteHost = idahub
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    set message = "missing $setup"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    exit 1
+endif
+source $setup
+
+# Make sure no other instance of this script is running
+
+filelock $lock $$
+if ($status != 0) then
+    if ($debug) logger -t $myname"[$$]" -p user.info "another instance already active"
+    exit 0
+endif
+
+# See if tunnel is already running
+
+pgrep -f "${TunnelUser}@${RemoteHost}" >& /dev/null
+if ($status == 0) then
+    if ($debug) logger -t $myname"[$$]" -p user.info "tunnel already present"
+    exit 0
+endif
+
+set TunnelInfo = $NRTS_HOME/etc/Tunnels
+
+if (! -e $TunnelInfo) then
+    if ($debug) logger -t $myname"[$$]" -p user.info "$TunnelInfo not present"
+    exit 0
+endif
+
+set PortString = `stripcat $TunnelInfo | grep -i " $DefaultSite " `
+set exitstatus = $status
+if ($exitstatus != 0) then
+    if ($debug) logger -t $myname"[$$]" -p user.info "can't extract ports for $DefaultSite from $TunnelInfo"
+    exit 0
+endif
+
+set RemoteData = `echo $PortString | awk '{print $2}'`
+if ($debug) logger -t $myname"[$$]" -p user.info "RemoteData = $RemoteData"
+set RemoteShell = `echo $PortString | awk '{print $3}'`
+if ($debug) logger -t $myname"[$$]" -p user.info "RemoteShell = $RemoteShell"
+
+# Launch the tunnel
+
+logger -t $myname"[$$]" -p user.notice "Starting SSH tunnels into $RemoteHost"
+set command = "ssh -f -N -R ${RemoteData}:localhost:${MyData} -R ${RemoteShell}:localhost:${MyShell} ${TunnelUser}@${RemoteHost}"
+logger -t $myname"[$$]" -p user.notice "$command"
+$command
+
+exit 0
+
+# Revision History
+#
+# $Log: CheckTunnels,v $
+# Revision 1.2  2008/05/06 20:44:48  dechavez
+# use pgrep -f to check for existing tunnels
+#
+# Revision 1.1  2008/05/06 20:29:13  dechavez
+# created
+#

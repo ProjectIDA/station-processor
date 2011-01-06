@@ -1,0 +1,51 @@
+#!/bin/csh -f
+# "$Id: CheckLinkQuality,v 1.1 2008/06/08 13:38:34 dechavez Exp $"
+#
+# Track link quality via ping
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    echo "missing $setup"
+    exit 1
+endif
+source $setup
+
+# Test host and log file are required arguments
+
+if ($#argv != 2) then
+    echo "usage: CheckLinkQuality host logfile"
+    exit 1
+endif
+
+set host = $argv[1]
+set log  = $argv[2]
+
+touch $log
+if ($status != 0) then
+    echo "Can't update log file '$log'."
+    exit 1
+endif
+
+# These are not expected to need to be changed, so we hardcode them here
+
+set size = 1024
+set count = 10
+
+# Run the test
+
+set tmpstamp = `gmt yyyy:ddd-hh:mm:ss`
+set tstamp = `substring $tmpstamp 1 14`
+set result = `ping -s $host $size $count | grep round-trip | awk '{print $5}'`
+
+echo $tstamp $result >> $log
+
+exit 0
+
+# Revision History
+#
+# $Log: CheckLinkQuality,v $
+# Revision 1.1  2008/06/08 13:38:34  dechavez
+# first draft
+#

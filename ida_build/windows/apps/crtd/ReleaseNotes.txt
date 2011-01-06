@@ -1,0 +1,4 @@
+Crtd Release notes
+
+0.1.3 6/26/2000 (cvs rtag crtd_0_1_3 crtd)
+      Initial release following import into CVS

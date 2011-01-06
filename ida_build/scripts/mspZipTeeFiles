@@ -1,0 +1,164 @@
+#!/bin/csh
+# $Id: mspZipTeeFiles,v 1.3 2002/03/19 01:37:49 dec Exp $
+#
+# Prepare multiple ISP "tee" files for subsequent ISO image generation
+
+set debug  = 0
+set myname = mspZipTeeFiles
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    set message = "missing $setup"
+    echo "${myname}: $message"
+    logger -t $myname"[$$]" -p user.info "$message"
+    goto abort
+endif
+source $setup
+
+# Specific setup
+
+set mspCompress         = $NRTS_HOME/scripts/mspCompress
+set mspStage            = $NRTS_HOME/scripts/mspStage
+set mspGenerateIsoLabel = $NRTS_HOME/scripts/mspGenerateIsoLabel
+set mspCreateIsoImage   = $NRTS_HOME/scripts/mspCreateIsoImage
+set Nobody = nobody
+
+set RequiredList = "$mspCompress"
+set RequiredList = "$RequiredList $mspStage"
+set RequiredList = "$RequiredList $mspCreateIsoImage"
+
+@ errors  = 0
+foreach script ($RequiredList)
+    if (! -e $script) then
+        set message = "Missing $script"
+        echo "${myname}: $message"
+        logger -t $myname"[$$]" -p user.info "$message"
+        @ errors += 1
+    endif
+end
+
+if ($errors != 0) goto abort
+
+# Set up the archive tree
+
+set ArchiveDir = "$NRTS_HOME/archive"
+set ZipDir     = "$ArchiveDir/zip"
+set StageDir   = "$ArchiveDir/stage"
+set TextDir    = "$ArchiveDir/text"
+set IsoDir     = "$ArchiveDir/iso"
+
+foreach dir ($ArchiveDir $ZipDir $StageDir $TextDir $IsoDir)
+    if (! -e $dir) then
+        set command = "mkdir -p $dir"
+        if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+        if ($debug) echo "$command"
+        $command
+        if ($status != 0) then
+            logger -t $myname"[$$]" -p user.info "FAILED"
+            echo "FAILED: $command"
+            goto abort
+        endif
+    endif
+end
+
+# Command line setup
+
+if ($#argv != 1 && $#argv != 2) then
+    echo "usage: $myname MaxMBytesPerArchive"
+    goto abort
+endif
+
+if ($#argv == 2) then
+    set NotifyAddress = $argv[2]
+else
+    set NotifyAddress = $Nobody
+endif
+
+if ($argv[1] == FORCE) then
+    set Force = TRUE
+    logger -t $myname"[$$]" -p user.info "begin (FORCE)"
+    set NotifyAddress = $Nobody
+else
+    set MaxMBytesPerArchive = $argv[1]
+    @ MaxBytesPerArchive = $MaxMBytesPerArchive * 1024 * 1024
+    set Force = FALSE
+    logger -t $myname"[$$]" -p user.info "begin ($MaxMBytesPerArchive)"
+endif
+
+# If forcing an ISO image, then do it now
+
+if ($Force == TRUE) then
+    source $mspCreateIsoImage
+    if ($exitstatus != 0) goto abort
+    goto done
+endif
+
+# Compress all the new stuff
+
+foreach system ($SystemsList)
+    set TeeDir = $NRTS_HOME/$system/isp/tee
+    if ( -e $TeeDir ) then
+        cd $TeeDir
+        source $mspCompress
+        if ($exitstatus != 0) goto abort
+    endif
+end
+
+# Move zipped files into the staging area, building ISO images as needed
+
+@ count = `find $ZipDir -name \*.gz -print | wc -l`
+
+if ($count > 0) then
+    cd $ZipDir
+    foreach year (????)
+        cd $ZipDir/$year
+        foreach day (???)
+            cd $ZipDir/$year/$day
+            foreach hr (??)
+                cd $ZipDir/$year/$day/$hr
+                source $mspStage
+                if ($exitstatus != 0) goto abort
+                cd ..
+                set command = "rm -rf $ZipDir/$year/$day/$hr"
+                if ($debug) echo $command
+                $command
+            end
+            cd ..
+            set command = "rm -rf $ZipDir/$year/$day"
+            if ($debug) echo $command
+            $command
+        end
+        cd ..
+        set command = "rm -rf $ZipDir/$year"
+        if ($debug) echo $command
+        $command
+    end
+endif
+
+# Exit points
+
+done:
+
+logger -t $myname"[$$]" -p user.info "completed OK"
+exit 0
+
+abort:
+
+echo "ABORTED DUE TO ERRORS"
+logger -t $myname"[$$]" -p user.info "ABORTED DUE TO ERRORS"
+exit 1
+
+# Revision History
+#
+# $Log: mspZipTeeFiles,v $
+# Revision 1.3  2002/03/19 01:37:49  dec
+# first working version
+#
+# Revision 1.2  2002/03/18 23:39:57  dec
+# added cleanup and helper task error detection
+#
+# Revision 1.1  2002/03/18 22:48:50  dec
+# created
+#

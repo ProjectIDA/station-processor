@@ -1,0 +1,54 @@
+#!/bin/csh -f
+#
+# Load the Windows autorun files
+
+set myname = isiLoadAutorun
+
+if ($#argv == 0) then
+    set dest = .
+else if ($#argv == 1) then
+    set dest = $argv[1]
+else
+    echo "usage: $myname [destdir]"
+endif
+set autorun = $dest/autorun
+set unpack  = $dest/unpack.exe
+       
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    echo "${myname}: missing $setup"
+    goto failure
+endif
+source $setup
+
+set idacd = $NRTS_HOME/etc/start/idacd.exe
+if (! -e $idacd) exit 0
+
+cp -f $idacd $unpack
+if ($status != 0) goto failure
+
+cp -f /dev/null $autorun
+if ($status != 0) goto failure
+
+echo \[autorun\] >> $autorun
+if ($status != 0) goto failure
+
+echo "open=unpack.exe" >> $autorun
+if ($status != 0) goto failure
+
+echo "icon=unpack.exe" >> $autorun
+if ($status != 0) goto failure
+
+unix2dos < $autorun > $autorun.inf
+if ($status != 0) goto failure
+
+rm -f $autorun
+exit 0
+
+failure:
+
+foreach file ($unpack $autorun $autorun.inf)
+    rm -f $file
+end
+
+exit 1

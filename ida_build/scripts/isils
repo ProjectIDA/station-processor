@@ -1,0 +1,25 @@
+#!/bin/csh -f
+# $Id: isils,v 1.1 2005/11/04 01:08:36 dechavez Exp $
+# List start/end times for each .gz file in the current directory
+
+if ($#argv == 1) then
+    set rev = $argv
+else if (-e ./contents.txt) then
+    set rev = `cat contents.txt | awk '{print $2}'`
+else
+    echo "need to specify rev code"
+    exit 1
+endif
+
+foreach gz (*.gz)
+    echo -n $gz
+    echo -n ": "
+    gzcat $gz | idaspan rev=$rev
+end
+
+# Revision History
+#
+# $Log: isils,v $
+# Revision 1.1  2005/11/04 01:08:36  dechavez
+# initial release
+#

@@ -1,0 +1,82 @@
+#!/bin/csh -f
+# $Id: ispGenerateIsoLabel,v 1.2 2005/05/04 16:37:32 dechavez Exp $
+
+# Find first and last files in this volume
+
+set files = (*.gz)
+set FirstFile = $files[1]
+set LastFile = $files[$#files]
+set yydddhh = `$expr substr $FirstFile 1 7`
+
+# Determine time span based on file name
+
+set By = `$expr substr $FirstFile 1 2`
+set Bd = `$expr substr $FirstFile 3 3`
+set Bh = `$expr substr $FirstFile 6 2`
+set FileBeg = "20${By}:$Bd-${Bh}"
+
+set Ey = `$expr substr $LastFile 1 2`
+set Ed = `$expr substr $LastFile 3 3`
+set Eh = `$expr substr $LastFile 6 2`
+set FileEnd = "20${Ey}:$Ed-${Eh}"
+
+# Determine time span based on file contents
+
+set range = `gzcat $FirstFile | idaspan rev=$PktRev reclen=$PktLen`
+set DataBeg = $range[1]
+
+set range = `gzcat $LastFile | idaspan rev=$PktRev reclen=$PktLen`
+set DataEnd = $range[2]
+
+# Generate the human readable README.txt
+
+set README = ./README
+cp /dev/null $README
+
+echo "Station Code  = $StaName" >> $README
+echo "Packet Format = $PktRev" >> $README
+echo "Record length = $PktLen bytes" >> $README
+echo "File Dates:  $FileBeg    through $FileEnd" >> $README
+echo "Data Dates:  $DataBeg through $DataEnd *" >> $README
+echo "" >> $README
+echo "* Data Dates may not be accurate if there are clock problems" >> $README
+rm -f $README.txt
+unix2dos < $README > $README.txt
+rm -f $README
+
+# Generate the machine readable CONTENTS
+
+set CONTENTS = ./CONTENTS
+rm -f $CONTENTS
+set contents = "$StaName $PktRev $PktLen $FileBeg $FileEnd $DataBeg $DataEnd"
+echo $contents > $CONTENTS
+unix2dos < $CONTENTS > $CONTENTS.txt
+rm -f $CONTENTS
+
+# Set up for autorun
+
+set idacd = /usr/nrts/etc/start/idacd.exe
+if ( -e $idacd ) then
+    cp $idacd .
+    set autorun = autorun.inf
+    cp /dev/null $autorun
+    echo \[autorun\] >> $autorun
+    echo "open=idacd.exe" >> $autorun
+    echo "icon=idacd.exe" >> $autorun
+    unix2dos < $autorun > $autorun.inf
+    rm -f $autorun
+endif
+
+# Generate the volume ID
+
+set VolId = "${StaName}_${FileBeg}_${FileEnd}"
+
+# Revision History
+#
+# $Log: ispGenerateIsoLabel,v $
+# Revision 1.2  2005/05/04 16:37:32  dechavez
+# added autorun stuff
+#
+# Revision 1.1  2002/02/22 21:20:03  dec
+# created
+#

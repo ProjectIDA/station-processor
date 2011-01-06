@@ -1,0 +1,216 @@
+#!/bin/csh -f
+#
+# $Id: nrts_release,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+#
+# Generate a new release of the nrts software
+
+unalias cp rm
+
+set OS = `uname -s`
+if ($OS == SCO_SV) then
+    set iam = `who -m | awk '{print $1}'`
+else if ( -e /usr/ucb/whoami ) then
+    set iam = `/usr/ucb/whoami`
+else
+    echo "can't determine user id"
+    exit 1
+endif
+
+if ($iam != dec && $iam != code) then
+    echo "must be run as user dec or code"
+    goto abort
+endif
+
+if ($#argv != 2) then
+    echo "usage: nrts_release dest_host dest_platform"
+    exit 1
+endif
+
+set host = $argv[1]
+set platform = $argv[2]
+
+# Work from home directory
+
+set dist_home = ~
+set crnt_dir  = `pwd`
+set output = "$crnt_dir/new$host.tar.gz"
+if (-e $output) rm $output
+
+cd $dist_home
+if ($status != 0) goto abort
+
+set ident = $$
+set list  = ""
+
+# Get the Devices, Systems and Dialups appropriate for this host
+
+#foreach file (Devices Systems)
+#    set master = $dist_home/etc/release/$file/$host
+#    if (-e $master) then
+#        set orig = etc/$file
+#        set copy = $orig
+#        set temp = etc/$file.$ident
+#        if (-e $orig) mv $orig $temp
+#        if ($status != 0) then
+#            echo "can't save $orig"
+#            goto abort
+#        endif
+#        cp $master $orig
+#        if ($status != 0) then
+#            echo "can't copy $master"
+#            goto abort
+#        endif
+#        set list = "$list $orig"
+#    endif
+#end
+#
+## Get Dialups directory for this host (if there is one)
+#
+#set master = $dist_home/etc/release/Dialups/$host
+#if ( -e $master ) then
+#    set orig   = $dist_home/etc/Dialups
+#    set save   = $orig.$ident
+#    if ( -e $orig ) then
+#        mv $orig $save
+#        if ($status != 0) then
+#            echo "can't mv $orig $copy"
+#            goto abort
+#        endif
+#    endif
+#    mkdir $dist_home/etc/Dialups
+#    cp $master/[a-z]* $dist_home/etc/Dialups
+#    if ($status != 0) then
+#        echo "can't copy files from $master"
+#        goto abort
+#    endif
+#endif
+
+# Determine master list file names
+
+set binaries = etc/release/binaries
+set temp = $binaries.$host
+if (-e $temp) set binaries = $temp
+
+set scripts = etc/release/scripts
+set temp = $scripts.$host
+if (-e $temp) set scripts = $temp
+
+set datafiles = etc/release/datafiles
+set temp = $datafiles.$host
+if (-e $temp) set datafiles = $temp
+
+# Verify master lists and their contents all exist
+
+@ errors = 0
+
+foreach file ($binaries $scripts $datafiles)
+    if (! -e $file) then
+        echo "missing $file"
+        set ok = 0
+        @ errors = $errors + 1
+    endif
+end
+
+if (-e $binaries) then
+    foreach entry (`stripcat $binaries`)
+        set entry = bin/$platform/$entry
+        if (! -e $entry) then
+            echo "missing $entry"
+            @ errors = $errors + 1
+        else
+            set list = "$list $entry"
+        endif
+    end
+endif
+    
+if (-e $scripts) then
+    foreach entry (`stripcat $scripts`)
+        set entry = scripts/$entry
+        if (! -e $entry) then
+            echo "missing $entry"
+            @ errors = $errors + 1
+        else
+            set list = "$list $entry"
+        endif
+    end
+endif
+
+if (-e $datafiles) then
+    foreach entry (`stripcat $datafiles`)
+        set entry = etc/$entry
+        if (! -e $entry) then
+            echo "missing $entry"
+            @ errors = $errors + 1
+        else
+            set list = "$list $entry"
+        endif
+    end
+endif
+
+#  Get boot startup file
+
+set boot = etc/start/$host.boot
+if (! -e $boot) then
+    echo "missing $boot"
+    @ errors = $errors + 1
+else
+    set list = "$list $boot"
+endif
+
+if ($errors != 0) goto abort
+
+#  Make a compressed tar file of the distribution
+
+tar cvf - $list | gzip -c > $output
+
+#  Restore any temp copies
+
+foreach file (Devices Systems)
+    set orig = etc/$file.$ident
+    set temp = etc/$file
+    if (-e $orig) then
+        /bin/rm -f $temp
+        if ($status != 0) then
+            echo "can't remove $temp"
+            exit 1
+        endif
+        mv $orig $temp
+        if ($status != 0) then
+            echo "can't mv $orig $temp"
+            exit 1
+        endif
+    endif
+end
+
+set orig = $dist_home/etc/Dialups
+set save = $orig.$ident
+if ( -e $save ) then
+    /bin/rm -rf $orig
+    if ($status != 0) then
+        echo "can't rm -rf $orig"
+        exit 1
+    endif
+    mv $save $orig
+    if ($status != 0) then
+        echo "can't mv $save $orig"
+        exit 1
+    endif
+endif
+
+cd $crnt_dir
+if ($status != 0) goto abort
+
+exit 0
+
+abort:
+
+echo "failed to create distribution"
+
+exit 1
+
+# Revision History
+#
+# $Log: nrts_release,v $
+# Revision 1.1.1.1  2000/02/08 20:20:45  dec
+# import existing IDA/NRTS sources
+#

@@ -1,0 +1,22 @@
+/Makefile/1.3/Thu Jan  4 21:38:36 2007//
+/calib.c/1.3/Thu Jan 11 21:59:25 2007//
+/chan.c/1.4/Thu Jan 11 21:59:25 2007//
+/chnlocmap.c/1.6/Wed Oct 31 17:00:30 2007//
+/coords.c/1.4/Thu Jan 11 21:59:25 2007//
+/datlen.c/1.5/Tue Jan 15 19:41:17 2008//
+/debug.c/1.3/Thu Jan 11 21:59:25 2007//
+/inst.c/1.4/Wed Oct 31 17:00:30 2007//
+/revs.c/1.5/Wed Oct 31 17:00:30 2007//
+/root.c/1.4/Fri Oct  5 19:37:25 2007//
+/sint.c/1.4/Thu Jan 11 21:59:25 2007//
+/site.c/1.4/Thu Jan 11 21:59:25 2007//
+/sitechan.c/1.6/Wed Oct 31 16:59:50 2007//
+/sitechanflag.c/1.4/Wed Oct 31 16:59:32 2007//
+/srate.c/1.4/Thu Jan 11 21:59:25 2007//
+/stamap.c/1.4/Wed Oct 31 16:56:39 2007//
+/system.c/1.11/Wed Oct 31 16:55:53 2007//
+/tqual.c/1.4/Thu Jan 11 21:59:25 2007//
+/trecs.c/1.2/Thu Jan 11 21:59:25 2007//
+/version.c/1.14/Tue Jan 15 19:41:12 2008//
+/wrdsiz.c/1.5/Tue Jan 15 19:41:17 2008//
+D

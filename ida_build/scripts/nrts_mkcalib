@@ -1,0 +1,100 @@
+#!/bin/csh -f
+# $Id: nrts_mkcalib,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+#
+# Generate an updated calibration file from and IDA calibration relation
+
+if ($#argv != 1) then
+    echo "usage: nrts_mkcalib calibration_relation"
+    exit 1
+endif
+
+if ($?NRTS_HOME) then
+    set nrts_home  = $NRTS_HOME
+    set etc        = $nrts_home/etc
+    set tmp        = /tmp/nrts_mkcalib.$$
+    set calib      = "calibration"
+    set others     = "calibration.others"
+    set fullcalib  = "$etc/$calib"
+    set fullothers = "$etc/$others"
+else
+    echo "NRTS_HOME is not defined"
+    exit 1
+endif
+
+set master = $argv[1]
+if ( ! -e $master) then
+    echo "missing $master"
+    exit 1
+endif
+
+cd $etc
+echo "opening $fullcalib for edit"
+set command = "sccs edit $calib"
+$command# >& /dev/null
+set exitstatus = $status
+if ($exitstatus != 0) then
+    echo "$command failed: status $exitstatus"
+    exit 1
+endif
+
+echo "extracting $fullothers"
+set command = "sccs get $others"
+$command >& /dev/null
+set exitstatus = $status
+if ($exitstatus != 0) then
+    echo "$command failed: status $exitstatus"
+    exit 1
+endif
+
+echo "creating temp relation"
+cp /dev/null $calib
+if ($status != 0) then
+    echo "can't initialize $fullcalib"
+    exit 1
+endif
+
+cp /dev/null $tmp
+if ($status != 0) then
+    echo "can't initialize tmp file $tmp"
+    exit 1
+endif
+
+cat $master $others >> $tmp
+if ($status != 0) then
+    echo "can't create tmp file $tmp"
+    exit 1
+endif
+
+echo "converting from calibration relation to internal format"
+set command = "nrts_calcon $tmp"
+$command > $calib
+if ($status != 0) then
+    echo "$command failed"
+    exit 1
+endif
+
+echo "locking $fullcalib"
+set command = "sccs delget $calib"
+echo "nrts_mkcalib update" | $command >& /dev/null
+if ($status != 0) then
+    echo "$command failed"
+    exit 1
+endif
+
+echo "removing temp $fullothers"
+chmod 644 $fullothers
+rm -f $fullothers
+if ($status != 0) then
+    echo "can't remove $fullothers"
+    exit 1
+endif
+
+echo "$fullcalib successfully updated"
+exit 0
+
+# Revision History
+#
+# $Log: nrts_mkcalib,v $
+# Revision 1.1.1.1  2000/02/08 20:20:45  dec
+# import existing IDA/NRTS sources
+#

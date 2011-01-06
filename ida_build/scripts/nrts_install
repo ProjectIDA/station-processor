@@ -1,0 +1,115 @@
+#!/bin/csh
+#
+# $Id: nrts_install,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+#
+# Install a new release of the nrts distribution
+
+unalias rm ls
+
+set OS = `uname -s`
+if ($OS == SCO_SV) then
+    set iam = `who -m | awk '{print $1}'`
+else if ( -e /usr/ucb/whoami ) then
+    set iam = `/usr/ucb/whoami`
+else
+    echo "can't determine user id"
+    goto abort
+endif
+
+if ($iam != nrts) then
+    echo "Must be run as nrts"
+    goto abort
+endif
+
+
+if ($?NRTS_HOME) then
+    set nrts_home = $NRTS_HOME
+else
+    echo "NRTS_HOME is undefined"
+    goto abort
+endif
+
+set path = ($nrts_home/bin/$platform $nrts_home/scripts $path)
+
+if ($#argv == 1 && $1 == "-backup") then
+    set backup = 1
+else
+    set backup = 0
+endif
+
+cd ~nrts
+set bindir = bin/$platform
+if ($nodename == congo) set nodename = jts-gw
+if ($nodename == chato) set nodename = jts
+set input = "./new$nodename.tar.gz"
+
+if (! -e $input) then
+    echo "missing $input distribution file"
+    goto abort
+endif
+
+if ($backup != 0) then
+    mkdir /usr/nrts/backup >& /dev/null
+    set backup = /usr/nrts/backup/`date +%m%d%y-%H:%M:%S`.tar.Z
+    echo "backing up old system to $backup"
+    tar cvf - bin scripts etc | compress > $backup
+    if ($status != 0) goto abort
+endif
+
+echo "Distribution file is '$input'"
+echo "adding write permission"
+
+chmod -R 755 bin etc scripts
+if ($status != 0) goto abort
+
+echo "extracting new release"
+
+gzip -cd $input | tar xvf -
+if ($status != 0) goto abort
+
+echo "set-uid on appropriate binaries"
+
+set setuidlist = "nrts_wrtdl nrts_bwd nrts_mon nrts_xfer drmd drm_spool"
+set setuidlist = "$setuidlist nrts_alpha AlphaSend nrts_edes"
+
+foreach file ($setuidlist)
+    set dest = $bindir/$file
+    if ( -e $dest) then
+        set command = "chmod 4555 $dest"
+        echo $command
+        $command
+    endif
+end
+
+echo "setting read-only mode"
+
+chmod 775 bin etc scripts $bindir
+chmod 444 etc/*
+chmod 775 etc/start etc/maps
+chmod 444 etc/maps/*
+chmod 555 etc/start/* scripts/*
+foreach subdirectory (crontabs msgs Dialups)
+    if ( -e etc/$subdirectory ) then
+        chmod 755 $subdirectory
+        chmod 444 $subdirectory/*
+    endif
+end
+chmod a-w $bindir/*
+
+if ($status != 0) goto abort
+
+echo "removing $input"
+rm -f $input
+
+exit $status
+
+abort:
+
+echo "installation failed"
+
+# Revision History
+#
+# $Log: nrts_install,v $
+# Revision 1.1.1.1  2000/02/08 20:20:45  dec
+# import existing IDA/NRTS sources
+#

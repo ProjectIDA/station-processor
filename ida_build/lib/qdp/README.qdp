@@ -1,0 +1,217 @@
+This is a thread-safe C language implementation of the Q330 QDP protocol
+as described in the document
+
+    http://www.q330.com/Download/Secure/Developers/Q330com-v17.pdf.
+
+It supports connections to any of the 6 defined ports (config, special
+functions, and logical data ports 1 through 4).  Although it has only 
+been tested over ethernet, it has been successfully tested under stressful
+conditions (randomly corrupted packets and frequent random forced loss of
+registration) so my expectation is that performance over other types
+of networks should error free as well.
+
+Registration and re-registration are handled transparently to the
+application layer.  User commands are automatically resent in the
+event of timeout or transmission error.  Connections to data ports
+automatically includes loading of the configuration and DP tokens.
+
+Connection
+----------
+The application should begin by establishing a connection to the Q330
+via a call to
+
+QDP *qdpConnect(char *q330, UINT64 serialno, UINT64 authcode, int port, int debug, LOGIO *lp)
+
+where
+
+    q330 = null terminated string containing digitizer name or dot decimal IP address
+    serialno = digitizer serial number (interpreted as a 16 digit hex number)
+    authcode = digitizer authentication code
+    port = QDP_CFG_PORT (config port), QDP_SFN_PORT, (special functions), or 1-4 (data port)
+    debug = library log verbosity, one of QDP_TERSE, QDP_INFO, QDP_DEBUG 
+    lp = pointer to logging facility (see README.logio)
+
+The return value is a pointer to a QDP handle that is used for all
+subsequent communication, or NULL in the event of failure.  Currently
+the only thing that will cause qdpConnect() to fail is a socket I/O error
+or a C1_ERR response other than "too many servers" during the registration.
+In the case of "too many servers", the library will periodically retry
+the registration request (however, I have observed that when the port is later
+free and the retry succeeds, the result is an "invalid parameter" error
+reply to the server challenge response, which then triggers a failure...
+clearly additional work is required here).
+
+The debug parameter controls the amount of log chatter the library generates.
+QDP_TERSE will cause only errors and warning messages to get logged.  QDP_INFO
+will include messages related to registration/deregistration, while QDP_DEBUG
+will document every step taken by the automaton.
+
+The above call assumes the user accepts the various defaults for I/O timeouts
+on the various UDP ports, retry intevals and the like.  If more control is desired
+then the user can configure a QDP_PAR structure and use that to initialize the
+connection via
+
+QDP *qdpConnectWithPar(QDP_PAR *, LOGIO *lp)
+
+See qdp.h for the full description of the QDP_PAR structure and par.c for the
+functions one can use to set the parameters.  Here 
+
+Packet Processing
+-----------------
+Begining with release 0.9.4 there are two ways for the application to receive
+packets from the library.  One way, the default, is for the library will to
+insert all packets it receives (except for C1_ERR and C1_CACK) into a message
+queue and to make them available to the applcation in the order they were 
+received, via:
+
+BOOL qdpNextPkt(QDP *qp, QDP_PKT *pkt)
+
+where qp is the handle that was obtained during the call to qdpConnect() or
+qdpConnectgWithPar() and pkt is a pointer to a QDP_PKT, which is a structure
+defined thus:
+
+typedef struct {
+    QDP_CMNHDR hdr;         /* header */
+    UINT8 *payload;         /* points to payload */
+    UINT8 raw[QDP_MAX_MTU]; /* the entire raw packet, including header */
+    int len;                /* number of bytes used in raw */
+} QDP_PKT;
+
+The "payload" field just points to 12 bytes into the raw field.
+The QDP_CMNHDR is the first 12 bytes of the "raw" field, decoded into
+host byte order:
+
+typedef struct {
+    UINT32 crc;   /* checksum over all the packet */
+    UINT8 cmd;    /* command */
+    UINT8 ver;    /* version */
+    UINT16 dlen;  /* payload length, not including header */
+    UINT16 seqno; /* sender's sequence number */
+    UINT16 ack;   /* sender's acknowledge */
+} QDP_CMNHDR;
+
+Release 0.9.4 introduces a second method for getting packets into the
+application.  Instead of the message queue, the library can call a
+user supplied function each time it has a packet ready to give to the
+user.  This function needs to be of the type
+
+void UserFunction(void *arg, QDP_PKT *pkt)
+
+where arg points to any user defined data that the function will need
+to do its job and pkt points to the packet.  This function will be
+called by the library _before_ an acknowledgment of the packet is sent
+to the Q330.  Assuming that the function does its job properly this will
+help ensure that no data would be loss between disconnects and reconnects.
+
+The way to use this feature is to use qdpConnectWithPar() 
+
+qdpSetUser(QDP_PAR *par, void *arg, QDP_USER_FUNC func)
+
+NOTE: When using the user defined function, qdpConnectWithPar() will
+never return except in the case of library error.
+
+To date, only limited support exists for decoding the contents of the QDP packet
+payload (basically, only that required to complete the registration process and
+to start a data feed using the configured acknowledgement count and timeout
+parameters).
+
+When connecting to a data port the library insures that the meta-data required
+to interpret the DT_DATA packets is read before opening the data flow.  Those
+packets will get passed to the application (for possible archiving) but are 
+also stored in the handle.  To get the combo packet (C1_FLGS) you can use
+
+void qdpGetComboPkt(QDP *qp, QDP_TYPE_C1_COMBO *combo)
+
+The QDP_TYPE_C1_COMBO structure includes decoded C1_FIX, C1_GLOB and C1_LOG
+information (see qdp.h).
+
+The DP tokens are also retrieved as part of the handshake, however no code
+has yet been written to do anything with that information.  For the moment
+you can get the concatenated 8K memory block using
+
+void qdpGetMemBlk(QDP *qp, QDP_MEMBLK *mem)
+
+where mem->data is a pointer to mem->nbyte of data.  The next release of this
+library will decode this beast.
+
+Examples
+--------
+
+A data acquisition application using the message queues could be coded like this:
+
+#include "qdp.h"
+
+QDP *qp;
+QDP_PKT pkt;
+QDP_TYPE_C1_COMBO combo;
+QDP_MEMBLK token;
+
+    if ((qp = qdpConnect(q330, serialno, authcode, port, debug, lp)) == NULL) fail();
+    qdpGetCombo(qp, &combo);
+    qdpGetMemBlk(qp, &token);
+
+    while (1) {
+        if (!qdpNextPkt(qp, &pkt)) fail();
+        ProcessPacket(&pkt, &combo, &token);
+    }
+
+A data acquisition application using the user supplied function could be coded like this
+
+#include "qdp.h"
+
+void MyFunc(void *arg, QDP_PKT *pkt)
+{
+UINT64 serialno;
+
+    serialno = *((UINT64 *) arg);
+    printf("%s(%hu, %hu) received from %16llX\n",
+        qdpCmdString(pkt->hdr.cmd),
+        pkt->hdr.seqno,
+        pkt->hdr.ack,
+        serialno
+    );
+}
+
+...
+QDP_PAR par;
+
+    qdpInitPar(&par, port);
+    qdpSetHost(&par, q330);
+    qdpSetSerialno(&par, serialno);
+    qdpSetAuthcode(&par, authcode);
+    qdpSetDebug(&par, debug);
+    qdpSetUser(&par, (void *) &serialno, MyFunc);
+
+    if (qdpConnectWithPar(&par, lp) == NULL) {
+        fprintf(stderr, "Unable to connect to Q330\n");
+        exit(1);
+    }
+    fprintf(stderr, "THIS WILL NEVER BE REACHED\n");
+
+Command and control is less developed.  Commands are sent to the device via
+
+BOOL qdpPostCmd(QDP *qp, QDP_PKT *pkt)
+
+where qp is the handle, and pkt is a pointer to a packet that contains valid
+QDP command.  The user needs to load the pkt->payload field with the proper
+values and set the cmd and dlen parts of the pkt->hdr.  The library will
+compute the checksum and determine the proper sequence number.  The function
+will block until a response to the command has been received.  A return 
+value of FALSE means that the Q330 responded with a C1_CERR, TRUE means
+that the command was accepted.  If the command generated a QDP packet
+then that response can be obtained via qdpNextPkt().  For a pure
+command and control application this decoupling of the command and
+response is probably not ideal.  It would not be too difficult to
+modify qdpPostCommand to return a copy of the reply packet, should that be
+determined to be a useful feature.
+
+qdpPostCmd() works by inserting a message into queue with a depth of 1,
+meaning that only one command will be accepted at a time. 
+
+If you want to stress test the library, use
+
+qdpSetTrash(QDP_PAR *par, BOOL pkts, BOOL link)
+
+Setting pkts to TRUE will cause the library to randomly corrupt about 10% of
+the UDP packets (in both directions) and setting link to TRUE will cause the
+link to get deregistered at random intervals about 10 minutes apart.

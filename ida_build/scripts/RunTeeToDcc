@@ -1,0 +1,76 @@
+#!/bin/csh -f
+# $Id: RunTeeToDcc,v 1.2 2009/01/26 22:06:15 dechavez Exp $
+#
+# idaTeeToDcc wrapper
+
+set myname = RunTeeToDcc
+
+if ($#argv != 1) then
+    logger -t $myname"[$$]" -p user.info "bad command line"
+    goto failure
+endif
+
+set DestDir = $argv[1]
+
+# General setup
+
+set setup = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    set message = "missing $setup"
+    logger -t $myname"[$$]" -p user.info "$message"
+    echo "${myname}: $message"
+    goto failure
+endif
+source $setup
+
+# Check for debug flag
+
+if (-e $DebugDir/$myname) then
+    set debug = 1
+else
+    set debug = 0
+endif
+
+if ($debug) logger -t $myname"[$$]" -p user.info "begin"
+
+# Process each site listed in the Systems file
+
+set systems = /usr/nrts/etc/Systems
+if (! -e $systems) then
+    logger -t $myname"[$$]" -p user.info "missing $systems file"
+    goto failure
+endif
+
+set SiteList = `stripcat $systems`
+if ($status != 0) then
+    logger -t $myname"[$$]" -p user.info "stripcat $systems FAILED"
+    goto failure
+endif
+
+foreach site ($SiteList)
+    set command = "idaTeeToDcc $site $DestDir/$site"
+    if ($debug) logger -t $myname"[$$]" -p user.info "$command"
+    $command
+end
+
+# Normal exit
+
+success:
+pkill -HUP -x ispd
+if ($debug) logger -t $myname"[$$]" -p user.info "completed OK"
+exit 0
+
+failure:
+pkill -HUP -x ispd
+logger -t $myname"[$$]" -p user.info "exit 1"
+exit 1
+
+# Revision History
+#
+# $Log: RunTeeToDcc,v $
+# Revision 1.2  2009/01/26 22:06:15  dechavez
+# Set debug flag based on DebugDir file
+#
+# Revision 1.1  2008/03/13 21:49:50  dechavez
+# initial release (not really, but new to this CVS)
+#

@@ -1,0 +1,219 @@
+#!/bin/csh -f
+# $Id: ida_unpack,v 1.1.1.1 2000/02/08 20:20:44 dec Exp $
+
+if ($#argv == 1) then
+    set outdir = $argv[1]
+else
+    echo "usage: ida_unpack volume_ident"
+    exit 1
+endif
+
+set osname   = `uname -s`
+if ($osname == SunOS) then
+    uname -i >& /dev/null
+    if ($status == 0) then
+        set osname = solaris
+    else
+        set osname = sunos
+    endif
+else if ($osname == SCO_SV) then
+        set osname   = sco_sv
+else if ($osname == BSDOS) then
+        set osname = bsdos
+else
+    set osname = unknown
+endif
+
+echo -n "Enter station code: "
+set stacode = $<
+set stacode = `echo $stacode | lcase`
+echo ""
+echo "Supported data logger Rev's are as follows: "
+revcode
+
+get_revcode:
+echo ""
+echo -n "Enter appropriate Rev for this station: "
+@ revcode = $<
+if ($revcode < 0) goto get_revcode
+if ($revcode < 10) then
+    set default_map = "Std.0$revcode"
+else
+    set default_map = "Std.$revcode"
+endif
+if ($stacode == bfo  && $revcode == 8) set default_map = bfo.default
+if ($stacode == coco && $revcode == 8) set default_map = coco.default
+
+echo -n "Enter channel map or return for [$default_map]: "
+set map = $<
+if (`echo $map | stripcat | wc -c` == 0) set map = $default_map
+if (map == "") set map = $default_map
+
+set isdisk = 0
+if ($stacode == rayn) then
+    if ($osname == solaris) then
+        set default_device = /dev/rdsk/c0t0d0s2
+    else
+        set default_device = /dev/rsd3c
+    endif
+else
+    if ($osname == solaris) then
+        set default_device = /dev/rmt/0
+    else
+        set default_device = /dev/rst0
+    endif
+endif
+echo -n "Enter input device or return for [$default_device]: "
+set device = $<
+if (`echo $device | stripcat | wc -c` == 0) set device = $default_device
+echo $device | grep rsd > /dev/null
+if ($status == 0) set isdisk = 1
+echo $device | grep rdsk > /dev/null
+if ($status == 0) set isdisk = 1
+echo $device | grep syjet > /dev/null
+if ($status == 0) set isdisk = 1
+
+make_rawimage:
+echo -n "Make a copy of the raw volume image? "
+set answer = $<
+if ($answer == y || $answer == yes) then
+    set rawimage = 1
+else if ($answer == n || $answer == no) then
+    set rawimage = 0
+else
+    echo "Please answer yes or no."
+    goto make_rawimage
+endif
+
+if ($rawimage) then
+select_rawname:
+    echo -n "Enter pathname for raw image: "
+    set rawimage = $<
+    if (-e $rawimage) then
+ok_to_delete:
+        echo -n "Output file $rawimage already exists. Delete? "
+        set answer = $<
+        if ($answer == y || $answer == yes) then
+            set delete = 1
+        else if ($answer == n || $answer == no) then
+            set delete = 0
+        else
+            echo "Please answer yes or no."
+            goto ok_to_delete
+        endif
+    else
+        set delete = 1
+    endif
+    if ($delete == 0) goto select_rawname
+    cp /dev/null $rawimage
+    if ($status != 0) then
+        echo -n "Error: unable to initialize $rawimage"
+        goto make_rawimage
+    endif
+    set tap_cmnd = "tee $rawimage"
+endif
+
+check_outdir:
+if ( -e $outdir) then
+delete_loop:
+    echo -n "Output directory '$outdir' already exists.  Delete? "
+        set answer = $<
+    if ($answer == y || $answer == yes) then
+        set delete = 1
+    else if ($answer == n || $answer == no) then
+        set delete = 0
+    else
+        echo "Please answer yes or no."
+        goto delete_loop
+    endif
+    if ( $delete ) then
+        /bin/rm -rf $outdir
+        if ($status != 0) then
+            echo "abort: failed to delete $outdir"
+            exit 1
+        endif
+    else
+        echo -n "Enter output directory name: "
+        set outdir = $<
+        goto check_outdir
+    endif
+endif
+
+do_spectra:
+#echo -n "Calculate spectra? "
+#set answer = $<
+#if ($answer == y || $answer == yes) then
+#    set do_qdspect = 1
+#else if ($answer == n || $answer == no) then
+    set do_qdspect = 0
+#else
+#    echo "Please answer yes or no."
+#    goto do_spectra
+#endif
+
+if ($isdisk) then
+#   set read_cmnd = "idadd $device"
+    set read_cmnd = "rdread $device bs=32k"
+else
+    echo "Rewinding tape"
+    mt -f $device rew >& /dev/null
+    mt -f $device rew >& /dev/null
+#   set read_cmnd = "dd if=$device bs=32k"
+    set read_cmnd = "mtread $device bs=32k"
+endif
+set dmx_cmnd = "idadmx rev=$revcode sta=$stacode"
+set dmx_cmnd = "$dmx_cmnd id=$outdir outdir=$outdir +headers map=$map"
+if ($rawimage != 0) then
+    echo "Unpacking $device with: "
+    echo "    $read_cmnd | $tap_cmnd | \"
+    echo "    $dmx_cmnd"
+    $read_cmnd | $tap_cmnd | $dmx_cmnd
+else
+    echo "Unpacking $device with: "
+    echo "    $read_cmnd | \"
+    echo "    $dmx_cmnd"
+    $read_cmnd | $dmx_cmnd
+endif
+if ($status != 0) then
+    echo "abort: unpack failed"
+    exit 1
+endif
+echo "idadmx completed. Output is in directory $outdir."
+if ($rawimage != 0) then
+    echo "Raw volume image stored in the file $rawimage."
+endif
+
+set read_cmnd = "cat $outdir/headers"
+set chek_cmnd = "idalst -data rev=$revcode map=$map +tag +v"
+set chek_cmnd = "$chek_cmnd isplog=$outdir/isplog"
+echo "Checking headers with: "
+echo "    $read_cmnd | \"
+echo "    $chek_cmnd"
+$read_cmnd | $chek_cmnd | sort | trim > $outdir/idalst.out
+if ($status != 0) then
+    echo "ERROR: idalst failed."
+else
+    echo "idalst completed. Listing is $outdir/idalst.out"
+endif
+
+if ($do_qdspect) then
+    cd $outdir
+    echo "Computing spectra with qdspect."
+    qdspect $outdir.wfdisc
+    if ($status != 0) then
+        echo "abort: qdspect failed"
+        exit 1
+    endif
+    echo "qdspect completed."
+    cd ..
+endif
+
+echo "Unpacking completed."
+exit 0
+
+# Revision History
+#
+# $Log: ida_unpack,v $
+# Revision 1.1.1.1  2000/02/08 20:20:44  dec
+# import existing IDA/NRTS sources
+#

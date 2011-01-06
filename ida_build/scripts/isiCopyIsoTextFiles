@@ -1,0 +1,43 @@
+#!/bin/csh -f
+# $Id: isiCopyIsoTextFiles,v 1.1 2008/03/20 19:07:23 dechavez Exp $
+#
+# Copy contents.txt and readme.txt from ISO image of standard archive
+
+set myname = isiCopyIsoTextFiles
+
+if ($#argv != 2) then
+    echo "usage: $myname ISO_image destination"
+    exit 1
+endif
+
+set image = $argv[1]
+set dest  = $argv[2]
+set mnt = /tmp/$myname.$$
+mkdir -p $mnt
+
+set osname   = `uname -s | tr "[A-Z]" "[a-z]"`
+
+if ($osname == sunos) then
+    goto sunos
+else if ($osname == freebsd) then
+    goto freebsd
+else
+    goto unsupported
+endif
+
+freebsd:
+set isodev = `sudo mdconfig -a -t vnode -f ${image}`
+sudo mount -t cd9660 /dev/${isodev} $mnt
+foreach file (readme.txt contents.txt)
+    cp -f $mnt/$file $dest
+end
+sudo umount $mnt
+rm -rf $mnt
+sudo mdconfig -d -u ${isodev}
+exit 0
+
+sunos:
+unsupported:
+
+    echo "${myname}: unsupported on this platform."
+    exit 1

@@ -1,0 +1,150 @@
+#!/bin/csh -f
+# $Id: isp_receive,v 1.2 2005/02/18 03:16:39 dechavez Exp $
+#
+# Load isp_push'd files into the appropriate disk loop(s)
+#
+
+set myname = isp_receive
+
+set admin = nrtsmgr@idahub.ucsd.edu
+set mail  = /usr/ucb/Mail
+set expr  = /usr/ucb/expr
+set rm    = /bin/rm
+set cp    = "/bin/cp -f"
+set gzdir = /archive/tmp/nrts/incoming
+
+# Make sure no other instance of this script is currently running
+
+if (-e /vmunix) then
+    set psopts = "-ax"
+else
+    set psopts = "-ef"
+endif
+
+ps $psopts | fgrep $myname | fgrep -v fgrep | fgrep -v $$ | fgrep -v "sh -c" > /dev/null
+if ($status == 0) exit 0
+
+if ($#argv == 3) then
+    set IncomingDir = $argv[1]
+    @   MinAge      = $argv[2]
+    set MaxAge      = $argv[3]
+else
+    logger -t $myname"[$$]" -p user.info "incorrect command line: $argv"
+    logger -t $myname"[$$]" -p user.info "ABORTED"
+    goto done
+endif
+
+set STOPFLAG = $IncomingDir/STOPFLAG
+if (-e $STOPFLAG) exit 0
+
+setenv NRTS_HOME /usr/nrts
+setenv IRIS_HOME $NRTS_HOME
+setenv IDA_DPATH $NRTS_HOME/etc
+
+if (-e $NRTS_HOME/UNCONFIGURED) exit 0
+
+set path = ($NRTS_HOME/bin $NRTS_HOME/scripts /opt/gnu/bin /opt/local/bin $path)
+
+set systems_file = $NRTS_HOME/etc/Systems
+if ( -e $systems_file ) then
+    set systems = `stripcat $systems_file`
+else
+    logger -t $myname"[$$]" -p user.info "error: missing $systems_file"
+    logger -t $myname"[$$]" -p user.info "ABORTED"
+    goto done
+endif
+
+# Loop over all the systems 
+
+set DotAutodrm = ".autodrm"
+foreach system ($systems)
+    set incoming = $IncomingDir/$system
+    set AutoDRM_Flag = $incoming/$DotAutodrm
+    if (! -e $incoming) continue
+    cd $incoming # absolute path so we don't have to cd out later
+    if ($status != 0) then
+        logger -t $myname"[$$]" -p user.info "ERROR: CAN'T CD TO $incoming"
+        continue
+    endif
+
+    # Delete all the old stuff right away
+
+    find . -name $DotAutodrm -a -exec touch {} \;
+    find . -mtime $MaxAge -a -exec $rm -f {} \;
+
+    # Decompress and feed through nrts_wrtdl
+
+    set dummy = xxxx:xxx-xx:00.Z
+    touch $dummy
+    set raw_files = ????:???-??:??.Z > & /dev/null
+    if ($status == 0) then
+        foreach fileZ ($raw_files)
+            if ($fileZ == $dummy) continue
+            @ mod = `modtime $fileZ`
+            @ now = `gmt raw`
+            @ age = $now - $mod
+            if ($age > $MinAge || $system == "nil") then
+                set command = "$cp $fileZ $gzdir/$system"
+                logger -t $myname"[$$]" -p user.info "$command"
+                $command
+                set command = "uncompress $fileZ"
+                logger -t $myname"[$$]" -p user.info "$command"
+                $command
+                set exitstatus = $status
+                if ($exitstatus != 0) then
+                    logger -t $myname"[$$]" -p user.info "FAILED (status $exitstatus)"
+                    touch $STOPFLAG
+                    goto done
+                else
+                    set file = `$expr substr $fileZ 1 14`
+                    set log  = $file.LOG
+                    set command = "nrts_wrtdl if=$file bg=0 log=$log $system"
+                    logger -t $myname"[$$]" -p user.info "$command"
+                    $command
+                    set exitstatus = $status
+                    if ($exitstatus != 0) then
+                        logger -t $myname"[$$]" -p user.info "FAILED (status $exitstatus)"
+                        touch $STOPFLAG
+                        goto done
+                    endif
+                endif
+                $rm -f $fileZ $file $log
+            endif
+        end
+    endif
+    $rm -f $dummy
+end # foreach system loop
+
+# And, just because this is run so often, make sure that the files coming in
+# via ispPushGz are group writeable.
+
+foreach system ($systems)
+    if (-e /archive/tmp/nrts/incoming/$system) chmod -R g+w /archive/tmp/nrts/incoming/$system
+end #foreach 
+
+
+done:
+if (-e $STOPFLAG) $mail -s "$myname FAILED" $admin < /dev/null
+exit 0
+
+# Revision History
+#
+# $Log: isp_receive,v $
+# Revision 1.2  2005/02/18 03:16:39  dechavez
+# replace with versions from nrts@idahub
+#
+# Revision 1.5  2005/02/18 03:01:22  nrts
+# *** empty log message ***
+#
+# Revision 1.4  2004/02/26 19:40:07  nrts
+# *** empty log message ***
+#
+# Revision 1.3  2004/02/09 17:39:59  nrts
+# *** empty log message ***
+#
+# Revision 1.2  2004/01/31 21:14:00  nrts
+# changes to accomodate NIL email files
+#
+# Revision 1.1  2003/04/18 23:08:32  nrts
+# initial (imported) release
+#

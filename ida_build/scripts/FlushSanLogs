@@ -1,0 +1,46 @@
+#!/bin/csh -f
+#
+# $Id: FlushSanLogs,v 1.2 2005/02/11 22:13:51 dechavez Exp $
+#
+# Flush SAN logs
+
+unalias cat cd mv rm
+
+if ($#argv < 2) then
+    echo "usage: FlushSanLog LogDir KeepDays"
+    exit 1
+endif
+
+set LogDir   = $argv[1]
+shift
+set KeepDays = $argv[1]
+shift
+
+set yyyyddd = `date -u +%Y%j`
+set tmp     = FlushSanLog.$$
+
+cd $LogDir
+if ($status != 0) then
+    echo "cd $LogDir failed"
+    exit 1
+endif
+
+foreach dir (*)
+    set tmp    = $dir/FlushSanLog.$$
+    set active = $dir/active
+    if (-e $active) mv $active $tmp
+end
+
+pkill -HUP sanlog
+sleep 1
+
+foreach dir (*)
+    set output = $dir/$yyyyddd
+    touch $output
+    set active = $dir/FlushSanLog.$$
+    if (-e $active) then
+        cat $active >> $output
+        rm $active
+    endif
+    find $dir -mtime +$KeepDays -a -exec rm -f {}\;
+end

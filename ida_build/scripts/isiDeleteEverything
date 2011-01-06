@@ -1,0 +1,115 @@
+#!/bin/csh -f
+# $Id: isiDeleteEverything,v 1.2 2008/12/16 18:18:08 dechavez Exp $
+#
+# Delete all ISI and NRTS data files (eg, prior to backup)
+
+set myname = isiDeleteEverything
+
+# General setup
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) then
+    echo "missing $setup"
+    goto failure
+endif
+source $setup
+
+# Command line setup
+
+set error = 0
+if ($#argv == 0) then
+    set SiteList = "$SystemsList"
+else 
+    set SiteList = "$argv"
+endif
+
+# Loop for each site
+
+foreach site ($SiteList)
+
+    # Get the full path names
+
+    set SiteDir    = $NRTS_HOME/$site
+    set MetaDir    = $NRTS_HOME/$site/meta
+    set IsoDir     = $SiteDir/iso
+
+    set NrtsFiles  = "$SiteDir/bwd"
+    set NrtsFiles  = "$NrtsFiles $SiteDir/hdr"
+    set NrtsFiles  = "$NrtsFiles $SiteDir/dat"
+    set NrtsFiles  = "$NrtsFiles $SiteDir/sys"
+
+    set command = "rm -f $NRTS_HOME/tmp"
+    echo $command
+    $command
+    mkdir $NRTS_HOME/tmp
+
+    set command = "rm -f $NrtsFiles"
+    echo $command
+    $command
+
+    set command = "rm -rf $SiteDir/isi"
+    echo $command
+    $command
+
+    set command = "rm -rf $SiteDir/tee"
+    echo $command
+    $command
+    mkdir $SiteDir/tee
+
+    if (-d $MetaDir) then
+        set command = "rm -rf $MetaDir"
+        echo $command
+        $command
+        mkdir $MetaDir
+    endif
+
+    if (-d $IsoDir) then
+        touch $IsoDir/dummy.iso
+        set command = "rm -f $IsoDir/*.iso"
+        echo $command
+        $command
+
+        set command = "rm -rf $IsoDir/stage"
+        echo $command
+        $command
+        mkdir $IsoDir/stage
+
+        set command = "rm -rf $IsoDir/done/gziped $IsoDir/done/images"
+        echo $command
+        $command
+        mkdir $IsoDir/done/gziped $IsoDir/done/images
+    endif
+
+    set command = "rm -rf $SiteDir/log"
+    echo $command
+    $command
+    mkdir $SiteDir/log
+
+    cd $NRTS_HOME/log
+    foreach dir (*)
+        set fullpath = $NRTS_HOME/log/$dir
+        if (-d $fullpath) then
+            set command = "rm -rf $fullpath"
+            echo $command
+            $command
+            mkdir $fullpath
+        endif
+    end
+    cp /dev/null $NRTS_HOME/log/nrtslog
+end
+
+success:
+exit 0
+
+failure:
+exit 1
+
+# Revision History
+#
+# $Log: isiDeleteEverything,v $
+# Revision 1.2  2008/12/16 18:18:08  dechavez
+# added missing end quote
+#
+# Revision 1.1  2008/12/16 18:15:22  dechavez
+# initial release
+#

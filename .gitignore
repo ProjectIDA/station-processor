@@ -1,0 +1,5 @@
+# Ignore thise files
+*.[oa]
+aslreq/aslreq
+dispstatus/dispstatus
+falcon/falcon

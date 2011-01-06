@@ -1,0 +1,85 @@
+To get raw data using the nrts_xfer service.
+
+1. Establish a connection with the nrts_xfer service (normally port 13002)
+
+2. Send a network short containing 0x01 (NRTS_DATREQ)
+
+3. Send a network long containing the client process id
+
+4. Send a network short containing the number of seconds the server should
+   wait for new data to be acquired once all requested data have been sent
+
+5. Send a network short containing the number of seconds the client will
+   wait before a socket I/O timeout occurs
+
+6. Send a network short describing the type of compression before transfer
+   which is desired: 0 for no compression, 0x01 for first difference
+
+7. Send 7-byte string containing the remote (server side) system code. If
+   the system code is less than seven characters long then include the
+   trailing null at the appropriate place.
+
+8. Send a network short containing the number of stations to follow.
+
+9. For each station:
+
+    9.1 Send a 7-byte string containing the station name
+    9.2 Send a network short containing the number of channels to follow
+    9.3 For each channel
+        9.3.1 Send a 7-byte string containing the channel name
+        9.3.1 Send the desired data start time as follows:
+              If you want a specific time then send 6 network shorts
+              containing the year, day, hour, minute, seconds, and milliseconds.
+              If you want the begining of the disk loop then send a single
+              network short containing 0, for the end of the disk loop send a
+              single network short containing -1.
+        9.3.2 Send the desired data end time as follows:
+              If you want a specific time then send 6 network shorts
+              containing the year, day, hour, minute, seconds, and milliseconds.
+              If you want the begining of the end of the disk loop then send
+              a single network short containing 0.  Depending on the value of
+              the keep up flag (see 3 above) the connection will either break
+              once the end of the disk loop (as defined the instant the request
+              was received) is reached or will stay up and newly acquired data
+              will be sent.
+
+10. Read server acknowledgement.  If the server sends a 0 then the request
+    has been received, does not contain errors, and is complete.  Non-zero
+    acks are errno's and mean the server has exited and the client should too.
+
+11. Read raw data packets
+     10.1 Read a network short containing the number of bytes to follow.
+          A value of zero signifies that all requested data have been sent.
+          If the client had specified a zero keep up time (see 4 above)
+          then the server will have exited and will no longer respond to the
+          client.  On the other hand, if the client had issued a positive
+          keep up time then it must reply with a new keep up time.  If the
+          client doesn't want to wait anymore then it should send a network
+          short containing zero.  If it wants to continue to wait for new data
+          then the reply should be a network short containing the number of
+          seconds the server should wait for new data and go to 10.1 again.
+          If the number of bytes to follow is non-zero then for IDA data the
+          protocol is:
+     10.2 Read a network short containing the type of compression used on the
+          data portion of the packet.  0 means uncompressed, 0x01 means IGPP
+          first difference.
+     10.3 Read the required number of bytes and decompress if neccesary
+
+To get wfdiscs using the nrts_xfer service.
+
+1. Establish a connection with the nrts_xfer service (normally port 13002)
+
+2. Send a network short containing 0x02 (NRTS_WDREQ)
+
+3. Send 7-byte string containing the station code for which you desire
+   wfdiscs.  If the station code is less than seven characters long then
+   include the trailing null at the appropriate place.
+
+4. Send a network short containing non-zero if you want the server to flush
+   the wfdiscs before collecting them or 0 if you want to take what is
+   currently on disk.
+
+5. Read a network long containing the number of records to follow.
+
+6. Read that many wfdiscs, as 284 byte ascii strings, without a trailing
+   NULL.  It is your responsibility to append the null.

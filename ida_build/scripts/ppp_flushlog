@@ -1,0 +1,38 @@
+#! /bin/csh -f
+# $Id: ppp_flushlog,v 1.1.1.1 2000/02/08 20:20:45 dec Exp $
+#
+#  Purge the pppd log file(s) in /var/adm
+#
+
+if (`/usr/ucb/whoami` != root) then
+    echo "must be run as root"
+    exit 1
+endif
+
+unalias cp rm
+
+set destdir = /var/log/ppp
+set logfile = "/var/adm/pppd.log"
+set today   = `date -u +19%y%j`
+set tmp     = /var/tmp/ppp_flushlog.$$
+cp /dev/null $tmp
+
+mkdir -p $destdir >& /dev/null
+
+cp $logfile $tmp
+cp /dev/null $logfile
+chmod 664 $logfile
+set destfile = "$destdir/$today"
+touch $destfile
+cat $tmp | fgrep -v Dialing | fgrep -v \ Hangup >> $destfile
+chmod 644 $destfile
+find $destdir -mtime +15 -a -exec rm -f {} \;
+
+rm -f $tmp
+
+# Revision History
+#
+# $Log: ppp_flushlog,v $
+# Revision 1.1.1.1  2000/02/08 20:20:45  dec
+# import existing IDA/NRTS sources
+#

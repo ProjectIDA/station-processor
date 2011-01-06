@@ -1,0 +1,6 @@
+#!/bin/csh -f
+# $Id: ils,v 1.1 2007/09/06 15:36:25 dechavez Exp $
+#
+# wrapper for common idalst use
+
+idalst +tag rev=9 $argv | sort | trim

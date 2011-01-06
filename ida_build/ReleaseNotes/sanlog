@@ -1,0 +1,7 @@
+sanlog Release Notes
+
+1.0.1  09/18/2001 (cvs rtag sanlog_1_0_1 sanlog)
+       relink with sanio library 1.1.2
+
+1.0.0  09/18/2001 (cvs rtag sanlog_1_0_0 sanlog)
+       created

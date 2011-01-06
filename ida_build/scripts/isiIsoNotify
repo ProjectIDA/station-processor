@@ -1,0 +1,24 @@
+#!/bin/csh
+# $Id: isiIsoNotify,v 1.1 2005/08/17 21:06:56 dechavez Exp $
+#
+# E-mail notification about completed ISO images
+
+set subject  = "New ISO image ready to burn"
+set mail     = "/usr/ucb/mail"
+set addr     = IsoNotifyList
+set hostname = `hostname`
+
+if ($#argv < 1) then
+    set message = "New ISO image ready to burn on host $hostname"
+else
+    set message = ${hostname}:$argv[1]
+endif
+
+echo "$message" | $mail -s "$subject" $addr
+
+# Revision History
+#
+# $Log: isiIsoNotify,v $
+# Revision 1.1  2005/08/17 21:06:56  dechavez
+# initial release
+#

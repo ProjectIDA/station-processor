@@ -5,3 +5,16 @@ dispstatus/dispstatus
 falcon/falcon
 OBJS
 bin
+dlresize/dlresize
+dlutil/dlutil
+falcon/ofadump
+ida2arch/ida2arch
+ida2chan/ida2chan
+ida2liss/ida2liss
+isirstat/isirstat
+log330/log330
+netreq/netreq
+netseed/netseed
+q330arch/q330arch
+q330serv/q330serv
+

@@ -24,6 +24,7 @@ if [[ $osname == "linux" ]] ; then
   export ostype=SVR4
   export MTLIBS=-lpthread
   export CURSELIB=-lcurses
+  export INSTALL=install
 fi
 if [[ $osname == "sunos" ]] ; then
   export ostype=SVR4

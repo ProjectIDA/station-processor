@@ -18,7 +18,7 @@ else
   osname=untested
 endif
 OSUNAME=$(shell uname -s)
-LIBIDA=$(HOME)/lib/$(platform)
+LIBIDA=../lib/$(platform)
 
 DEFS    = -D$(OSNAME) -D$(OSTYPE) -D_REENTRANT
 
@@ -32,7 +32,7 @@ endif
 
 COPT = 
 LIBS = -L $(LIBIDA)
-CFLAGS = -I.. -I. -I$(HOME)/ida_build/include $(DEFS)
+CFLAGS = -I.. -I. -I../ida_build/include $(DEFS)
 LIBS += -lm -lpthread -lz
 
 SRCS = isirstat.c

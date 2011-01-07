@@ -5,8 +5,8 @@ else
   CC=gcc -g -Wl,--hash-style=both
 endif
 
-LIB330_DIR=../../../lib330
-LIBIDA=$(HOME)/lib/$(PLATFORM)
+LIB330_DIR=../lib330
+LIBIDA=../lib/$(PLATFORM)
 COPT = 
 LIBS = -L$(LIBIDA)
 CFLAGS = -Wall -I.. -I. -I$(LIB330_DIR)

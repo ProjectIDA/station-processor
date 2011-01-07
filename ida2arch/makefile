@@ -1,7 +1,7 @@
 # Needed for IDA code
 MACHINE = $(shell uname -m)
 OSUNAME=$(shell uname -s)
-LIBIDA=$(HOME)/lib/$(PLATFORM)
+LIBIDA=../lib/$(PLATFORM)
 ifeq ($(OSUNAME),Linux)
   osname=linux
   OSNAME=LINUX
@@ -30,7 +30,7 @@ endif
 
 COPT = 
 LIBS = -L $(LIBIDA)
-CFLAGS = -I.. -I. -I$(HOME)/ida_build/include $(DEFS)
+CFLAGS = -I.. -I. -I../ida_build/include $(DEFS)
 LIBS += -lz -lm -lpthread
 
 SRCS = ida2arch.c daemonize.c wildmatch.c

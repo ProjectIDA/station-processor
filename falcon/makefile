@@ -5,7 +5,7 @@ else
   CC = gcc -g -Wl,--hash-style=both
 endif
 
-LIB330_DIR=../../../lib330
+LIB330_DIR=../lib330
 COPT = 
 LIBS =
 CFLAGS = -Wall -I.. -I. -I$(LIB330_DIR)
@@ -29,7 +29,7 @@ falcon : ../lib/dalib.a ../lib/dcctime2lib.a $(OBJS)
 	$(CC) $(OBJS) ../lib/dalib.a ../lib/dcctime2lib.a $(LIBS) -o falcon
 
 ofadump: $(OFADUMP_OBJS)
-	$(CC) $(OFADUMP_OBJS) ../../../lib330/lib330.a $(OFADUMP_LIBS) -o ofadump
+	$(CC) $(OFADUMP_OBJS) $(LIB330_DIR)/lib330.a $(OFADUMP_LIBS) -o ofadump
 
 falcon.o: ../include/diskloop.h
 

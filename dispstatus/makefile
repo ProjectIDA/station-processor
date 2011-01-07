@@ -5,7 +5,7 @@ else
   CC = gcc -g -Wl,--hash-style=both
 endif
 
-LIB330_DIR=../../../lib330
+LIB330_DIR=../lib330
 COPT = 
 LIBS = -L$(LIB330_DIR) -l330
 CFLAGS = -I.. -I. -I$(LIB330_DIR)

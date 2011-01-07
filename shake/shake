@@ -1,0 +1,160 @@
+#! /bin/bash 
+#
+#  Bring up/down shaek table daemons
+#
+#  description: 
+# The script brings up/down the following programs as user $USER
+#
+# The isid program allows external users/computers to collect data
+# from an ida disk loop.
+#
+# The q330arch program accepts seed records via socket connection
+# and saves them to an ISI disk loop and to an archive directory
+# specified in diskloop.config
+#
+# The ida2liss program allows a LISS feed connection to get any new
+# data put on the ISI loop
+#
+# The netseed program allows rerequest data and supports the ASPseed
+# program data requests
+#
+# The ufors program reads rotation rate data from a serial port
+# connected to a uFors-1 rotation rate sensor.  EJZ, EJ1, and EJ2
+# define the serial ports for each of the 3 respective channels
+
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+RETVAL=0
+USER=fshelly
+EJZ=/dev/ttyS0
+EJ1=
+EJ2=
+PROG=`basename $0`
+SCRIPTPID=$$
+numargs=$#
+
+# source configuration file 
+. /opt/data/config
+
+# Make sure binaries exists
+test -x /opt/data/bin/linux.2.6.i86pc/isid || exit 0
+test -x /opt/data/bin/ufors || exit 0
+test -x /opt/data/bin/netseed || exit 0
+test -x /opt/data/bin/ida2liss || exit 0
+test -x /opt/data/bin/q330arch || exit 0
+
+# Now start the data collection process
+start () {
+
+    echo "Starting shake table data collection..." 
+    isid port=39136 log=/opt/data/nrts/log/isid.log user=$USER -bd
+    q330arch /etc/q330/DLG1/diskloop.config
+    ida2liss server=localhost isiport=39136 lissport=4000 log=/opt/data/nrts/log/ida2liss.log depth=500 filter=*/* keepalive=100 raw
+    ida2liss server=localhost isiport=39136 lissport=4001 log=/opt/data/nrts/log/ida2liss.log depth=500 filter=*/* keepalive=100 raw
+    ida2liss server=localhost isiport=39136 lissport=4002 log=/opt/data/nrts/log/ida2liss.log depth=500 filter=*/* keepalive=100 raw
+    netseed 4003
+    netseed 4003
+    netseed 4003
+    netseed 4004
+
+    # needs root
+    # make sure programs can read/write the serial ports
+    if [[ ${USER} == "root" ]] ; then
+      chmod a+rw $EJZ $EJ1 $EJ2
+
+      if [[ ${EJZ} != "" ]] ; then
+        nice -n -5 ufors /etc/q330/DLG1/diskloop.config EJZ $EJZ
+      fi
+      if [[ ${EJ1} != "" ]] ; then
+        nice -n -5 ufors /etc/q330/DLG1/diskloop.config EJ1 $EJ1
+      fi
+      if [[ ${EJ2} != "" ]] ; then
+        nice -n -5 ufors /etc/q330/DLG1/diskloop.config EJ2 $EJ2
+      fi
+    else
+      # Not root
+      if [[ ${EJZ} != "" ]] ; then
+        /opt/data/bin/nice -n -5 ufors /etc/q330/DLG1/diskloop.config EJZ $EJZ
+      fi
+      if [[ ${EJ1} != "" ]] ; then
+        /opt/data/bin/nice -n -5 ufors /etc/q330/DLG1/diskloop.config EJ1 $EJ1
+      fi
+      if [[ ${EJ2} != "" ]] ; then
+        /opt/data/bin/nice -n -5 ufors /etc/q330/DLG1/diskloop.config EJ2 $EJ2
+      fi
+    fi
+}
+
+
+stop ()
+{
+    echo "Killing shake table daemons" 
+
+    pid=`ps h -C ufors -o pid,cmd | awk '{ print $1 }'`
+    if [ "${pid}" != "" ]; then
+      echo "Stopping ufors ${pid}"
+      kill ${pid}
+    fi
+
+    pid=`ps h -C netseed -o pid,cmd | awk '{ print $1 }'`
+    if [ "${pid}" != "" ]; then
+      echo "Stopping netseed ${pid}"
+      kill ${pid}
+    fi
+
+    pid=`ps h -C q330arch -o pid,cmd | awk '{ print $1 }'`
+    if [ "${pid}" != "" ]; then
+      echo "Stopping q330arch ${pid}"
+      kill ${pid}
+    fi
+
+    pid=`ps h -C ida2liss -o pid,cmd | awk '{ print $1 }'`
+    if [ "${pid}" != "" ]; then
+      echo "Stopping ida2liss ${pid}"
+      kill ${pid}
+    fi
+
+    pid=`ps h -C isid -o pid,cmd | awk '{ print $1 }'`
+    if [ "${pid}" != "" ]; then
+      echo "Stopping isid ${pid}"
+      kill ${pid}
+    fi
+
+    for i in 1 2 3
+    do
+       # Per Frank wait two seconds,
+       # check if it's still running
+       # then send a second kill
+       sleep 2;
+       pid=`ps h -C isid -o pid,cmd | awk '{ print $1 }'`
+       if [ "${pid}" != "" ] ; then
+           kill -15 $pid
+           echo "Trying again... Killing isid pid $pid"
+       else
+         continue 3 
+       fi
+    done
+}
+
+case "$1" in
+
+    start)
+        start
+	;;
+
+    stop)
+        stop
+	;;
+
+    restart|reload|force-reload)
+        echo -n "Restarting $PROG: "
+	stop 
+        sleep 2
+        start
+        ;;
+
+    *)
+        echo "Usage: /etc/init.d/shake {start|stop|reload|force-reload|restart}"
+        exit 1
+esac
+
+exit 0

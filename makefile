@@ -32,11 +32,14 @@ clean:
 	cd dispstatus; $(MAKE) clean
 	cd netseed; $(MAKE) clean
 	cd falcon; $(MAKE) clean
+	cd shake; $(MAKE) clean
 
 outside:
 	cd lib330; $(MAKE)
 	cd ida_build; $(MAKE)
 
+shakeit:
+	cd shake; $(MAKE)
 install:
 	cp -p q330serv/q330serv ida2chan/ida2chan netreq/netreq dlutil/dlutil \
      log330/log330 q330arch/q330arch ida2liss/ida2liss \

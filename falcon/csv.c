@@ -36,6 +36,9 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
             csv_buffer->header->description, csv_buffer->header->channel,
             (int)(csv_buffer->end_time - csv_buffer->start_time), TM_HOUR);
         }
+syslog(LOG_INFO, "%s[%d]: elapsed time %d <> %d TM_HOUR\n",
+            csv_buffer->header->description, csv_buffer->header->channel,
+            (int)(csv_buffer->end_time - csv_buffer->start_time), TM_HOUR);
         while ((csv_buffer->end_time - csv_buffer->start_time) >= TM_HOUR) 
         {
             // Compress the csv data to FMash format
@@ -182,16 +185,16 @@ void csv_poll( csv_context_t* csv_buffer_list, buffer_t* url_str,
         get_page((char*)url->content, buf);
         file_hash = murmur_64_b( buf->content, buf->length, HASH_SEED_64 );
         if (gDebug) {
-            printf("file '%s' [0x%016llx] uncompressed size is %lu bytes\n",
+            fprintf(stderr, "file '%s' [0x%016llx] uncompressed size is %lu bytes\n",
                    csv_buffer->file_name, (unsigned long long)file_hash,
                    (unsigned long)buf->length);
             if (strcmp("/data/minute/logm1.csv", csv_buffer->file_name) == 0)
-              printf("'%s'\n", buf->content);
+              fprintf(stderr, "'%s'\n", buf->content);
         }
         // Populate a csv_buffer with the contents of the file
         csv_parse_file(csv_buffer, buf, initial_time);
         if (gDebug) {
-            printf("The CSV buffer contains %u rows\n", csv_buffer->list->numels);
+            fprintf(stderr, "The CSV buffer contains %u rows\n", csv_buffer->list->numels);
         }
         // Empty our temporary buffers
         buffer_reset(buf);

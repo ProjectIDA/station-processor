@@ -1,4 +1,5 @@
 /* -*- mode: C; c-basic-offset: 8; indent-tabs-mode: nil; tab-width: 8 -*- */
+#include <syslog.h>
 
 #include <config.h>
 
@@ -404,7 +405,6 @@ http_transfer(UrlResource *rsrc, buffer_t* usr_buf)
         bytes_read = read(sock, buf, 8);
 
         if( bytes_read == 0 ) {
-                close(sock);
                 goto cleanup;
         }
 
@@ -488,9 +488,10 @@ http_transfer(UrlResource *rsrc, buffer_t* usr_buf)
                         
  cleanup:
         free_http_header(header);
-        if (!usr_buf)
+        if (!usr_buf && out != NULL)
             fclose(out);
-        close(sock); 
+        if (sock > 0)
+            close(sock); 
         return retval;
 
 }

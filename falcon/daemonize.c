@@ -159,6 +159,7 @@ void daemonize()
     }
 
     /* At this point we are executing as the child process */
+    syslog(LOG_INFO, "daemon running");
     parent = getppid();
 
     /* Cancel certain signals */

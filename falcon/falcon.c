@@ -11,9 +11,10 @@ mmddyy who Changes
 ==============================================================================
 041009 fcs Create skeleton
 102809 fcs Add lock file to allow only one invocation
+010311 fcs Improve recovery from falcon connection issues
 ******************************************************************************/
 #define FILENAME "falcon"
-const char *VersionIdentString = "Release 1.0";
+const char *VersionIdentString = "Release 1.1";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -266,30 +267,24 @@ void GetLastTimeCSV( time_t* last_csv_time, st_info_t* st_info)
     if (gDebug)
     {
       printf("Last SEED record (raw):\n");
-      format_data((uint8_t*)seed_record, iSeedRecordSize, 0, 0);
+//    format_data((uint8_t*)seed_record, iSeedRecordSize, 0, 0);
     }
 
     offset = (size_t)ntohs(*(uint16_t*)(seed_record + 46));
     // There must be at least one blockette within this record
     if (!offset) {
-      if (gDebug) printf("No data in SEED record\n"); // TODO XXX Remove 
       goto next;
     }
-    if (gDebug) printf("Found SEED record with data\n"); // TODO XXX Remove 
     blockette = seed_record + offset;
     // Make sure the first blockette is a blockette 1000
     if (ntohs(*(uint16_t*)(blockette)) != 1000) {
-      if (gDebug) printf("First blockette is not a blockette 1000\n"); // TODO XXX Remove 
       goto next;
     }
-    if (gDebug) printf("Found a blockette 1000\n"); // TODO XXX Remove 
     offset = (size_t)ntohs(*(uint16_t*)(blockette + 2));
     // Make sure there is a blockette following this one
     if (!offset) {
-      if (gDebug) printf("No data after blockette 1000\n"); // TODO XXX Remove 
       goto next;
     }
-    if (gDebug) printf("There is more data :)\n"); // TODO XXX Remove 
 
     do {
       blockette = seed_record + offset;
@@ -299,21 +294,17 @@ void GetLastTimeCSV( time_t* last_csv_time, st_info_t* st_info)
         if (gDebug) printf("  Founds an unexpected blockette!!\n"); // TODO XXX Remove 
         continue;
       }
-      if (gDebug) printf("  Found a blockette 2000\n"); // TODO XXX Remove 
       // Make sure this opaque blocketter contains either a complete
       // record or the first piece of a fragmented record
       if (((*(uint8_t*)(blockette + 13) & 0x0c) >> 2) > 1 ) {
         if (gDebug) printf("  Ran into a continuation blockette\n"); // TODO XXX Remove 
         continue;
       }
-      if (gDebug) printf("  This is not a continuation blockette.\n"); // TODO XXX Remove 
 
       opaque_data = blockette + (size_t)ntohs(*(uint16_t*)(blockette + 6));
       if ((ntohs(*(uint16_t*)(opaque_data)) & 0x7fff) > FALCON_VERSION) {
-        if (gDebug) printf("  Falcon data in this blockette is too new\n"); // TODO XXX Remove 
         continue;
       }
-      if (gDebug) printf("  Found a valid version.\n"); // TODO XXX Remove 
 
 
       // Verify csv opaque data
@@ -419,57 +410,43 @@ void GetLastTimeAlarm( time_t* last_alarm_time, st_info_t* st_info)
     offset = (size_t)ntohs(*(uint16_t*)(seed_record + 46));
     // There must be at least one blockette within this record
     if (!offset) {
-      if (gDebug) printf("No data in SEED record\n"); // TODO XXX Remove 
       goto next;
     }
-    if (gDebug) printf("Found SEED record with data\n"); // TODO XXX Remove 
     blockette = seed_record + offset;
     // Make sure the first blockette is a blockette 1000
     if (ntohs(*(uint16_t*)(blockette)) != 1000) {
-      if (gDebug) printf("First blockette is not a blockette 1000\n"); // TODO XXX Remove 
       goto next;
     }
-    if (gDebug) printf("Found a blockette 1000\n"); // TODO XXX Remove 
     offset = (size_t)ntohs(*(uint16_t*)(blockette + 2));
     // Make sure there is a blockette following this one
     if (!offset) {
-      if (gDebug) printf("No data after blockette 1000\n"); // TODO XXX Remove 
       goto next;
     }
-    if (gDebug) printf("There is more data :)\n"); // TODO XXX Remove 
 
     do {
       blockette = seed_record + offset;
       offset = (size_t)ntohs(*(uint16_t*)(blockette + 2));
       // Make sure this is a blockette 2000
       if (ntohs(*(uint16_t*)(blockette)) != 2000) {
-        if (gDebug) printf("  Founds an unexpected blockette!!\n"); // TODO XXX Remove 
         continue;
       }
-      if (gDebug) printf("  Found a blockette 2000\n"); // TODO XXX Remove 
       // Make sure this opaque blocketter contains either a complete
       // record or the first piece of a fragmented record
       if (((*(uint8_t*)(blockette + 13) & 0x0c) >> 2) > 1 ) {
         if (gDebug) printf("  Ran into a continuation blockette\n"); // TODO XXX Remove 
         continue;
       }
-      if (gDebug) printf("  This is not a continuation blockette.\n"); // TODO XXX Remove 
 
       opaque_data = blockette + (size_t)ntohs(*(uint16_t*)(blockette + 6));
       if ((ntohs(*(uint16_t*)(opaque_data)) & 0x7fff) > FALCON_VERSION) {
-        if (gDebug) printf("  Falcon data in this blockette is too new\n"); // TODO XXX Remove 
         continue;
       }
-      if (gDebug) printf("  Found a valid version.\n"); // TODO XXX Remove 
 
 
       if (ntohs(*(uint16_t*)(opaque_data)) & 0x8000) {
         if (!(*last_alarm_time)) {
           memcpy(&netuint32, opaque_data+6, 4);
           *last_alarm_time = (time_t)ntohl(netuint32);
-          if (gDebug) printf("  Got Alarm time data.\n"); // TODO XXX Remove 
-        } else {
-          if (gDebug) printf("  Already have Alarm time data.\n"); // TODO XXX Remove 
         }
       }
 
@@ -510,7 +487,6 @@ int main (int argc, char **argv)
 
   st_info_t st_info;
 
-  int i = 0;
   unsigned int interval = 0;
   unsigned int unslept  = 0;
 
@@ -628,9 +604,6 @@ int main (int argc, char **argv)
   // the previous check.
   while (1)
   {
-    if (gDebug && (i++ == DEBUG_ITERATIONS))
-      break;
-
     /* poll the Falcon for data, and record if available */
     PollFalcon(csv_buffers, alarm_lines, url_str, &st_info,
                last_csv_time, last_alarm_time);
@@ -648,6 +621,7 @@ int main (int argc, char **argv)
   }
 
 clean:
+
   csv_buffers = csv_context_destroy(csv_buffers);
   alarm_lines = alarm_context_destroy(alarm_lines);
   url_str = buffer_destroy(url_str);

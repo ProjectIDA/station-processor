@@ -10,6 +10,7 @@
 #include <string.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <syslog.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -37,6 +38,8 @@
 
 
 char output_buf[BUFSIZ];
+extern int  gDebug;
+extern int  h_errno;
 
 
 #ifndef HAVE_STRERROR
@@ -161,7 +164,6 @@ dump_data(UrlResource *rsrc, int sock, FILE *out, buffer_t* usr_buf)
                     (rsrc->outfile_offset >= rsrc->outfile_size) ) {
                         report(WARN, "you already have all of `%s', skipping", 
                              rsrc->outfile);
-                        close(sock);
                         result = 0;
                         goto cleanup;
                 }
@@ -184,9 +186,19 @@ dump_data(UrlResource *rsrc, int sock, FILE *out, buffer_t* usr_buf)
                 } else {
                     progress_update(p, bytes_read);
                     written = write(out_fd, buf, bytes_read);
-                    if( written == -1 ) {
-                            perror("write");
-                            close(sock);
+                    if( written == -1 )
+                    {
+                            int errsave = h_errno ;
+                            if (gDebug)
+                            {
+                              fprintf(stderr, "%s line %d write: %s\n",
+                                     __FILE__, __LINE__, strerror(errsave));
+                            }
+                            else
+                            {
+                              syslog(LOG_ERR, "%s line %d write: %s\n",
+                                     __FILE__, __LINE__, strerror(errsave));
+                            }
                             result = 0;
                             goto cleanup;
                     }
@@ -194,7 +206,8 @@ dump_data(UrlResource *rsrc, int sock, FILE *out, buffer_t* usr_buf)
         }
 
  cleanup:
-        close(sock);
+        if (sock > 0)
+          close(sock);
         if (!usr_buf)
             progress_destroy(p);
         return 1;
@@ -492,13 +505,22 @@ report(enum report_levels lev, char *format, ...)
 {
         switch( lev ) {
         case DEBUG:
-                fprintf(stderr, "debug: ");
+                if (gDebug)
+                  fprintf(stderr, "debug: ");
+                else
+                  syslog(LOG_ERR, "debug: ");
                 break;
         case WARN:
-                fprintf(stderr, "warning: ");
+                if (gDebug)
+                  fprintf(stderr, "warning: ");
+                else
+                  syslog(LOG_ERR, "warning: ");
                 break;
         case ERR:
-                fprintf(stderr, "error: ");
+                if (gDebug)
+                  fprintf(stderr, "error: ");
+                else
+                  syslog(LOG_ERR, "error: ");
                 break;
         default:
                 break;
@@ -507,28 +529,54 @@ report(enum report_levels lev, char *format, ...)
         if( format ) {
                 va_list args;
                 va_start(args, format);
-                vfprintf(stderr, format, args);
+                if (gDebug)
+                  vfprintf(stderr, format, args);
+                else
+                  vsyslog(LOG_ERR, format, args);
                 va_end(args);
-                fprintf(stderr, "\n");
+                if (gDebug)
+                  fprintf(stderr, "\n");
+                else
+                  syslog(LOG_ERR, "\n");
         }
 }
 
 
-int
-tcp_connect(char *remote_host, int port) 
+int tcp_connect(char *remote_host, int port) 
 {
         struct hostent *host;
         struct sockaddr_in sa;
         int sock_fd;
 
         if((host = (struct hostent *)gethostbyname(remote_host)) == NULL) {
-                herror(remote_host);
+                int errsave = h_errno ;
+                if (gDebug)
+                {
+                  fprintf(stderr, "%s line %d: %s : %s\n",
+                         __FILE__, __LINE__, remote_host, hstrerror(errsave));
+                }
+                else
+                {
+                  syslog(LOG_ERR, "%s line %d: %s : %s\n",
+                         __FILE__, __LINE__, remote_host, hstrerror(errsave));
+                }
                 return 0;
         }
 
         /* get the socket */
-        if((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-                perror("socket");
+        if((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        {
+                int errsave = errno;
+                if (gDebug)
+                {
+                  syslog(LOG_ERR, "%s line %d: %s : %s\n",
+                         __FILE__, __LINE__, remote_host, strerror(errsave));
+                }
+                else
+                {
+                  fprintf(stderr, "%s line %d: %s : %s\n",
+                         __FILE__, __LINE__, remote_host, strerror(errsave));
+                }
                 return 0;
         }
 
@@ -538,7 +586,17 @@ tcp_connect(char *remote_host, int port)
         memcpy(&sa.sin_addr, host->h_addr,host->h_length);
   
         if(connect(sock_fd, (struct sockaddr *)&sa, sizeof(sa)) < 0){
-                perror(remote_host);
+                int errsave = errno;
+                if (gDebug)
+                {
+                  fprintf(stderr, "%s line %d: %s : %s\n",
+                         __FILE__, __LINE__, remote_host, strerror(errsave));
+                }
+                else
+                {
+                  syslog(LOG_ERR, "%s line %d: %s : %s\n",
+                         __FILE__, __LINE__, remote_host, strerror(errsave));
+                }
                 return 0;
         }
 
@@ -573,7 +631,11 @@ transfer(UrlResource *rsrc)
                 i = http_transfer(rsrc, NULL);
                 break;
         default:
-                report(ERR, "bad url: %s", rsrc->url->full_url);
+                i=0;
+                if (gDebug)
+                  fprintf(stderr, "bad url: %s\n", rsrc->url->full_url);
+                else
+                  syslog(LOG_ERR, "bad url: %s\n", rsrc->url->full_url);
         }
 
         return i;

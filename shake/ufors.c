@@ -57,17 +57,26 @@ int gDebug=0;
 // measureHZ is the current running average
 // measureTime is the timetag for the next seed record
 // iMeasureCount is how many samples we've buffered up ready to be sent
+// iRunCount is the number of continous seed records we've generated
+// iFixCount is the iRunCount we last subtracted ticks from a record
 // utcWhen stores shortest record start timetags based upon new data
 //         extrapolated back iMeasureCount * measureHZ in time
 // iTimeBufSize says how many values are stored in utcWhen
 // sample stores the last iMeasureCount sample values
+// bNewRun means we need to start timetags etc from scratch
 double measureHZ = DATAHZ;
 double defaultHZ = DATAHZ;
 struct timeval measureTime={0};
 long   iMeasureCount=0;
+long   iRunCount=0;
+long   iFixCount=0;
+int    bNewRun=1;  
 struct timeval  utcWhen[TIMEARRAYSIZE];
 int  iTimeBufSize=0;   // Says how many values have been added to utcWhen
 long sample[8192*8];            // Can't pack lower than 1 bit/value
+
+char channel[4];
+char location[4];
 
 //////////////////////////////////////////////////////////////////////////////
 // ShowUsage()
@@ -124,31 +133,18 @@ record_handler (char *record, int reclen, void *ptr)
         measureTime.tv_sec += measureTime.tv_usec/1000000;
         measureTime.tv_usec = measureTime.tv_usec % 1000000;
       }
-      memset(&newtime, 0, sizeof(newtime));
-      newtime.year = 1970;
-      newtime.day = 1;
-      newtime = ST_AddToTime2(newtime, 0, 0, 0,
-                    measureTime.tv_sec, measureTime.tv_usec/100);
       if (gDebug)
         fprintf(stdout, 
-             "%2.2s %5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
+             "%2.2s %-5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
              seedhdr->seednet, seedhdr->station_id_call_letters,
              seedhdr->location_id, seedhdr->channel_id,
              1, measureHZ);
-      else
-        syslog(LOG_INFO, 
-             "%2.2s %5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
-             seedhdr->seednet, seedhdr->station_id_call_letters,
-             seedhdr->location_id, seedhdr->channel_id,
-             1, measureHZ);
-  
-      // Store new timetag
-      seedhdr->yr = htons(newtime.year);
-      seedhdr->jday = htons(newtime.day);
-      seedhdr->hr = newtime.hour;
-      seedhdr->minute = newtime.minute;
-      seedhdr->seconds = newtime.second;
-      seedhdr->tenth_millisec = htons(newtime.tenth_msec);
+//    else
+//      syslog(LOG_INFO, 
+//           "%2.2s %-5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
+//           seedhdr->seednet, seedhdr->station_id_call_letters,
+//           seedhdr->location_id, seedhdr->channel_id,
+//           1, measureHZ);
     } // We've seen enough nudge requests in a row to be convinced
   } // decided to nudge record start time forward 1 tick
   else
@@ -163,6 +159,19 @@ record_handler (char *record, int reclen, void *ptr)
              seedhdr->location_id, seedhdr->channel_id,
              measureHZ, calcDelta);
   }
+
+  // Store the start time for current record
+  memset(&newtime, 0, sizeof(newtime));
+  newtime.year = 1970;
+  newtime.day = 1;
+  newtime = ST_AddToTime2(newtime, 0, 0, 0,
+                measureTime.tv_sec, measureTime.tv_usec/100);
+  seedhdr->yr = htons(newtime.year);
+  seedhdr->jday = htons(newtime.day);
+  seedhdr->hr = newtime.hour;
+  seedhdr->minute = newtime.minute;
+  seedhdr->seconds = newtime.second;
+  seedhdr->tenth_millisec = htons(newtime.tenth_msec);
 
   // Reset record start timetag for new data
   for (i=0; i < iMeasureCount - iPackCount; i++)
@@ -182,11 +191,11 @@ record_handler (char *record, int reclen, void *ptr)
   while ((retstr = q330SeedSend((void *)record)) != NULL)
   {
     if (gDebug)
-      fprintf(stderr, "%s line %d q330SeedSend: %s\n", 
-             __FILE__, __LINE__, retstr);
+      fprintf(stderr, "%s line %d q330SeedSend: %s %s\n", 
+             __FILE__, __LINE__, channel, retstr);
     else
-      syslog(LOG_ERR, "%s line %d q330SeedSend: %s\n",
-            __FILE__, __LINE__, retstr);
+      syslog(LOG_ERR, "%s line %d q330SeedSend: %s %s\n",
+            __FILE__, __LINE__, channel, retstr);
     sleep(1);
   }
 }  /* End of record_handler() */
@@ -249,6 +258,7 @@ void collectData(
 
   // Create initial miniseed header
   LogSNCL(log_station, log_network, log_channel, log_location);
+
   memset(&msr, 0, sizeof(msr));
   memset(seedrec, 0, sizeof(seedrec));
   packreclen = 512;
@@ -299,17 +309,20 @@ void collectData(
           if (synccount < 10 || iMeasureCount > 0)
           {
             if (gDebug)
-            fprintf(stderr, "Checksum error %02x %02x %02x %02x %02x = %02x\n",
-             buffer[0]&0xff, buffer[1]&0xff, buffer[2]&0xff, 
-             buffer[3]&0xff, buffer[4]&0xff,
-                    checksum & 0xff);
+              fprintf(stderr, "%s Checksum error %02x %02x %02x %02x %02x = %02x\n",
+               channel,
+               buffer[0]&0xff, buffer[1]&0xff, buffer[2]&0xff, 
+               buffer[3]&0xff, buffer[4]&0xff,
+                      checksum & 0xff);
             if (iMeasureCount > 0)
             {
               syslog(LOG_ERR, 
-               "Checksum error %02x %02x %02x %02x %02x = %02x Data count %d\n",
+               "%s Checksum error %02x %02x %02x %02x %02x = %02x Data count %d\n",
+               channel,
                buffer[0]&0xff, buffer[1]&0xff, buffer[2]&0xff, 
                buffer[3]&0xff, buffer[4]&0xff,
-                    checksum & 0xff, iMeasureCount);
+                      checksum & 0xff, iMeasureCount);
+               bNewRun = 1;
             }
           } // checksum error debug prints
 
@@ -343,32 +356,36 @@ void collectData(
     // Handle the various cases
     // 1A -- This is the first data value we have collected
     // 1B -- Too much time has elapsed since last data and need reset
+    // 1C -- Checksum error in middle of run should force a reset
     // 2  -- Adding a new value to the existing sample list
 
     // If this is the first data value
     // If more than 10 seconds since last data value, start record over
-    if (timetag.tv_sec - utcWhen[0].tv_sec > 10 || iMeasureCount == 1)
+    if (timetag.tv_sec - utcWhen[0].tv_sec >= 10 || bNewRun)
     {
       if (gDebug && iMeasureCount > 1)
       {
-        fprintf(stdout, "Time gap timetag.tv_sec %d - utcWhen[0] %d = %d\n",
-        timetag.tv_sec, utcWhen[0].tv_sec, timetag.tv_sec - utcWhen[0].tv_sec);
+        fprintf(stdout, "%s Time gap timetag.tv_sec %d - utcWhen[0] %d = %d\n",
+        channel, timetag.tv_sec, utcWhen[0].tv_sec, timetag.tv_sec - utcWhen[0].tv_sec);
       }
       else if (!gDebug && iMeasureCount > 1)
       {
-        syslog(LOG_INFO, "Time gap timetag.tv_sec %d - utcWhen[0] %d = %d\n",
-        timetag.tv_sec, utcWhen[0].tv_sec, timetag.tv_sec - utcWhen[0].tv_sec);
+        syslog(LOG_INFO, "%s Time gap timetag.tv_sec %d - utcWhen[0] %d = %d\n",
+        channel, timetag.tv_sec, utcWhen[0].tv_sec, timetag.tv_sec - utcWhen[0].tv_sec);
       }
       else if (gDebug)
       {
-        fprintf(stdout, "Data collection start at tv_sec = %d.%06d\n",
-        now.tv_sec, now.tv_usec);
+        fprintf(stdout, "%s Data collection start at tv_sec = %d.%06d\n",
+        channel, now.tv_sec, now.tv_usec);
       }
       else
       {
-        syslog(LOG_INFO, "Data collection start at tv_sec = %d.%06d\n",
-        now.tv_sec, now.tv_usec);
+        syslog(LOG_INFO, "%s Data collection start at tv_sec = %d.%06d\n",
+        channel, now.tv_sec, now.tv_usec);
       }
+      bNewRun = 0;
+      iRunCount = 0;
+      iFixCount = 0;
       iTimeBufSize = 0;
       iMeasureCount = 1;
       measureHZ = defaultHZ;
@@ -386,12 +403,25 @@ void collectData(
       {
         measureHZ = ((measureHZ * (DECAY_RATE - delta_sec)) + 1.0
                     ) / DECAY_RATE;
+
+        // Only allow measureHZ to drift from defaultHZ by 0.05%
+        if (measureHZ > defaultHZ*1.0003)
+          measureHZ = defaultHZ*1.0003;
+        if (measureHZ < defaultHZ*0.9997)
+          measureHZ = defaultHZ*0.9997;
       }
-//if (gDebug && iMeasureCount%600 == 2)
-//{
-//fprintf(stdout, "DEBUG delta_sec = %.6lf, sample Hz=%.6lf\n",
-//delta_sec, 1.0/delta_sec);
-//}
+      else
+      {
+        // Want a record of 0 or negative time deltas
+        if (gDebug)
+          fprintf(stdout, 
+             "%s/%s Sample time delta error %.6lf seconds\n",
+             location, channel, delta_sec);
+        else
+          syslog(LOG_INFO, 
+             "%s/%s Sample time delta error %.6lf seconds\n",
+             location, channel, delta_sec);
+      }
     } // Adding new value to existing sequence
 
     // remember timetag of this sample for next round rate determination
@@ -419,12 +449,16 @@ void collectData(
     }
 
     // Use earliest start time estimate as the real start time
-    if (iTime == 0)
+    if (iTime == 0 &&
+        (iFixCount != iRunCount || iRunCount < 60*5*4))
     {
       delta_sec = (timetag.tv_sec - measureTime.tv_sec)
                 + (timetag.tv_usec - measureTime.tv_usec) / 1000000.0;
       if (delta_sec <= -0.0001)
       {
+        // Only allow a single -1 tick correction per record after first 5 minutes
+        if (iRunCount > 60*5*4)
+          delta_sec = -0.0001;
         delta_usec = (suseconds_t) (-delta_sec * 1000000);
         if ((delta_usec % 1000000) > timetag.tv_usec)
         {
@@ -437,26 +471,26 @@ void collectData(
           measureTime.tv_sec -= delta_usec / 1000000;
         }
 
-        // Put new timetag in seed record structure 
+        if (gDebug)
+          fprintf(stdout, 
+             "%2.2s %-5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
+             log_network, log_station, location, channel,
+             (int)(delta_sec*10000), measureHZ);
+        else if (delta_sec < -0.0001)
+          syslog(LOG_INFO, 
+             "%2.2s %-5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
+             log_network, log_station, location, channel,
+             (int)(delta_sec*10000), measureHZ);
+  
+        // Store new timetag
         memset(&newtime, 0, sizeof(newtime));
         newtime.year = 1970;
         newtime.day = 1;
         newtime = ST_AddToTime2(newtime, 0, 0, 0,
                       measureTime.tv_sec, measureTime.tv_usec/100);
-        if (gDebug)
-          fprintf(stdout, 
-             "%2.2s %5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
-             log_network, log_station, location, channel,
-             (int)(delta_sec*10000), measureHZ);
-        else
-          syslog(LOG_INFO, 
-             "%2.2s %5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
-             log_network, log_station, location, channel,
-             (int)(delta_sec*10000), measureHZ);
-  
-        // Store new timetag
         msr.starttime = ms_time2hptime(newtime.year, newtime.day, newtime.hour,
                  newtime.minute, newtime.second, newtime.tenth_msec*100);
+        iFixCount = iRunCount;
       } // time bump was at least 1/10th of a millisecond
     } // We bumped the start time forward
   
@@ -470,6 +504,18 @@ void collectData(
         fprintf(stderr, "Unable to pack records\n");
       else
         syslog(LOG_ERR, "Unable to pack records\n");
+    }
+    if (packedrecords > 0)
+    {
+      // Keep library up to date with the latest extrapolated timetag
+      memset(&newtime, 0, sizeof(newtime));
+      newtime.year = 1970;
+      newtime.day = 1;
+      newtime = ST_AddToTime2(newtime, 0, 0, 0,
+                measureTime.tv_sec, measureTime.tv_usec/100);
+      msr.starttime = ms_time2hptime(newtime.year, newtime.day, newtime.hour,
+                newtime.minute, newtime.second, newtime.tenth_msec*100);
+      iRunCount++;
     }
 
     if (packedrecords > 0 && gDebug)
@@ -509,8 +555,6 @@ char *argv[];
   char *loc_chan = NULL;
   char *portname = NULL;
   char *retmsg;
-  char location[4];
-  char channel[4];
 
   int  bParseError=0;
   int  bShowUsage=0;

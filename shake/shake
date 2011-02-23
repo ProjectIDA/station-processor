@@ -1,6 +1,6 @@
 #! /bin/bash 
 #
-#  Bring up/down shaek table daemons
+#  Bring up/down shake table daemons
 #
 #  description: 
 # The script brings up/down the following programs as user $USER
@@ -24,10 +24,15 @@
 
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 RETVAL=0
-USER=fshelly
-EJZ=/dev/ttyS0
-EJ1=
-EJ2=
+chanz=00/EJZ
+chan1=00/EJ1
+chan2=00/EJ2
+serz=/dev/ttyS0
+ser1=/dev/ttyS1
+ser2=/dev/ttyS2
+lissz=4000
+liss1=4001
+liss2=4002
 PROG=`basename $0`
 SCRIPTPID=$$
 numargs=$#
@@ -42,46 +47,95 @@ test -x /opt/data/bin/netseed || exit 0
 test -x /opt/data/bin/ida2liss || exit 0
 test -x /opt/data/bin/q330arch || exit 0
 
+# needs root
+# make sure programs can read/write the serial ports
+USER=`whoami`
+if [[ ${USER} == "root" ]] ; then
+  chmod a+rw $serz $ser1 $ser2
+fi
+echo $USER
+
+
 # Now start the data collection process
 start () {
+#
+# Make sure isid program is running
+#
+pid=`/bin/ps h -C isid -o pid,user,cmd | awk '{ print $1 }'`
+if [[ "${pid}" == "" ]] ; then
+  echo "Starting up isid daemon"
+  isid port=39136 log=/opt/data/nrts/log/isid.log -bd
+fi
 
-    echo "Starting shake table data collection..." 
-    isid port=39136 log=/opt/data/nrts/log/isid.log user=$USER -bd
-    q330arch /etc/q330/DLG1/diskloop.config
-    ida2liss server=localhost isiport=39136 lissport=4000 log=/opt/data/nrts/log/ida2liss.log depth=500 filter=*/* keepalive=100 raw
-    ida2liss server=localhost isiport=39136 lissport=4001 log=/opt/data/nrts/log/ida2liss.log depth=500 filter=*/* keepalive=100 raw
-    ida2liss server=localhost isiport=39136 lissport=4002 log=/opt/data/nrts/log/ida2liss.log depth=500 filter=*/* keepalive=100 raw
-    netseed 4003
-    netseed 4003
-    netseed 4003
-    netseed 4004
+#
+# Make sure q330arch program is running
+#
+pid=`/bin/ps h -C q330arch -o pid,user,cmd | awk '{ print $1 }'`
+if [[ "${pid}" == "" ]] ; then
+  echo "Starting up q330arch daemon"
+  q330arch /etc/q330/DLG1/diskloop.config
+fi
 
-    # needs root
-    # make sure programs can read/write the serial ports
-    if [[ ${USER} == "root" ]] ; then
-      chmod a+rw $EJZ $EJ1 $EJ2
+#
+# Make sure ida2liss program is running
+#
+port=`/bin/ps h -C ida2liss -o cmd | grep $lissz | awk '{ print $1 }'`
+if [[ "${port}" == "" ]] ; then
+  echo "Starting up ida2liss $lissz $chanz daemon"
+  ida2liss server=localhost isiport=39136 lissport=$lissz log=/opt/data/nrts/log/ida2liss.log depth=640 keepalive=100 raw
+fi
 
-      if [[ ${EJZ} != "" ]] ; then
-        nice -n -5 ufors /etc/q330/DLG1/diskloop.config EJZ $EJZ
-      fi
-      if [[ ${EJ1} != "" ]] ; then
-        nice -n -5 ufors /etc/q330/DLG1/diskloop.config EJ1 $EJ1
-      fi
-      if [[ ${EJ2} != "" ]] ; then
-        nice -n -5 ufors /etc/q330/DLG1/diskloop.config EJ2 $EJ2
-      fi
-    else
-      # Not root
-      if [[ ${EJZ} != "" ]] ; then
-        /opt/data/bin/nice -n -5 ufors /etc/q330/DLG1/diskloop.config EJZ $EJZ
-      fi
-      if [[ ${EJ1} != "" ]] ; then
-        /opt/data/bin/nice -n -5 ufors /etc/q330/DLG1/diskloop.config EJ1 $EJ1
-      fi
-      if [[ ${EJ2} != "" ]] ; then
-        /opt/data/bin/nice -n -5 ufors /etc/q330/DLG1/diskloop.config EJ2 $EJ2
-      fi
-    fi
+pid=`/bin/ps h -C ida2liss -o pid,user,cmd | awk '{ print $1 }'`
+port=`/bin/ps h -C ida2liss -o cmd | grep $liss1 | awk '{ print $1 }'`
+if [[ "${port}" == "" ]] ; then
+  echo "Starting up ida2liss $liss1 $chan1 daemon"
+  ida2liss server=localhost isiport=39136 lissport=$liss1 log=/opt/data/nrts/log/ida2liss.log depth=640 keepalive=100 raw
+fi
+
+pid=`/bin/ps h -C ida2liss -o pid,user,cmd | awk '{ print $1 }'`
+port=`/bin/ps h -C ida2liss -o cmd | grep $liss2 | awk '{ print $1 }'`
+if [[ "${port}" == "" ]] ; then
+  echo "Starting up ida2liss $liss2 $chan1 daemon"
+  ida2liss server=localhost isiport=39136 lissport=$liss2 log=/opt/data/nrts/log/ida2liss.log depth=640 keepalive=100 raw
+fi
+
+#
+# Make sure netseed daemons are running
+#
+port=`/bin/ps h -C netseed -o cmd | grep 4003 | awk '{ print $1 }'`
+if [[ "${port}" == "" ]] ; then
+  echo "Starting up netseed 4003 daemon"
+  netseed 4003
+fi
+port=`/bin/ps h -C netseed -o cmd | grep 4004 | awk '{ print $1 }'`
+if [[ "${port}" == "" ]] ; then
+  echo "Starting up netseed 4004 daemon"
+  netseed 4004
+fi
+
+#
+# start the ufors programs
+#
+pid=`/bin/ps h -C ufors -o pid,cmd | grep ${chanz} | awk '{ print $1 }'`
+if [[ "${pid}" == "" ]] ; then
+  echo "Starting ufors $chanz $serz"
+  /opt/data/bin/nice -n -5 ufors /etc/q330/DLG1/diskloop.config $chanz $serz -hz=639.97
+  sleep 2
+fi
+
+pid=`/bin/ps h -C ufors -o pid,cmd | grep ${chan1} | awk '{ print $1 }'`
+if [[ "${pid}" == "" ]] ; then
+  echo "Starting ufors $chan1 $ser1"
+  /opt/data/bin/nice -n -5 ufors /etc/q330/DLG1/diskloop.config $chan1 $ser1 -hz=639.97
+  sleep 2
+fi
+
+pid=`/bin/ps h -C ufors -o pid,cmd | grep ${chan2} | awk '{ print $1 }'`
+if [[ "${pid}" == "" ]] ; then
+  echo "Starting ufors $chan2 $ser2"
+  /opt/data/bin/nice -n -5 ufors /etc/q330/DLG1/diskloop.config $chan2 $ser2 -hz=639.97
+fi
+
 }
 
 
@@ -135,6 +189,7 @@ stop ()
     done
 }
 
+echo Execute command $1
 case "$1" in
 
     start)

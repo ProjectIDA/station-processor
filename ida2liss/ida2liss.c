@@ -14,10 +14,13 @@ Update History:
 mmddyy who Changes
 ==============================================================================
 071309 fcs Change idaapi to log errors only Release 1.2
+022511 fcs Fix exit with no message when collecting data for ufors
 ========================================================================*/
 
 const char *WHOAMI="ida2liss";
-const char *VersionIdentString = "Release 1.2";
+const char *VersionIdentString = "Release 1.3";
+
+int debug = 0;
 
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include "isi.h"
@@ -141,7 +144,10 @@ void *ListenThread(void *params)
   // open LISS socket
   if (open_socket(mapshm->iPort) < 0)
   {
-    fprintf(stderr, "Failed to open socket on port %d\n", mapshm->iPort);
+    if (debug)
+      fprintf(stderr, "Failed to open socket on port %d\n", mapshm->iPort);
+    else
+      syslog(LOG_ERR, "Failed to open socket on port %d\n", mapshm->iPort);
     exit(1);
   }
   if (mapshm->iDebug)
@@ -160,7 +166,10 @@ void *ListenThread(void *params)
     if (iReturn < 0)
     {
       // No longer able to accept connections, exit
-      fprintf(stderr, "No longer able to accept connections, exiting!\n");
+      if (debug)
+        fprintf(stderr, "No longer able to accept connections, exiting!\n");
+      else
+        syslog(LOG_ERR, "No longer able to accept connections, exiting!\n");
       mapshm->bQuit = 1;
       exit(1);
     }
@@ -357,8 +366,12 @@ static ISI_DATA_REQUEST *BuildRawRequest(int compress, ISI_SEQNO *begseqno, ISI_
 {
 ISI_DATA_REQUEST *dreq;
 
-    if ((dreq = isiAllocSimpleSeqnoRequest(begseqno, endseqno, SiteSpec)) == NULL) {
-        fprintf(stderr, "isiAllocSimpleSeqnoRequest: %s\n", strerror(errno));
+    if ((dreq = isiAllocSimpleSeqnoRequest(begseqno, endseqno, SiteSpec)) == NULL)
+    {
+        if (debug)
+          fprintf(stderr, "isiAllocSimpleSeqnoRequest: %s\n", strerror(errno));
+        else
+          syslog(LOG_ERR, "isiAllocSimpleSeqnoRequest: %s\n", strerror(errno));
         exit(1);
     }
     isiSetDatreqCompress(dreq, compress);
@@ -420,10 +433,18 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
     }
 
     if ((isi = isiInitiateDataRequest(server, par, dreq)) == NULL) {
-        if (errno == ENOENT) {
-            fprintf(stderr, "can't connect to server %s, port %d\n", server, par->port);
-        } else {
-            perror("isiInitiateDataRequest");
+        if (errno == ENOENT)
+        {
+            if (debug)
+              fprintf(stderr, "can't connect to server %s, port %d\n", server, par->port);
+            else
+              syslog(LOG_ERR, "can't connect to server %s, port %d\n", server, par->port);
+        } else
+        {
+            if (debug)
+              perror("isiInitiateDataRequest");
+            else
+              syslog(LOG_ERR, "isiInitiateDataRequest: %s\n", strerror(errno));
         }
         exit(1);
     }
@@ -550,7 +571,6 @@ static char *VerboseHelp =
 int main(int argc, char **argv)
 {
 int i, request, isiport;
-int debug = 0;
 int lissport=4001;
 int depth=-1;
 int iRecords;
@@ -671,7 +691,10 @@ struct s_mapshm *mapshm=NULL;
                  &mapshm);
         if (retstr != NULL)
         {
-          fprintf(stderr, "%s:main %s\n", WHOAMI, retstr);
+          if (debug)
+            fprintf(stderr, "%s:main %s\n", WHOAMI, retstr);
+          else
+            syslog(LOG_ERR, "%s:main %s\n", WHOAMI, retstr);
           exit(1);
         }
         memset(mapshm, 0, sizeof(struct s_mapshm));
@@ -687,18 +710,30 @@ struct s_mapshm *mapshm=NULL;
         if (pthread_create(&mapshm->listen_tid, NULL,
               ListenThread, (void *)mapshm))
         {
-          fprintf(stderr, "%s:main pthread_create StartServer: %s\n",
-            WHOAMI, strerror(errno));
+          if (debug)
+            fprintf(stderr, "%s:main pthread_create StartServer: %s\n",
+              WHOAMI, strerror(errno));
+            else
+            syslog(LOG_ERR, "%s:main pthread_create StartServer: %s\n",
+              WHOAMI, strerror(errno));
           exit(1);
         }
         pthread_detach(mapshm->listen_tid);
 
-        if (begstr != NULL && !isiStringToSeqno(begstr, &begseqno)) {
-            fprintf(stderr, "illegal beg seqno '%s'\n", begstr);
+        if (begstr != NULL && !isiStringToSeqno(begstr, &begseqno))
+        {
+            if (debug)
+              fprintf(stderr, "illegal beg seqno '%s'\n", begstr);
+            else
+              syslog(LOG_ERR, "illegal beg seqno '%s'\n", begstr);
             exit(1);
         }
-        if (endstr != NULL && !isiStringToSeqno(endstr, &endseqno)) {
-            fprintf(stderr, "illegal end seqno '%s'\n", endstr);
+        if (endstr != NULL && !isiStringToSeqno(endstr, &endseqno))
+        {
+            if (debug)
+              fprintf(stderr, "illegal end seqno '%s'\n", endstr);
+            else
+              syslog(LOG_ERR, "illegal end seqno '%s'\n", endstr);
             exit(1);
         }
         raw(server, &par, compress, &begseqno, &endseqno, SiteSpec, mapshm);
@@ -707,6 +742,8 @@ struct s_mapshm *mapshm=NULL;
         help(argv[0]);
     } // switch request
 
+    if (!debug)
+      syslog(LOG_INFO, "Normal program exit\n");
     exit(0);
 } // main()
 

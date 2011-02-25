@@ -202,13 +202,17 @@ int accept_client(const char *whitelist, int iDebug)
    */
   if (iDebug && whitelist)
     fprintf(stderr, "Limiting connections to hosts %s\n", whitelist);
-  else
+  else if (whitelist)
     syslog(LOG_INFO, "Limiting connections to hosts %s\n", whitelist);
 
   sockpath = accept(fd, &from, &fromlen);
   if(sockpath < 0)
   {
-   perror("accept");
+   int terrno = errno;
+   if (iDebug)
+     fprintf(stderr, "accept: %s\n", strerror(terrno));
+   else
+     syslog(LOG_ERR, "accept: %s\n", strerror(terrno));
    return -1;
   }
   peer_ip[0] = from.sa_data[2];

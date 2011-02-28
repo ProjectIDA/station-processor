@@ -48,3 +48,9 @@ isirstat (1.2)  -- Add beg= and end= option arguments
 dispstatus(1.3) -- new lib330
 NOTE:  seneca.config is not compatible with earlier releases
 Built with svn revision 216
+
+Release 1.9
+falcon            -- Improve robustness when hardware is not disconnected
+q330serv          -- Would crash on QSPA due to uninitialized baler callback
+init.d/dispstatus -- Only chmod /dev/ttyS3 if root user
+jiffyreboot.pl    -- Perl script run as crontab to reboot slate periodically

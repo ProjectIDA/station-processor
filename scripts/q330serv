@@ -12,7 +12,7 @@ PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 RETVAL=0
 #PROG=`basename $0`
 PROG=q330serv
-MAXWAIT=15
+MAXWAIT=20
 numargs=$#
 command=$1
 

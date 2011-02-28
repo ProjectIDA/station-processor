@@ -52,5 +52,7 @@ Built with svn revision 216
 Release 1.9
 falcon            -- Improve robustness when hardware is not disconnected
 q330serv          -- Would crash on QSPA due to uninitialized baler callback
+ida2liss          -- Don't print out null whitelist
 init.d/dispstatus -- Only chmod /dev/ttyS3 if root user
+init.d/q330serv   -- Only chmod /dev/ttyS3 if root user
 jiffyreboot.pl    -- Perl script run as crontab to reboot slate periodically

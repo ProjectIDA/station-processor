@@ -8,9 +8,10 @@ mmddyy who Changes
 ==============================================================================
 020509 fcs Creation
 021910 fcs Add beg= and end=arguments
+030211 fcs Add save= argument to save the seed records downloaded
 ******************************************************************************/
 #define WHOAMI "isirstat"
-const char *VersionIdentString = "Release 1.2";
+const char *VersionIdentString = "Release 1.3";
 
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include <stdio.h>
@@ -38,6 +39,8 @@ const char *VersionIdentString = "Release 1.2";
 #define BUFLEN  256
 
 char *server   = NULL;
+char *savefile = NULL;
+FILE *savefd   = NULL;
 
 int iDebug;
 
@@ -90,7 +93,7 @@ char          *loc          // return Location ID
 void ShowUsage()
 {
   fprintf(stderr,"Usage: %s isi=<host> [port=<port>] [<site>]\n", WHOAMI);
-  fprintf(stderr,"   [beg=<begstr>] [end=<endstr>]\n");
+  fprintf(stderr,"   [beg=<begstr>] [end=<endstr>] [save=<filename>]\n");
   fprintf(stderr," Displays status information about a remote isi disk loop\n");
   fprintf(stderr," port defaults to 39136\n");
   fprintf(stderr," site defaults to the name reported by the remote server\n");
@@ -268,27 +271,11 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
               station, loc, chan, year, doy, hour, minute, second, tmsec,
               raw.hdr.seqno.signature, int2x32[1], int2x32[0]);
 
-        // Open the disk loop for the site this packet comes from
-/*
-        if ((dl = isidlOpenDiskLoop(&glob, raw.hdr.site, NULL, ISI_RDONLY)) == NULL)
-        {
-          fprintf(stderr, "%s: isidlOpenDiskLoop failed for site=%s\n", WHOAMI, raw.hdr.site);
-          exit(1);
-        }
-
-        // Get snapshot of the disk loop
-        if (!isidlSnapshot(dl, &snap, &sys))
-        {
-          fprintf(stderr, "%s: isidlSnapshot failed for site=%s\n",
-                  WHOAMI, raw.hdr.site);
-          exit(1);
-        }
-
-        // Print additional status info
-        printf("     count=%llu, numpkt=%d, update=%s\n",
-               sys.count, sys.numpkt,
-               utilTimeString(sys.tstamp.write, 100, datebuf, BUFLEN));
-*/
+      // Save the seed record if save= option supplied
+      if (savefd > NULL)
+      {
+        fwrite(seedrec, SEED_RECLEN, 1, savefd);
+      }
     } // While no errors reading from ida disk loop
 
 } // raw()
@@ -332,6 +319,17 @@ int format    = ISI_FORMAT_GENERIC;
     else if (strncmp(argv[i], "end=", strlen("end=")) == 0)
     {
         endstr = argv[i] + strlen("end=");
+    }
+    else if (strncmp(argv[i], "save=", strlen("save=")) == 0)
+    {
+        savefile = argv[i] + strlen("save=");
+        if ((savefd = fopen(savefile, "w")) == NULL)
+        {
+          int errsave = errno;
+          fprintf(stderr, "Unable to open save file %s, %s.\n",
+                  savefile, strerror(errsave));
+          exit(1);
+        }
     }
     else if (strlen(argv[i]) <= 5 && argv[i][0] != '?' && 
              strcmp(argv[i], "help") != 0 && strcmp(argv[i], "-help") != 0)
@@ -405,6 +403,8 @@ int format    = ISI_FORMAT_GENERIC;
   }
 
   raw(server, &par, compress, &begseqno, &endseqno, SiteSpec);
+  if (savefd)
+    fclose(savefd);
 
   exit(0);
 

@@ -1,0 +1,100 @@
+#! /bin/bash
+#
+# Script to make sure all stations that need an IDA disk relay have an isidl running
+# Also makes sure that isid server is running
+# The station name and IP address must be in /etc/hosts for this script to work correctly
+# The file $NRTS_HOME/idarelay.stations should contain a list of stations and port numbers
+# ie.  ASPX 39136
+#      ANMO 39136
+#
+#
+# loop through all stations in idarelay.stations
+#
+echo `date`
+if [[ ! -r $NRTS_HOME/idarelay.stations ]]
+then
+  echo $NRTS_HOME/idarelay.stations does not exist, ABORTING!
+  exit 1
+fi
+
+#
+# function to process list of stations needing an ida disk relay
+# 
+processlist() {
+while [[ $# > 1 ]]
+do
+  # Make sure that there is a disk loop directory for this station
+  if [[ ! -r $NRTS_HOME/$1 ]]
+  then
+    echo Creating a new disk loop for station $1
+    isimkdl type=ida reclen=512 nrec=4000000 $1
+    chmod -R ug+rw $1
+  fi
+  echo Checking station $1, port $2
+  #
+  # see if there was already an isidl running for this station
+  pid=`/bin/ps aux | grep $1 | grep isidl | grep -v restart_isidl | sed -e 's/^[^ ]*[ ]*//' -e 's/ .*//'`
+
+  # if not, we need to start one
+  if  [ "${pid}" == "" ]
+  then
+    echo Starting isidl for station $1 port $2
+    isidl $1 isi=$1:$2 user=dcc to=120 log=$NRTS_HOME/log/isidl.$1.log -bd
+  fi
+
+  # Make sure that there is an archive directory for this station
+  if [[ ! -r $NRTS_HOME/../$1 ]]
+  then
+    echo No archive directory $NRTS_HOME/../$1, not archiving.
+  else
+    # see if there was already an ida2arch running for this station
+    pid=`/bin/ps aux | grep $1 | grep ida2arch | sed -e 's/^[^ ]*[ ]*//' -e 's/ .*//'`
+    # if not, we need to start one
+    if  [ "${pid}" == "" ]
+    then
+      echo Starting ida2arch for station $1
+      ida2arch raw=$1 server=localhost log=$NRTS_HOME/log/ida2arch.$1.log \
+               configdir=/etc/q330/$1/DLG1/
+    fi
+  fi
+
+  # Done with this station port pair
+  shift
+  shift
+done
+} # function processlist
+
+#
+# process list of stations
+#
+STATIONLIST=`cat $NRTS_HOME/idarelay.stations`
+processlist $STATIONLIST
+#
+# Make sure that isid server is running
+#
+pid=`/bin/ps -A -o cmd,pid | grep -e "^isid " | sed -e 's/^  *//' -e 's/ .*//'`
+if [ "${pid}" == "" ]
+then
+  echo Starting up isid daemon
+  isid port=39136 user=dcc log=$NRTS_HOME/log/isid.log -bd
+fi
+#
+# Make sure that netseed server is running
+#
+pid=`/bin/ps -A -o cmd,pid | grep -e "^netseed " | grep 4005 | sed -e 's/^  *//' -e 's/ .*//'`
+if [ "${pid}" == "" ]
+then
+  echo Starting up netseed 4005 daemon
+  netseed 4005
+fi
+pid=`/bin/ps -A -o cmd,pid | grep -e "^netseed " | grep 4003 | sed -e 's/^  *//' -e 's/ .*//'`
+if [ "${pid}" == "" ]
+then
+  echo Starting up netseed 4003 daemon
+  netseed 4003
+fi
+
+#
+# Done
+#
+echo Done

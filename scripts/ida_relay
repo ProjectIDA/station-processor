@@ -81,11 +81,11 @@ fi
 #
 # Make sure that netseed server is running
 #
-pid=`/bin/ps -A -o cmd,pid | grep -e "^netseed " | grep 4005 | sed -e 's/^  *//' -e 's/ .*//'`
+pid=`/bin/ps -A -o cmd,pid | grep -e "^netseed " | grep 4004 | sed -e 's/^  *//' -e 's/ .*//'`
 if [ "${pid}" == "" ]
 then
-  echo Starting up netseed 4005 daemon
-  netseed 4005
+  echo Starting up netseed 4004 daemon
+  netseed 4004
 fi
 pid=`/bin/ps -A -o cmd,pid | grep -e "^netseed " | grep 4003 | sed -e 's/^  *//' -e 's/ .*//'`
 if [ "${pid}" == "" ]

@@ -50,9 +50,12 @@ NOTE:  seneca.config is not compatible with earlier releases
 Built with svn revision 216
 
 Release 1.9
-falcon            -- Improve robustness when hardware is not disconnected
-q330serv          -- Would crash on QSPA due to uninitialized baler callback
-ida2liss          -- Don't print out null whitelist
+falcon (1.1)      -- Improve robustness when hardware is not disconnected
+q330serv (1.4)    -- Would crash on QSPA due to uninitialized baler callback
+                  -- Add VY? vacuum channels to dispstatus shared memory
+ida2liss (1.3)    -- Don't print out null whitelist
+dispstatus (1.4)  -- Display vacuum status VY? channels
+isirstat (1.3)    -- Add option to save seed records
 init.d/dispstatus -- Only chmod /dev/ttyS3 if root user
-init.d/q330serv   -- Only chmod /dev/ttyS3 if root user
+init.d/q330serv   -- Gives 20 seconds for q330serv to shutdown instead of 15
 jiffyreboot.pl    -- Perl script run as crontab to reboot slate periodically

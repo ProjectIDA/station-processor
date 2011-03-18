@@ -18,7 +18,7 @@ import java.net.UnknownHostException;
 public class SeedSocket extends Thread
 {
 	// Maximum number of records that we allow to be transfered at one time
-	public static final int MAX_RECORDS = 20000;
+	public static final int MAX_RECORDS = 4000000;
 
 	private Socket socket = null;
 	private PrintWriter out = null;

@@ -73,11 +73,11 @@ public class ASPdisplay
  */
 class TransferFrame extends JFrame implements ActionListener, FocusListener 
 {
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 2L;
 	public TransferFrame()
 	{
 		prefs = new ASPpreferences();
-		setTitle("ASP seed data Transfer");
+		setTitle("ASP seed data Transfer V" + serialVersionUID);
 		setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
 
 		// Create panel for channel list and file list

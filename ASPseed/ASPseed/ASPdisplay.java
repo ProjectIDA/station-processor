@@ -1078,7 +1078,7 @@ class TransferFrame extends JFrame implements ActionListener, FocusListener
   			if (Integer.parseInt(maxRecordField.getText()) > SeedSocket.MAX_RECORDS)
   			{
   				maxRecordField.setText(Integer.toString(SeedSocket.MAX_RECORDS));
-  				msgBox.append("Reset Max Record to maximum value of 20000\n");
+  				msgBox.append("Reset Max Record to maximum value of " + SeedSocket.MAX_RECORDS + "\n");
   	  		Toolkit.getDefaultToolkit().beep();
   			}
 			}

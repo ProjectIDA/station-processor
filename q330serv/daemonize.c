@@ -28,7 +28,7 @@ static void sigterm_handler()
   enum tlibstate libstate;
 
   lib_change_state (context, LIBSTATE_IDLE, LIBERR_CLOSED) ;
-  for (i=0; i < 150 && 
+  for (i=0; i < 200 && 
        lib_get_state(context, &err, &opstat) != LIBSTATE_IDLE; i++)
   {
     // Sleep 1/10th of a second

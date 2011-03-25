@@ -38,7 +38,6 @@ int openraw(const char *name);
 #include <arpa/inet.h>
 
 #include "libmseed.h"
-#include "sachead.h"
 #include "diskloop.h"
 #include "q330arch.h"
 #include "netreq.h"
@@ -392,6 +391,13 @@ void collectData(
       timetag = now;
       measureTime = now;
       utcWhen[0] = now;
+      memset(&newtime, 0, sizeof(newtime));
+      newtime.year = 1970;
+      newtime.day = 1;
+      newtime = ST_AddToTime2(newtime, 0, 0, 0,
+                    measureTime.tv_sec, measureTime.tv_usec/100);
+      msr.starttime = ms_time2hptime(newtime.year, newtime.day, newtime.hour,
+               newtime.minute, newtime.second, newtime.tenth_msec*100);
     } // Start of a new measuring sequence
     else
     {
@@ -488,8 +494,8 @@ void collectData(
         newtime.day = 1;
         newtime = ST_AddToTime2(newtime, 0, 0, 0,
                       measureTime.tv_sec, measureTime.tv_usec/100);
-        msr.starttime = ms_time2hptime(newtime.year, newtime.day, newtime.hour,
-                 newtime.minute, newtime.second, newtime.tenth_msec*100);
+//      msr.starttime = ms_time2hptime(newtime.year, newtime.day, newtime.hour,
+//               newtime.minute, newtime.second, newtime.tenth_msec*100);
         iFixCount = iRunCount;
       } // time bump was at least 1/10th of a millisecond
     } // We bumped the start time forward
@@ -513,8 +519,8 @@ void collectData(
       newtime.day = 1;
       newtime = ST_AddToTime2(newtime, 0, 0, 0,
                 measureTime.tv_sec, measureTime.tv_usec/100);
-      msr.starttime = ms_time2hptime(newtime.year, newtime.day, newtime.hour,
-                newtime.minute, newtime.second, newtime.tenth_msec*100);
+//    msr.starttime = ms_time2hptime(newtime.year, newtime.day, newtime.hour,
+//              newtime.minute, newtime.second, newtime.tenth_msec*100);
       iRunCount++;
     }
 

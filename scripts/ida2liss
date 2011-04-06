@@ -9,8 +9,8 @@
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 RETVAL=0
 PROG=`basename $0`
+SCRIPT_PID=$$
 numargs=$#
-
 
 # Make sure binary exists
 test -x /usr/local/sbin/ida2liss || exit 0
@@ -25,30 +25,66 @@ fi
 . /etc/q330/ida2liss.config
 
 
+filtercmd ()
+{
+  if [[ $# > 0 ]] ; then
+    findraw=`echo "$*" | grep raw`
+    if [ "${findraw}" == "" ] ; then
+      RAW="raw"
+    else
+      RAW=""
+    fi
+
+    if test -z "$FILTER" ; then
+      ida2liss $RAW server=localhost isiport=$ISIPORT lissport=$* log=$IDA2LISS_LOG depth=$IDA2LISS_DEPTH keepalive=$IDA2LISS_KEEPALIVE
+    else
+      ida2liss $RAW server=localhost isiport=$ISIPORT lissport=$* log=$IDA2LISS_LOG depth=$IDA2LISS_DEPTH filter=$FILTER keepalive=$IDA2LISS_KEEPALIVE
+    fi
+  fi
+}
 
 # Now start the data collection process
 start () 
 {
-    echo "Starting $PROG..." 
-    IDA2LISS="ida2liss server=localhost isiport=$ISIPORT lissport=$LISSPORT log=$IDA2LISS_LOG depth=$IDA2LISS_DEPTH filter=$FILTER keepalive=$IDA2LISS_KEEPALIVE raw"
-    logger $IDA2LISS
-    ` $IDA2LISS `
-    #ida2liss server=localhost isiport=$ISIPORT lissport=$LISSPORT log=$IDA2LISS_LOG depth=$IDA2LISS_DEPTH filter=$FILTER keepalive=$IDA2LISS_KEEPALIVE raw
+    filtercmd $LISSPORT
+    filtercmd $LISSPORT1
+    filtercmd $LISSPORT2
+    filtercmd $LISSPORT3
+    filtercmd $LISSPORT4
+    filtercmd $LISSPORT5
+    filtercmd $LISSPORT6
+    filtercmd $LISSPORT7
+    filtercmd $LISSPORT8
+    filtercmd $LISSPORT9
 }
 
 
 
 stop ()
 {
-    echo "Killing $PROG ..." 
-    pids=`pidof $PROG`
-    if [ -n "$pids" ] ; then
-        killall $PROG 
-        if [ $? != 0 ]; then
-            echo "Error stopping $PROG.."
-        fi  
+    if [ $numargs -lt 2 ]
+    then
+        pid=`/bin/ps -A -o comm,pid | grep -e "^$PROG " | grep -v $SCRIPT_PID | awk '{ print $2 }'`
+        if [[ "$pid" == "" ]] ; then
+           echo "No $PROG process to stop"
+        else
+           echo "Killing $PROG $pid"
+           kill $pid
+        fi
+    else
+        shift
+        args="$*"
+        for arg in $args
+        do
+          pid=`/bin/ps -A -o comm,pid,cmd | grep -e "^$PROG " | grep -v $SCRIPT_PID | grep $arg | awk '{ print $2 }'`
+          if [[ "$pid" == "" ]] ; then
+             echo "No $PROG $arg process to stop"
+          else
+             echo "Killing $PROG $arg"
+             kill $pid
+          fi
+        done
     fi
-    echo
 }
 
 case "$1" in
@@ -58,7 +94,7 @@ case "$1" in
         ;;
 
     stop)
-        stop
+        stop $*
         ;;
 
     restart|reload|force-reload)
@@ -69,7 +105,7 @@ case "$1" in
         ;;
 
     *)
-        echo "Usage: /etc/init.d/isid {start|stop|reload|force-reload|restart}"
+        echo "Usage: /etc/init.d/ida2liss {start|stop|reload|force-reload|restart}"
         exit 1
 esac
 

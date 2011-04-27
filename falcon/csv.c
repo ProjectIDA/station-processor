@@ -36,9 +36,6 @@ void csv_archive( csv_context_t* csv_buffer_list, buffer_t* url_str,
             csv_buffer->header->description, csv_buffer->header->channel,
             (int)(csv_buffer->end_time - csv_buffer->start_time), TM_HOUR);
         }
-syslog(LOG_INFO, "%s[%d]: elapsed time %d <> %d TM_HOUR\n",
-            csv_buffer->header->description, csv_buffer->header->channel,
-            (int)(csv_buffer->end_time - csv_buffer->start_time), TM_HOUR);
         while ((csv_buffer->end_time - csv_buffer->start_time) >= TM_HOUR) 
         {
             // Compress the csv data to FMash format

@@ -33,9 +33,10 @@ mmddyy who Changes
 020910 fcs New diskloop.config keywords for falcon, new lib330_91005
 110310 fcs Add 1 sec callback to get timely vacuum data
 110910 fcs Initialize baler_callback = NIL to fix segmentation fault
+041311 fcs Fixed bug where de-registering would cause program to terminate
 ******************************************************************************/
 #define WHOAMI "q330serv"
-const char *VersionIdentString="Release 1.4";
+const char *VersionIdentString="Release 1.5";
 
 #include "globals.h"
 #include "libtypes.h"

@@ -12,9 +12,10 @@ mmddyy who Changes
 041009 fcs Create skeleton
 102809 fcs Add lock file to allow only one invocation
 010311 fcs Improve recovery from falcon connection issues
+042711 fcs Tone down syslog verbosity every half hour
 ******************************************************************************/
 #define FILENAME "falcon"
-const char *VersionIdentString = "Release 1.1";
+const char *VersionIdentString = "Release 1.2";
 
 #include <stdio.h>
 #include <stdlib.h>

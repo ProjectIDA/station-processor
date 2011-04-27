@@ -1,6 +1,6 @@
 Documents changes to operational software and scripts for q330 ASP processor
 
-README Updated:  May 10, 2010
+README Updated:  April 25, 2011
 
 Release June 30, 2008
 Initial release
@@ -59,3 +59,13 @@ isirstat (1.3)    -- Add option to save seed records
 init.d/dispstatus -- Only chmod /dev/ttyS3 if root user
 init.d/q330serv   -- Gives 20 seconds for q330serv to shutdown instead of 15
 jiffyreboot.pl    -- Perl script run as crontab to reboot slate periodically
+
+Release 1.10
+q330serv (1.5)    -- Fix bug where program would not auto reconnect
+falcon (1.2)      -- Remove the half hour syslog verbosity
+init.d/ida2liss   -- Allow multiple ida2liss programs to be specified
+init.d/netseed    -- Allow multiple netseed programs to be specified
+Quasar (1.0)      -- Initial inclusion of Quasar with release
+                     [1315bc592ec9ecebc0a1b20924cd57ad]
+CNC (1.0)         -- Initial inclusion of CnC with release
+                     [3f32d15b72e74177705216057191f541]

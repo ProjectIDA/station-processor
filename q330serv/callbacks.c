@@ -326,7 +326,7 @@ void sen_state_callback (pointer p)
               clear_globals () ;
               lib_get_state (context, addr(err), addr(opstat)) ;
               if (err == LIBERR_INVREG)
-                then
+              {
                   if (debug_arg)
                   {
                     fprintf (stderr, "Q330 registration failure!\n");
@@ -336,6 +336,7 @@ void sen_state_callback (pointer p)
                     syslog (LOG_ERR, "Q330 registration failure!\n");
                   }
                   lib_change_state (context, LIBSTATE_TERM, LIBERR_CLOSED) ; /* terminate thread */
+              }
               break ;
             case LIBSTATE_TERM :
               if (context)

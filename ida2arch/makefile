@@ -38,14 +38,12 @@ SRCS = ida2arch.c daemonize.c wildmatch.c
 OBJS = $(SRCS:%.c=%.o)
 
 ida2arch:	$(OBJS) ../lib/dalib.a ../lib/dcctime2lib.a \
-		../lib//libapi.a \
 		$(LIBIDA)/libqdp.a $(LIBIDA)/libqdplus.a $(LIBIDA)/libisidl.a \
 		$(LIBIDA)/libnrts.a $(LIBIDA)/libisi.a $(LIBIDA)/libida10.a \
 		$(LIBIDA)/libida.a $(LIBIDA)/libiacp.a $(LIBIDA)/libisidb.a \
 		$(LIBIDA)/libdbio.a $(LIBIDA)/libutil.a $(LIBIDA)/liblogio.a \
 		$(LIBIDA)/libcssio.a $(LIBIDA)/libliss.a
 	$(CC) -o $@ $(OBJS) $(LIBS) ../lib/dalib.a ../lib/dcctime2lib.a \
-		../lib/libapi.a \
 		$(LIBIDA)/libqdp.a $(LIBIDA)/libqdplus.a $(LIBIDA)/libisidl.a \
 		$(LIBIDA)/libnrts.a $(LIBIDA)/libisi.a $(LIBIDA)/libida10.a \
 		$(LIBIDA)/libida.a $(LIBIDA)/libiacp.a $(LIBIDA)/libisidb.a \

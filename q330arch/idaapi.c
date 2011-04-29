@@ -14,6 +14,8 @@ mmddyy who Changes
 ==============================================================================
 061207 fcs Creation
 071809 fcs Make Log threshold LOG_ERR instead of LOG_DEBUG
+042911 fcs Move to q330arch, add whoami parameter to initialization
+           do a new isidlOpenDiskLoop and isidlCloseDiskLoop on every write
 ******************************************************************************/
 
 #include <stdio.h>
@@ -33,27 +35,39 @@ typedef struct {
 static UINT32 flags = QDP_DEFAULT_HLP_RULE_FLAG;
 static LOCALPKT local;
 static QDPLUS_PAR par = QDPLUS_DEFAULT_PAR;
-
-LOGIO logio, *lp = NULL;
+static ISI_GLOB glob;
+static LOGIO logio;
+static char *who;
+extern int g_bDebug;
+//////////////////////////////////////////////////////////////////////////////
+// Log function
+void logFunc(char *msg)
+{
+  if (g_bDebug)
+  {
+    fprintf(stderr, "%s", msg);
+  }
+  else
+  {
+    syslog(LOG_INFO, "%s", msg);
+  }
+} // logFunc
 
 //////////////////////////////////////////////////////////////////////////////
 // Local callback
 static void mseed(void *arg, QDP_HLP *hlp)
 {
-  fprintf(stderr, "idaapi.c: mseed callback, TODO???\n");
-}
+  logFunc("idaapi.c: mseed callback, TODO???\n");
+} // mseed()
 
 //////////////////////////////////////////////////////////////////////////////
 // Initialize IDA interface
-char *idaInit(const char *dlname
-  )                       // returns NULL or an error string pointer
+// returns NULL or an error string pointer
+char *idaInit(const char *dlname, const char *whoami)
 {
-  static char *fid = "OpenDiskLoop";
-  static ISI_GLOB glob;
   static char  site[ISI_SITELEN+1];
-  FILE *fp=NULL;
-  char logFileName[MAXPATHLEN+1];
 
+  who = (char *)whoami;
   par.path.meta = "meta";
   par.path.state = "state";
   strlcpy(site, dlname, ISI_SITELEN+1);
@@ -70,23 +84,15 @@ char *idaInit(const char *dlname
   if (!isidlSetGlobalParameters(NULL, "q330serv", &glob))
   {
     fprintf(stderr, "%s: isidlSetGlobalParameters failed: %s\n",
-          fid, strerror(errno));
+          whoami, strerror(errno));
     exit(1);
   }
 
   // Initialize logging
-  sprintf(logFileName, "%s/%s.log", glob.root, dlname);
-  logioInit(&logio, logFileName, NULL, dlname);
-  lp = &logio;
+  logioInit(&logio, NULL, logFunc, (char *)whoami);
+
   // Optional debug level
   logioSetThreshold(&logio, LOG_ERR);
-
-  if ((local.dl = isidlOpenDiskLoop(&glob, par.site, lp, ISI_RDWR)) == NULL)
-  {
-    fprintf(stderr, "%s: isidlOpenDiskLoop failed: %s\n",
-          fid, strerror(errno));
-    exit(1);
-  }
 
   if (!isiInitRawPacket(&local.raw, NULL, local.dl->sys->maxlen))
   {
@@ -115,19 +121,19 @@ char *idaWriteChan(
   const char  *dlname     // Name of ida disk loop to save to
   )                       // returns NULL or an error string pointer
 {
+  static char  site[ISI_SITELEN+1];
   static int firstcall=1;
   static char lastname[6] = "";
   char *msg;
   BOOL      retflag;
 
-  // one time initialization
-  if (firstcall || (strcmp(lastname, dlname) != 0))
+  strlcpy(site, dlname, ISI_SITELEN+1);
+  par.site = site;
+  if ((local.dl = isidlOpenDiskLoop(&glob, par.site, &logio, ISI_RDWR)) == NULL)
   {
-    firstcall = 0;
-    strncpy(lastname, dlname, 6);
-    msg = idaInit(dlname);
-    if (msg != NULL)
-      return msg;
+    fprintf(stderr, "%s: isidlOpenDiskLoop failed: %s\n",
+          who, strerror(errno));
+    exit(1);
   }
 
   // Copy data to IDA buffer
@@ -138,6 +144,9 @@ char *idaWriteChan(
         fprintf(stderr, "isidlWriteToDiskLoop failed: %s\n", strerror(errno));
         exit(1);
   }
+
+  isidlCloseDiskLoop(local.dl);
+  local.dl = NULL;
 
   return NULL;
 } // idaWriteChan()

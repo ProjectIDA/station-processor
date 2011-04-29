@@ -31,24 +31,26 @@ mmddyy who Changes
 #define WHOAMI "q330arch"
 const char *VersionIdentString = "Release 1.5";
 
-#define _REENTRANT
-#include <pthread.h>
-
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <arpa/inet.h>
 #include <signal.h>
-#include <sys/shm.h>
+#include <unistd.h>
 #include <syslog.h>
+#include <pthread.h>
+#include <sys/shm.h>
 #include "include/diskloop.h"
-#include "include/dcc_time_proto2.h"
 #include "include/shmstatus.h"
 #include "include/q330arch.h"
 #include "include/netreq.h"
-#include "include/idaapi.h"
+#include "include/dcc_time_proto2.h"
 
 void daemonize();
+
+//////////////////////////////////////////////////////////////////////////////
+
 void *StartServer(void *params);
 
 // Make the server_pid global so it can be killed when program is shut down
@@ -229,6 +231,9 @@ int main (int argc, char **argv)
             retmsg);
     exit(1);
   }
+
+  // IDA initialization
+  idaInit(station, WHOAMI);
 
   // Start the server listening for clients in the background
   LogServerPort(&iPort);

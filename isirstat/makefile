@@ -40,7 +40,6 @@ SRCS = isirstat.c
 OBJS = $(SRCS:%.c=%.o)
 
 isirstat : $(OBJS) \
-		../lib//libapi.a \
     $(LIBIDA)/libqdp.a $(LIBIDA)/libqdplus.a $(LIBIDA)/libisidl.a \
     $(LIBIDA)/libnrts.a $(LIBIDA)/libisi.a $(LIBIDA)/libida10.a \
     $(LIBIDA)/libida.a $(LIBIDA)/libiacp.a $(LIBIDA)/libisidb.a \
@@ -48,7 +47,6 @@ isirstat : $(OBJS) \
     $(LIBIDA)/libcssio.a $(LIBIDA)/libliss.a \
 		../lib/dalib.a ../lib/dcctime2lib.a
 	$(CC) $(OBJS) $(LIBS) -o isirstat \
-		../lib//libapi.a \
     $(LIBIDA)/libqdp.a $(LIBIDA)/libqdplus.a $(LIBIDA)/libisidl.a \
     $(LIBIDA)/libnrts.a $(LIBIDA)/libisi.a $(LIBIDA)/libida10.a \
     $(LIBIDA)/libida.a $(LIBIDA)/libiacp.a $(LIBIDA)/libisidb.a \

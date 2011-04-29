@@ -34,7 +34,7 @@ mmddyy who Changes
 
 #include "include/dcc_std.h"
 #include "include/dcc_time.h"
-#include "libtypes.h"
+#include "lib330/libtypes.h"
 
 // Unique unix id for the status display shared memory area
 #define SHMKEY_STATUS 11

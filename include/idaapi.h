@@ -15,7 +15,8 @@ mmddyy who Changes
 //////////////////////////////////////////////////////////////////////////////
 // Initialize IDA interface
 char *idaInit(
-  const char  *dlname     // Name of ida disk loop to save to
+  const char  *dlname,    // Name of ida disk loop to save to
+  const char  *whaomi     // Name of program
   );                      // returns NULL or an error string pointer
 
 //////////////////////////////////////////////////////////////////////////////

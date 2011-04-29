@@ -41,7 +41,6 @@ SRCS = ida2chan.c
 OBJS = $(SRCS:%.c=%.o)
 
 ida2chan : $(OBJS) \
-		../lib//libapi.a \
 		$(LIBIDA)/libqdp.a $(LIBIDA)/libqdplus.a $(LIBIDA)/libisidl.a \
 		$(LIBIDA)/libnrts.a $(LIBIDA)/libida10.a $(LIBIDA)/libida.a \
 		$(LIBIDA)/libisi.a $(LIBIDA)/libiacp.a $(LIBIDA)/libisidb.a \
@@ -49,7 +48,6 @@ ida2chan : $(OBJS) \
 		$(LIBIDA)/libliss.a \
 		../lib/dalib.a ../lib/dcctime2lib.a
 	$(CC) $(OBJS) $(LIBS) -o ida2chan -lz -lm -lpthread \
-		../lib//libapi.a \
 		$(LIBIDA)/libqdp.a $(LIBIDA)/libqdplus.a $(LIBIDA)/libisidl.a \
 		$(LIBIDA)/libnrts.a $(LIBIDA)/libida10.a $(LIBIDA)/libida.a \
 		$(LIBIDA)/libisi.a $(LIBIDA)/libiacp.a $(LIBIDA)/libisidb.a \

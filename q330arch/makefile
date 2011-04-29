@@ -2,30 +2,51 @@ MACHINE = $(shell uname -m)
 ifeq ($(MACHINE), armv5tel)
   CC=gcc -g
 else
-  CC=gcc -g -Wl,--hash-style=both
+  CC=gcc -g
 endif
+
+OSUNAME=$(shell uname -s)
+ifeq ($(OSUNAME),Linux)
+  osname=linux
+  OSNAME=LINUX
+  OSTYPE=SVR4
+  install=/usr/bin/install
+  socklibs=
+  curselib=-lcurses
+  xincs=-I/usr/include/X11
+  xlibs=-lXm -lXt -lXext -lX11
+  order=LTL_ENDIAN_ORDER
+  POSIX4LIB=
+  MTLIBS=-lpthread
+  machine=i86pc
+  platform=linux.2.6.i86pc
+else
+  osname=untested
+endif
+
 
 LIB330_DIR=../lib330
 LIBIDA=../lib/$(PLATFORM)
 COPT = 
 LIBS = -L$(LIBIDA)
-CFLAGS = -Wall -I.. -I. -I$(LIB330_DIR)
+DEFS    = -D$(OSNAME) -D$(OSTYPE) -D_REENTRANT
+CFLAGS = -I.. -I. -I ../ida_build/include $(DEFS)
 LIBS += -lm -lpthread
 
-SRCS = q330arch.c daemonize.c server.c logclient.c seedmsg.c
+SRCS = q330arch.c daemonize.c server.c logclient.c seedmsg.c idaapi.c
 SRCS+= ../dispstatus/statusutil.c
 
 OBJS = $(SRCS:%.c=%.o)
 
 q330arch : ../lib/dalib.a ../lib/dcctime2lib.a \
-	../lib/libapi.a $(LIBIDA)/libqdp.a $(LIBIDA)/libqdplus.a \
+	$(LIBIDA)/libqdp.a $(LIBIDA)/libqdplus.a \
 	$(LIBIDA)/libisidl.a $(LIBIDA)/libnrts.a $(LIBIDA)/libida10.a \
 	$(LIBIDA)/libida.a $(LIBIDA)/libisi.a $(LIBIDA)/libiacp.a \
 	$(LIBIDA)/libisidb.a $(LIBIDA)/libdbio.a \
 	$(LIBIDA)/libutil.a $(LIBIDA)/liblogio.a $(LIBIDA)/libliss.a \
 	$(OBJS) 
 	$(CC) -o q330arch $(OBJS) ../lib/dalib.a ../lib/dcctime2lib.a $(LIBS) \
-	../lib/libapi.a $(LIBIDA)/libqdp.a $(LIBIDA)/libqdplus.a \
+	$(LIBIDA)/libqdp.a $(LIBIDA)/libqdplus.a \
 	$(LIBIDA)/libisidl.a $(LIBIDA)/libnrts.a $(LIBIDA)/libida10.a \
 	$(LIBIDA)/libida.a $(LIBIDA)/libisi.a $(LIBIDA)/libiacp.a \
 	$(LIBIDA)/libisidb.a $(LIBIDA)/libdbio.a \

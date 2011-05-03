@@ -345,7 +345,7 @@ public class MiniSeed  implements MiniSeedOutputHandler {
   public static int [] crackTime(byte [] buf) throws IllegalSeednameException {
     ByteBuffer bb = ByteBuffer.wrap(buf);
     if(swapNeeded(buf)) bb.order(ByteOrder.LITTLE_ENDIAN);
-    bb.position(20);
+    bb.position(24);
     //short year = bb.getShort();
     //short day = bb.getShort();
     int [] time = new int[4];

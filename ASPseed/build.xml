@@ -1,0 +1,61 @@
+<project name="ASPseed" default="jar" basedir=".">
+    <description>
+        Plots waveform data from MiniSEED records pulled from a LISS feed.
+    </description>
+    <property name="src" location="."/>
+    <property name="build" location="build"/>
+    <property name="target" location="ASPseed.jar"/>
+
+    <path id="compile.class.path">
+        <pathelement location="${src}"/>
+        <fileset dir="${src}">
+            <include name="**/*.jar"/>
+        </fileset>
+    </path>
+
+    <path id="jar.class.path">
+        <fileset dir="${src}">
+            <include name="**/*.jar"/>
+        </fileset>
+    </path>
+
+<!--INIT-->
+    <target name="init">
+        <tstamp/>
+        <mkdir dir="${build}"/>
+    </target>
+
+<!--COMPILE-->
+    <target name="compile" depends="init" description="Compile the source">
+        <javac srcdir="${src}" destdir="${build}" 
+               debug="true" includeantruntime="no">
+            <classpath refid="compile.class.path"/>
+        </javac>
+    </target>
+
+<!--LIBRARIES-->
+    <target name="libraries" depends="init" description="Add libraries">
+        <unjar dest="${build}">
+            <fileset dir="${src}">
+                <include name="**/*.jar"/>
+            </fileset>
+        </unjar>
+        <delete dir="${build}/META-INF"/>
+    </target>
+
+<!--JAR-->
+    <target name="jar" depends="compile, libraries"
+            description="generate the distribution" >
+        <jar jarfile="${target}" basedir="${build}">
+            <manifest>
+                <attribute name="Main-Class" value="ASPseed.ASPseed"/>
+            </manifest>
+        </jar>
+    </target>
+
+<!--CLEAN-->
+    <target name="clean" description="clean up" >
+        <delete dir="${build}"/>
+        <delete file="${target}"/>
+    </target>
+</project>

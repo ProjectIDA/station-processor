@@ -15,6 +15,7 @@ all:
 	cd dispstatus; $(MAKE)
 	cd netseed; $(MAKE)
 	cd falcon; $(MAKE)
+	cd shearreq; $(MAKE)
 
 clean:
 	cd lib; $(MAKE) clean
@@ -32,6 +33,7 @@ clean:
 	cd dispstatus; $(MAKE) clean
 	cd netseed; $(MAKE) clean
 	cd falcon; $(MAKE) clean
+	cd shearreq; $(MAKE) clean
 	cd shake; $(MAKE) clean
 
 outside:
@@ -44,10 +46,10 @@ install:
 	cp -p q330serv/q330serv ida2chan/ida2chan netreq/netreq dlutil/dlutil \
      log330/log330 q330arch/q330arch ida2liss/ida2liss \
      dispstatus/dispstatus netseed/netseed ida2arch/ida2arch isirstat/isirstat \
-     falcon/falcon dlresize/dlresize \
+     falcon/falcon dlresize/dlresize shearreq/shearreq \
       $(INSTALLDIR)
 cpio:
-	find aslreq q330serv ida2arch ida2chan isirstat netreq dispstatus dlresize dlutil log330 q330arch ida2liss netseed falcon lib include -name '*.[ch]' -print >/tmp/flist
+	find aslreq q330serv ida2arch ida2chan isirstat netreq dispstatus dlresize dlutil log330 q330arch ida2liss netseed falcon shearreq lib include -name '*.[ch]' -print >/tmp/flist
 	find . -name '[mM]akefile' -print >>/tmp/flist
 	sort /tmp/flist >/tmp/slist	
 	cpio -ov </tmp/slist >q330asp.cpio

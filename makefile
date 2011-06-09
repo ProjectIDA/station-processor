@@ -15,8 +15,9 @@ all:
 	cd dispstatus; $(MAKE)
 	cd netseed; $(MAKE)
 	cd falcon; $(MAKE)
-    cd ocf_utils; $(MAKE)
 	cd shearreq; $(MAKE)
+    cd ocf_utils; $(MAKE)
+    cd caldump; $(MAKE)
 
 clean:
 	cd lib; $(MAKE) clean
@@ -37,6 +38,7 @@ clean:
 	cd shearreq; $(MAKE) clean
 	cd shake; $(MAKE) clean
     cd ocf_utils; $(MAKE) clean
+    cd caldump; $(MAKE) clean
 
 outside:
 	cd lib330; $(MAKE)

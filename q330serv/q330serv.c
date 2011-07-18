@@ -34,9 +34,10 @@ mmddyy who Changes
 110310 fcs Add 1 sec callback to get timely vacuum data
 110910 fcs Initialize baler_callback = NIL to fix segmentation fault
 041311 fcs Fixed bug where de-registering would cause program to terminate
+061411 fcs Every midnight, and at program start, sync clock to Q330 GPS
 ******************************************************************************/
 #define WHOAMI "q330serv"
-const char *VersionIdentString="Release 1.5";
+const char *VersionIdentString="Release 1.6";
 
 #include "globals.h"
 #include "libtypes.h"
@@ -97,8 +98,8 @@ static void sigterm_nodaemon(int sig)
 
   fprintf(stderr, "q330serv shutting down\n");
   lib_change_state (context, LIBSTATE_IDLE, LIBERR_CLOSED) ;
-  // Give program up to 15 seconds to reach idle state
-  for (i=1; i < 150 && lib_get_state(context, &err, &opstat) != LIBSTATE_IDLE; i++)
+  // Give program up to 30 seconds to reach idle state
+  for (i=1; i < 300 && lib_get_state(context, &err, &opstat) != LIBSTATE_IDLE; i++)
   {
     usleep(100000);
   }
@@ -488,7 +489,7 @@ fprintf(stderr, "DEBUG Clock Quality: %d%%\n",
       libmsgadd(q330, LIBMSG_GPS, addr(s)) ;
 
       // For the first data logger we also want to keep the unix clock
-      // synchronized to GPS within a 5 minute boundary
+      // synchronized to GPS within a 15 second
       if (stat_pll.state == PLL_LOCK)
       {
         // Parse out clock time
@@ -506,8 +507,8 @@ fprintf(stderr, "DEBUG Clock Quality: %d%%\n",
             gpsTimetag = ST_AddToTime2(julTime, 0, hour, minute, second, 0);
             diffTime = ST_DiffTimes2(nowTimetag, gpsTimetag);
             diffMS = ST_DeltaToMS2(diffTime);
-            // Check for delta > 5 minutes in tenth of millisecond units
-            if ((diffMS<0?-diffMS:diffMS) > (5*60*10000))
+            // Check for delta > 15 seconds in tenth of millisecond units
+            if ((diffMS<0?-diffMS:diffMS) > (15*10000))
             {
               char cmdstr[80];
               sprintf(cmdstr, "date %02d%02d%02d%02d%04d.%02d",

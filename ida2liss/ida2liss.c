@@ -206,7 +206,7 @@ void *ListenThread(void *params)
           } // send keepalive packet
         }
         usleep(100);
-      }
+      } // while data to send
 
       // send the oldest record
       iSend = mapshm->iOldest;
@@ -236,6 +236,20 @@ void *ListenThread(void *params)
 
       } // No errors sending data
     } // while no read errors and not done
+
+    // Check for send error
+    if (iReturn < 0)
+    {
+      if (mapshm->iDebug)
+      {
+        fprintf(stderr, "Client connection closed, waiting for new connection...\n");
+      }
+      else
+      {
+        syslog(LOG_ERR, "Client connection closed, waiting for new connection...\n");
+      }
+      iReturn = 0;
+    }
   } // while not done
 
   return NULL;
@@ -508,7 +522,7 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
         mapshm->iNext = (mapshm->iNext+1) % mapshm->iRecords;
 
         // Give send process a chance to start send operation
-        usleep(200);
+        usleep(20);
 
     } // While no errors reading from ida disk loop
 

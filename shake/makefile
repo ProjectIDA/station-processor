@@ -41,6 +41,7 @@ SOURCES = *.c
 OBJECTS = \
 daemonize.o \
 genutils.o \
+gps.o \
 gswap.o \
 lmplatform.o \
 logclient.o \
@@ -51,7 +52,7 @@ openraw.o \
 pack.o \
 packdata.o \
 seedmsg.o \
-ufors.o \
+ufors.o
 
 HEADERS = *.h
 
@@ -70,6 +71,7 @@ XLIBS          =                                              # X
 SLIBS          = -lc -lm                                      # standard
 
 LIBS           = $(MLIBS) $(PLIBS) $(OLIBS) $(XLIBS) $(SLIBS)
+LIBS          += -lbcsdk
 
 
 
@@ -94,8 +96,25 @@ all: $(EXEC_OUTPUT)
 ufors: $(OBJECTS) $(HEADERS)
 	$(CC) -o $@ $(OBJECTS) $(LIBPATH) $(LIBS)
 
+gps.o:	gps.c $(HEADERS)
+	$(CC) -c $< $(CFLAGS) -DLINUX -fpic -Di386
+
 clean:
 	rm -f $(CLEAN)
+
+install:	ufors
+	mv -f /opt/data/bin/ufors /opt/data/bin/deleteme
+	cp -p ufors /opt/data/bin/
+	chmod ug+rx /opt/data/bin/ufors
+	chgrp shakey /opt/data/bin/ufors
+	chmod ug+s /opt/data/bin/ufors
+	chmod ug+rx /opt/data/bin/ida2liss
+	chmod ug+rx /opt/data/bin/ida2liss
+	chmod ug+s /opt/data/bin/ida2liss
+	chgrp shakey /opt/data/bin/netseed
+	chgrp shakey /opt/data/bin/netseed
+	chmod ug+s /opt/data/bin/netseed
+
 #=============================================================================#
 #                   Do not change anything after this line                    #
 #=============================================================================#

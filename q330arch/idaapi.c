@@ -94,18 +94,6 @@ char *idaInit(const char *dlname, const char *whoami)
   // Optional debug level
   logioSetThreshold(&logio, LOG_ERR);
 
-  if (!isiInitRawPacket(&local.raw, NULL, local.dl->sys->maxlen))
-  {
-    fprintf(stderr, "isiInitRawPacket: %s", strerror(errno));
-    exit(1);
-  }
-  strcpy(local.raw.hdr.site, local.dl->sys->site);
-  local.raw.hdr.len.used = local.dl->sys->maxlen;
-  local.raw.hdr.len.native = local.dl->sys->maxlen;
-  local.raw.hdr.desc.comp = ISI_COMP_NONE;
-  local.raw.hdr.desc.type = ISI_TYPE_MSEED;
-  local.raw.hdr.desc.order = ISI_TYPE_UNDEF;
-  local.raw.hdr.desc.size = sizeof(UINT8);
 
   return NULL;
 } // idaInit()
@@ -135,6 +123,20 @@ char *idaWriteChan(
           who, strerror(errno));
     exit(1);
   }
+
+  if (!isiInitRawPacket(&local.raw, NULL, local.dl->sys->maxlen))
+  {
+    fprintf(stderr, "isiInitRawPacket: %s", strerror(errno));
+    exit(1);
+  }
+
+  strcpy(local.raw.hdr.site, local.dl->sys->site);
+  local.raw.hdr.len.used = local.dl->sys->maxlen;
+  local.raw.hdr.len.native = local.dl->sys->maxlen;
+  local.raw.hdr.desc.comp = ISI_COMP_NONE;
+  local.raw.hdr.desc.type = ISI_TYPE_MSEED;
+  local.raw.hdr.desc.order = ISI_TYPE_UNDEF;
+  local.raw.hdr.desc.size = sizeof(UINT8);
 
   // Copy data to IDA buffer
   memcpy(local.raw.payload, databuf, 512);

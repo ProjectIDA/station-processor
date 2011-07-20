@@ -33,7 +33,7 @@ typedef struct {
 } LOCALPKT;
 
 static UINT32 flags = QDP_DEFAULT_HLP_RULE_FLAG;
-static LOCALPKT local;
+static LOCALPKT local={0,0};
 static QDPLUS_PAR par = QDPLUS_DEFAULT_PAR;
 static ISI_GLOB glob;
 static LOGIO logio;
@@ -124,19 +124,22 @@ char *idaWriteChan(
     exit(1);
   }
 
-  if (!isiInitRawPacket(&local.raw, NULL, local.dl->sys->maxlen))
+  if (local.raw.hdr.len.used == 0)
   {
-    fprintf(stderr, "isiInitRawPacket: %s", strerror(errno));
-    exit(1);
-  }
+    if (!isiInitRawPacket(&local.raw, NULL, local.dl->sys->maxlen))
+    {
+      fprintf(stderr, "isiInitRawPacket: %s", strerror(errno));
+      exit(1);
+    }
 
+    local.raw.hdr.len.used = local.dl->sys->maxlen;
+    local.raw.hdr.len.native = local.dl->sys->maxlen;
+    local.raw.hdr.desc.comp = ISI_COMP_NONE;
+    local.raw.hdr.desc.type = ISI_TYPE_MSEED;
+    local.raw.hdr.desc.order = ISI_TYPE_UNDEF;
+    local.raw.hdr.desc.size = sizeof(UINT8);
+  }
   strcpy(local.raw.hdr.site, local.dl->sys->site);
-  local.raw.hdr.len.used = local.dl->sys->maxlen;
-  local.raw.hdr.len.native = local.dl->sys->maxlen;
-  local.raw.hdr.desc.comp = ISI_COMP_NONE;
-  local.raw.hdr.desc.type = ISI_TYPE_MSEED;
-  local.raw.hdr.desc.order = ISI_TYPE_UNDEF;
-  local.raw.hdr.desc.size = sizeof(UINT8);
 
   // Copy data to IDA buffer
   memcpy(local.raw.payload, databuf, 512);

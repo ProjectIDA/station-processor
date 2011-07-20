@@ -37,6 +37,7 @@ int openraw(const char *name);
 #include <time.h>
 #include <arpa/inet.h>
 
+#include "gps.h"
 #include "libmseed.h"
 #include "diskloop.h"
 #include "q330arch.h"
@@ -49,6 +50,7 @@ int gDebug=0;
 #define TIMEARRAYSIZE 3
 #define DATAHZ 640
 #define DECAY_RATE 500
+#define GPS_SKIP 50
 #define ROTATION_UNIT 0.000002344
 
 // Variables to keep running average of data rate and record start time
@@ -65,6 +67,8 @@ int gDebug=0;
 // bNewRun means we need to start timetags etc from scratch
 double measureHZ = DATAHZ;
 double defaultHZ = DATAHZ;
+double decayRate = 10;
+double oldDecayRate = 10;
 struct timeval measureTime={0};
 long   iMeasureCount=0;
 long   iRunCount=0;
@@ -73,6 +77,8 @@ int    bNewRun=1;
 struct timeval  utcWhen[TIMEARRAYSIZE];
 int  iTimeBufSize=0;   // Says how many values have been added to utcWhen
 long sample[8192*8];            // Can't pack lower than 1 bit/value
+struct blkt_1000_s blockette1000;
+struct blkt_1001_s blockette1001;
 
 char channel[4];
 char location[4];
@@ -132,26 +138,34 @@ record_handler (char *record, int reclen, void *ptr)
         measureTime.tv_sec += measureTime.tv_usec/1000000;
         measureTime.tv_usec = measureTime.tv_usec % 1000000;
       }
+
+      if (blockette1001.timing_qual > 50)
+          blockette1001.timing_qual--;
+/*
       if (gDebug)
         fprintf(stdout, 
              "%2.2s %-5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
              seedhdr->seednet, seedhdr->station_id_call_letters,
              seedhdr->location_id, seedhdr->channel_id,
              1, measureHZ);
-//    else
-//      syslog(LOG_INFO, 
-//           "%2.2s %-5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
-//           seedhdr->seednet, seedhdr->station_id_call_letters,
-//           seedhdr->location_id, seedhdr->channel_id,
-//           1, measureHZ);
+      else
+        syslog(LOG_INFO, 
+             "%2.2s %-5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
+             seedhdr->seednet, seedhdr->station_id_call_letters,
+             seedhdr->location_id, seedhdr->channel_id,
+             1, measureHZ);
+*/
     } // We've seen enough nudge requests in a row to be convinced
   } // decided to nudge record start time forward 1 tick
   else
   {
     iNudge = 0;
+    if (blockette1001.timing_qual < 100 && blockette1001.timing_qual >= 50 && calcDelta > -0.0001)
+        blockette1001.timing_qual++;
   }
 
-  if (iCount++ % 1200 == 0)
+  if ((iCount++ % 1200 == 0) ||
+     ((iCount % 120 == 60) && (fabs(calcDelta) > 0.002)))
   {
       syslog(LOG_INFO, "%2.2s %5.5s %2.2s/%3.3s Rate %.5lf Hz, drift %.6lf\n",
              seedhdr->seednet, seedhdr->station_id_call_letters,
@@ -214,9 +228,12 @@ void collectData(
   int synccount;
   int iTime;
   int i;
+  int gpsErrCount=0;
   double delta_sec;
   suseconds_t delta_usec;
   STDTIME2  newtime;
+  STDTIME2  time1970={0};
+  DELTA_T2   deltaTime;
   struct timeval now;
   static struct timeval last={0};
   struct timeval timetag = {0};
@@ -238,6 +255,15 @@ void collectData(
   int verbose = 0;
   int firstone = 1;
 
+  unsigned short year;
+  unsigned short doy;
+  unsigned char  hour;
+  unsigned char  min;
+  unsigned char  sec;
+  unsigned int   usec;
+  unsigned char  time_status;
+  unsigned char  old_time_status=7;
+
   char log_station[8];
   char log_network[4];
   char log_channel[4];
@@ -258,7 +284,9 @@ void collectData(
   // Create initial miniseed header
   LogSNCL(log_station, log_network, log_channel, log_location);
 
-  memset(&msr, 0, sizeof(msr));
+  msr_init(&msr);
+  memset(&blockette1000, 0, sizeof(blockette1000));
+  memset(&blockette1001, 0, sizeof(blockette1001));
   memset(seedrec, 0, sizeof(seedrec));
   packreclen = 512;
   msr.reclen = packreclen;
@@ -276,12 +304,15 @@ void collectData(
   msr.datasamples = &sample;
   msr.numsamples = 1;
   msr.sampletype = 'i';
+  msr_addblockette(&msr, (char *)&blockette1000, sizeof(blockette1000), 1000, 0);
+  msr_addblockette(&msr, (char *)&blockette1001, sizeof(blockette1001), 1001, 0);
 
   // Infinite loop reading data from serial port
   synccount = 0;
   readcnt = 0;
   iMeasureCount = 0;
   firstone = 1;
+  gpsErrCount = 0;
   while (1)
   {
     // read a 5 byte data block
@@ -289,7 +320,6 @@ void collectData(
     while (readcnt < 5)
     {
       readcnt += read(filedes, &buffer[readcnt], 5-readcnt);
-      gettimeofday(&now, NULL);
       if (firstone && readcnt > 0 && gDebug)
       {
         fprintf(stdout, "First read grabbed %d chars\n", readcnt);
@@ -331,6 +361,79 @@ void collectData(
         }
       } // loop until we have 5 characters including valid checksum
     } // while need to fill up a 5 byte buffer
+
+    // Get UTC time from GPS card
+    if (gpsTime(&now, &time_status) < 0)
+    {
+      double calcDelta;
+      bNewRun = 1;
+      blockette1001.timing_qual = 0;
+      time_status = -1;
+      gpsErrCount++;
+      calcDelta = 1000000.0 / measureHZ;
+      now.tv_usec += ceil(calcDelta);
+      if (now.tv_usec >= 1000000)
+      {
+        now.tv_sec++;
+        now.tv_usec -= 1000000;
+      }
+      if (gpsErrCount < 10 || (gpsErrCount % 10000) == 1)
+      {
+        if (gDebug)
+        {
+          fprintf(stdout, "%s gpsTime returned an error\n",
+            channel);
+        }
+        else
+        {
+          fprintf(stdout, "%s gpsTime returned an error\n",
+            channel);
+        }
+      }
+    } // gpsTime returned an error
+    else
+    {
+      gpsErrCount = 0;
+    }
+
+    // When we first sync up to GPS then restart time
+    if (old_time_status != time_status)
+    {
+      if (time_status == 0)
+      {
+        bNewRun = 1;
+        blockette1001.timing_qual = 50;
+        if (gDebug)
+        {
+          fprintf(stdout, "%s GPS time synchronized at at tv_sec = %d.%06d\n",
+          channel, now.tv_sec, now.tv_usec);
+        }
+        else
+        {
+          syslog(LOG_INFO, "%s GPS time synchronized at at tv_sec = %d.%06d\n",
+          channel, now.tv_sec, now.tv_usec);
+        }
+      }
+      else if (time_status != 0)
+      {
+        bNewRun = 1;
+        blockette1001.timing_qual = 0;
+        if (gDebug)
+        {
+          fprintf(stdout, "%s GPS lost time signal at at tv_sec = %d.%06d\n",
+          channel, now.tv_sec, now.tv_usec);
+        }
+        else
+        {
+          fprintf(stdout, "%s GPS lost time signal at at tv_sec = %d.%06d\n",
+          channel, now.tv_sec, now.tv_usec);
+        }
+      }
+    }
+    if (time_status > 0)
+      blockette1001.timing_qual = 0;
+    old_time_status = time_status;
+
 
     // Extrapolate from now to timetag for first value in samples array
     timetag = now;
@@ -388,6 +491,7 @@ void collectData(
       iTimeBufSize = 0;
       iMeasureCount = 1;
       measureHZ = defaultHZ;
+      decayRate = 10;
       timetag = now;
       measureTime = now;
       utcWhen[0] = now;
@@ -407,14 +511,27 @@ void collectData(
                   ((now.tv_usec - last.tv_usec) / 1000000.0);
       if (delta_sec > 0)
       {
-        measureHZ = ((measureHZ * (DECAY_RATE - delta_sec)) + 1.0
-                    ) / DECAY_RATE;
+        measureHZ = ((measureHZ * (decayRate - delta_sec)) + 1.0
+                    ) / decayRate;
 
-        // Only allow measureHZ to drift from defaultHZ by 0.05%
-        if (measureHZ > defaultHZ*1.0003)
-          measureHZ = defaultHZ*1.0003;
-        if (measureHZ < defaultHZ*0.9997)
-          measureHZ = defaultHZ*0.9997;
+        if (decayRate < iRunCount/5 && iRunCount/5 > 10)
+          decayRate = iRunCount/5;
+        if (decayRate == DECAY_RATE && oldDecayRate != decayRate)
+        {
+          oldDecayRate = decayRate;
+          if (gDebug)
+            fprintf(stdout, 
+               "%s/%s Reached maximum decay rate constant of %.0f\n",
+               location, channel, decayRate);
+          else
+            syslog(LOG_INFO, 
+               "%s/%s Reached maximum decay rate constant of %.0f\n",
+               location, channel, decayRate);
+        }
+        if (decayRate > DECAY_RATE)
+        {
+          decayRate = DECAY_RATE;
+        }
       }
       else
       {
@@ -460,8 +577,25 @@ void collectData(
     {
       delta_sec = (timetag.tv_sec - measureTime.tv_sec)
                 + (timetag.tv_usec - measureTime.tv_usec) / 1000000.0;
+      if (delta_sec < -0.0005)
+      {
+        blockette1001.timing_qual = 50;
+        if (gDebug)
+          fprintf(stdout, 
+             "%2.2s %-5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
+             log_network, log_station, location, channel,
+             (int)(delta_sec*10000), measureHZ);
+          syslog(LOG_INFO, 
+             "%2.2s %-5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
+             log_network, log_station, location, channel,
+             (int)(delta_sec*10000), measureHZ);
+      }
+  
       if (delta_sec <= -0.0001)
       {
+        if (blockette1001.timing_qual > 50)
+          blockette1001.timing_qual--;
+
         // Only allow a single -1 tick correction per record after first 5 minutes
         if (iRunCount > 60*5*4)
           delta_sec = -0.0001;
@@ -477,17 +611,10 @@ void collectData(
           measureTime.tv_sec -= delta_usec / 1000000;
         }
 
-        if (gDebug)
-          fprintf(stdout, 
-             "%2.2s %-5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
-             log_network, log_station, location, channel,
-             (int)(delta_sec*10000), measureHZ);
-        else if (delta_sec < -0.0001)
-          syslog(LOG_INFO, 
-             "%2.2s %-5.5s %2.2s/%3.3s Adjust clock %d ticks, Rate %.5lf Hz\n",
-             log_network, log_station, location, channel,
-             (int)(delta_sec*10000), measureHZ);
-  
+        // For large - tick adjustments don't allow Hz to drift as far
+        if (delta_sec < -0.0003 && measureHZ < defaultHZ)
+          measureHZ = (measureHZ + defaultHZ) / 2;
+
         // Store new timetag
         memset(&newtime, 0, sizeof(newtime));
         newtime.year = 1970;
@@ -502,6 +629,11 @@ void collectData(
   
     msr.datasamples = sample;
     msr.numsamples = iMeasureCount;
+    if (msr.Blkt1001 != NULL)
+      msr.Blkt1001->timing_qual = blockette1001.timing_qual;
+    else
+      fprintf(stderr, "msr.Blkt1001 == NULL\n");
+
     packedrecords = msr_pack(&msr, &record_handler, NULL, &packedsamples,
                              0, verbose);
     if (packedrecords == -1)
@@ -526,13 +658,19 @@ void collectData(
 
     if (packedrecords > 0 && gDebug)
     {
+      double calcDelta;
+      double calcHZ;
       double rotation_rate;
       rotation_rate = buffer[0] * 0x10000;
       rotation_rate += (buffer[1] & 0xff) * 0x100;
       rotation_rate += (buffer[2] & 0xff);
       rotation_rate *= ROTATION_UNIT;
-fprintf(stdout, "%.6lf Hz, saved/samples %d/%d, angular rate %.9lf deg/sec\n",
-measureHZ, packedsamples, packedsamples+iMeasureCount, rotation_rate);
+  calcDelta = (utcWhen[1].tv_sec - measureTime.tv_sec)
+            + (utcWhen[1].tv_usec - measureTime.tv_usec)/1000000.0;
+  calcHZ = (now.tv_sec - utcWhen[1].tv_sec) + (now.tv_usec = utcWhen[1].tv_usec)/1000000.0;
+  calcHZ = (packedsamples + iMeasureCount) / calcHZ;
+fprintf(stdout, "%.5lf/%.5lf Hz, saved/samples %d/%d, Decay %.0f, drift %.4f angular rate %.9lf deg/sec\n",
+measureHZ, calcHZ, packedsamples, packedsamples+iMeasureCount, decayRate, calcDelta, rotation_rate);
 if (buffer[3])
 {
   if (buffer[3] & 0x80) fprintf(stdout, "NOGO ");
@@ -681,6 +819,17 @@ char *argv[];
   if (!gDebug)
   {
     daemonize();
+  }
+
+  // Initialize bc637pci GPS card interface
+  if (gpsInit() < 0)
+  {
+    if (gDebug)
+      fprintf(stdout, 
+            "Error Opening Device Driver for bc637pci GPS receiver card, FATAL error.");
+    else
+      syslog(LOG_ERR, 
+            "Error Opening Device Driver for bc637pci GPS receiver card, FATAL error.");
   }
 
   // Run loop to endlessly collect and store data from uFors1 sensors

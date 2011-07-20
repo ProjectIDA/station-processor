@@ -54,6 +54,7 @@ int openraw(
     return(-1);
   }
 
+  ioctl(fildes, TCFLSH, 0);
   return(fildes);
 } // openraw()
 

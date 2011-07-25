@@ -7,7 +7,8 @@ endif
 
 LIB330_DIR=../../../lib330
 OBJ=\
-  disklooplib.o
+  disklooplib.o\
+  map.o
 
 CFLAGS = -Wall -I..
 
@@ -17,6 +18,8 @@ ltime:
 	cd dcc_time2; $(MAKE)
 
 disklooplib.o:  disklooplib.c ../include/diskloop.h ../include/netreq.h
+
+map.o: map.c ../include/map.h
 
 dalib.a:  $(OBJ)
 	ar -r $@ $(OBJ)

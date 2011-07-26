@@ -19,5 +19,8 @@ q330arch/q330arch
 q330serv/q330serv
 shake/ufors
 shearreq/shearreq
+caldump/caldump
+ocf_utils/ocfdiff
+ocf_utils/ocfdump
 *.class
 .*.swp

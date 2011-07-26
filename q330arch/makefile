@@ -35,6 +35,7 @@ LIBS += -lm -lpthread
 
 SRCS = q330arch.c daemonize.c server.c logclient.c seedmsg.c idaapi.c
 SRCS+= ../dispstatus/statusutil.c
+SRCS+= ../lib/map.c
 
 OBJS = $(SRCS:%.c=%.o)
 
@@ -54,7 +55,7 @@ q330arch : ../lib/dalib.a ../lib/dcctime2lib.a \
 	-lz -lm -lpthread
 		
 
-q330arch.o: ../include/diskloop.h ../include/q330arch.h ../include/shmstatus.h
+q330arch.o: ../include/diskloop.h ../include/q330arch.h ../include/shmstatus.h ../include/map.h
 
 logclient.o: ../include/q330arch.h
 

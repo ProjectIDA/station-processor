@@ -24,6 +24,7 @@ mmddyy who Changes
 #include <ctype.h>
 #include <arpa/inet.h>    // Needed for ntohl,ntohs 
 #include "include/idaapi.h"
+#include "include/map.h"
 #include "qdplus.h"
 #include "ida10.h"
 #include "isi/dl.h"
@@ -32,13 +33,21 @@ typedef struct {
     ISI_DL *dl;
 } LOCALPKT;
 
+typedef struct {
+    LOCALPKT pkt;
+    LOGIO logio;
+    QDPLUS_PAR par;
+    ISI_GLOB glob;
+    char dlname[ISI_SITELEN+1];
+    char site[ISI_SITELEN+1];
+} DLINFO;
+
 static UINT32 flags = QDP_DEFAULT_HLP_RULE_FLAG;
-static LOCALPKT local={0,0};
-static QDPLUS_PAR par = QDPLUS_DEFAULT_PAR;
-static ISI_GLOB glob;
-static LOGIO logio;
-static char *who;
+static Map *info_map;
+static const char *who;
+
 extern int g_bDebug;
+
 //////////////////////////////////////////////////////////////////////////////
 // Log function
 void logFunc(char *msg)
@@ -61,40 +70,123 @@ static void mseed(void *arg, QDP_HLP *hlp)
 } // mseed()
 
 //////////////////////////////////////////////////////////////////////////////
+// Diskloop Map Management
+void addDiskloop(const char *dlname) 
+{
+    DLINFO *info;
+
+    if (info_map == 0) {
+        info_map = map_new(100, NULL, NULL);
+    }
+
+    if ((info = malloc(sizeof(DLINFO))) == 0) {
+        fprintf(stderr, "%s: could not allocate memory for new diskloop '%s'\n", who, dlname);
+        exit(1);
+    }
+    if ((map_put(info_map, dlname, info)) == 0)
+    {
+        fprintf(stderr, "%s: could not diskloop '%s' to map\n", who, dlname);
+        exit(1);
+    }
+
+    if (!isidlSetGlobalParameters(NULL, "q330serv", &info->glob))
+    {
+        fprintf(stderr, "%s: isidlSetGlobalParameters failed: %s\n",
+                who, strerror(errno));
+        exit(1);
+    }
+
+    strlcpy(info->dlname, dlname, ISI_SITELEN+1);
+    info->par.path.meta = "meta";
+    info->par.path.state = "state";
+    info->par.site = info->dlname;
+
+    if (!qdpInitHLPRules(&info->par.lcq.rules, 512, QDP_HLP_FORMAT_NOCOMP32,
+                         mseed, (void *)&(info->pkt), flags))
+    {
+        perror("qdpInitHLPRules");
+        exit(1);
+    }
+
+    // Initialize logging
+    logioInit(&(info->logio), NULL, logFunc, (char *)who);
+
+    // Optional debug level
+    logioSetThreshold(&(info->logio), LOG_ERR);
+
+    fprintf(stderr, "%s: attempting to open diskloop '%s'\n", who, info->dlname);
+    if ((info->pkt.dl = isidlOpenDiskLoop(&info->glob, info->par.site, &info->logio, ISI_RDWR)) == NULL)
+    {
+        fprintf(stderr, "%s: isidlOpenDiskLoop failed: %s\n",
+                who, strerror(errno));
+        exit(1);
+    }
+
+    if (info->pkt.raw.hdr.len.used == 0)
+    {
+        if (!isiInitRawPacket(&info->pkt.raw, NULL, info->pkt.dl->sys->maxlen))
+        {
+            fprintf(stderr, "isiInitRawPacket: %s", strerror(errno));
+            exit(1);
+        }
+      
+        info->pkt.raw.hdr.len.used = info->pkt.dl->sys->maxlen;
+        info->pkt.raw.hdr.len.native = info->pkt.dl->sys->maxlen;
+        info->pkt.raw.hdr.desc.comp = ISI_COMP_NONE;
+        info->pkt.raw.hdr.desc.type = ISI_TYPE_MSEED;
+        info->pkt.raw.hdr.desc.order = ISI_TYPE_UNDEF;
+        info->pkt.raw.hdr.desc.size = sizeof(UINT8);
+    }
+    strcpy(info->pkt.raw.hdr.site, info->pkt.dl->sys->site);
+}
+
+DLINFO *getDiskloop(const char *dlname) 
+{
+    return (DLINFO *)map_get(info_map, dlname);
+}
+
+int hasDiskloop(const char *dlname) 
+{
+    return map_exists(info_map, dlname);
+}
+
+void closeDiskloop(DLINFO *info) {
+    isidlCloseDiskLoop(info->pkt.dl);
+    info->pkt.dl = NULL;
+}
+
+void removeDiskloop(const char *dlname) 
+{
+    DLINFO *info;
+    info = getDiskloop(dlname);
+    closeDiskloop(info);
+    map_remove(info_map, dlname);
+}
+
+void callbackRemoveDiskloop(const char *key, const void *value, const void *obj) {
+    closeDiskloop((DLINFO *)value);
+}
+
+void closeDiskloops() 
+{
+    map_enum(info_map, callbackRemoveDiskloop, info_map);
+    map_delete(info_map);
+    info_map = NULL;
+}
+
+//////////////////////////////////////////////////////////////////////////////
 // Initialize IDA interface
 // returns NULL or an error string pointer
 char *idaInit(const char *dlname, const char *whoami)
 {
-  static char  site[ISI_SITELEN+1];
+  who = whoami;
 
-  who = (char *)whoami;
-  par.path.meta = "meta";
-  par.path.state = "state";
-  strlcpy(site, dlname, ISI_SITELEN+1);
-  par.site = site;
-
-  if (!qdpInitHLPRules(&par.lcq.rules, 512, QDP_HLP_FORMAT_NOCOMP32,
-                  mseed, (void *)&local, flags))
-  {
-    perror("qdpInitHLPRules");
-    exit(1);
+  if (hasDiskloop(dlname)) {
+      fprintf(stderr, "%s: have already added diskloop '%s'\n", whoami, dlname);
+      return;
   }
 
-
-  if (!isidlSetGlobalParameters(NULL, "q330serv", &glob))
-  {
-    fprintf(stderr, "%s: isidlSetGlobalParameters failed: %s\n",
-          whoami, strerror(errno));
-    exit(1);
-  }
-
-  // Initialize logging
-  logioInit(&logio, NULL, logFunc, (char *)whoami);
-
-  // Optional debug level
-  logioSetThreshold(&logio, LOG_ERR);
-
-
+  addDiskloop(dlname);  
   return NULL;
 } // idaInit()
 
@@ -109,49 +201,30 @@ char *idaWriteChan(
   const char  *dlname     // Name of ida disk loop to save to
   )                       // returns NULL or an error string pointer
 {
-  static char  site[ISI_SITELEN+1];
   static int firstcall=1;
   static char lastname[6] = "";
   char *msg;
   BOOL      retflag;
+  DLINFO *info;
 
-  strlcpy(site, dlname, ISI_SITELEN+1);
-  par.site = site;
-  if ((local.dl = isidlOpenDiskLoop(&glob, par.site, &logio, ISI_RDWR)) == NULL)
-  {
-    fprintf(stderr, "%s: isidlOpenDiskLoop failed: %s\n",
-          who, strerror(errno));
+  if (!hasDiskloop(dlname)) {
+      idaInit(dlname, who);
+  }
+  info = getDiskloop(dlname);
+
+  if (info == 0) {
+    fprintf(stderr, "%s: could not retrieve info for diskloop '%s'. Exiting!\n", who, dlname);
     exit(1);
   }
 
-  if (local.raw.hdr.len.used == 0)
-  {
-    if (!isiInitRawPacket(&local.raw, NULL, local.dl->sys->maxlen))
-    {
-      fprintf(stderr, "isiInitRawPacket: %s", strerror(errno));
-      exit(1);
-    }
-
-    local.raw.hdr.len.used = local.dl->sys->maxlen;
-    local.raw.hdr.len.native = local.dl->sys->maxlen;
-    local.raw.hdr.desc.comp = ISI_COMP_NONE;
-    local.raw.hdr.desc.type = ISI_TYPE_MSEED;
-    local.raw.hdr.desc.order = ISI_TYPE_UNDEF;
-    local.raw.hdr.desc.size = sizeof(UINT8);
-  }
-  strcpy(local.raw.hdr.site, local.dl->sys->site);
-
   // Copy data to IDA buffer
-  memcpy(local.raw.payload, databuf, 512);
+  memcpy(info->pkt.raw.payload, databuf, 512);
 
-  if (!isidlWriteToDiskLoop(local.dl, &local.raw, ISI_OPTION_GENERATE_SEQNO))
+  if (!isidlWriteToDiskLoop(info->pkt.dl, &info->pkt.raw, ISI_OPTION_GENERATE_SEQNO))
   {
         fprintf(stderr, "isidlWriteToDiskLoop failed: %s\n", strerror(errno));
         exit(1);
   }
-
-  isidlCloseDiskLoop(local.dl);
-  local.dl = NULL;
 
   return NULL;
 } // idaWriteChan()

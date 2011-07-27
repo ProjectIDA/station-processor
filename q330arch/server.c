@@ -241,9 +241,13 @@ void *StartServer(void *params)
     {
       if (errno==EADDRINUSE)
       {
-        fprintf(stderr,"Port %d in use? Trying again in 30 sec\n",
-        mapshm->iPort);
-        sleep(30);
+        if (mapshm->bDebug)
+          fprintf(stderr,"Port %d in use? Trying again in 15 sec\n",
+                  mapshm->iPort);
+        else
+          syslog(LOG_INFO,"Port %d in use? Trying again in 15 sec",
+                 mapshm->iPort);
+        sleep(15);
         continue;
       }
       fprintf(stderr,"Cannot bind (err %d - %s)\n",errno,strerror(errno));

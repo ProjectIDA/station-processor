@@ -314,15 +314,15 @@ int main (int argc, char **argv)
       iBuf = mapshm->read_index[iClient];
       if (mapshm->read_index[iClient] != mapshm->write_index[iClient])
       {
-	touched = 1;
+	    touched = 1;
 
         // Immediately archive non LOG seed record
-        if (strcmp("LOG", &mapshm->buffer[iClient][iBuf][15]) != 0)
+        if (strncmp("LOG", &mapshm->buffer[iClient][iBuf][15], 3) != 0)
         {
           if ((retmsg=ArchiveSeed((char *)&mapshm->buffer[iClient][iBuf]) )
               != NULL)
           {
-            fprintf(stderr, "q330arch: %s\n", retmsg);
+            fprintf(stderr, "%s: %s\n", WHOAMI, retmsg);
           }
           // Indicate that we have processed message
           mapshm->write_index[iClient] = iBuf;

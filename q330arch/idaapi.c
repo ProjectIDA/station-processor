@@ -80,12 +80,12 @@ void addDiskloop(const char *dlname)
     }
 
     if ((info = malloc(sizeof(DLINFO))) == 0) {
-        fprintf(stderr, "%s: could not allocate memory for new diskloop '%s'\n", who, dlname);
+        fprintf(stderr, "%s: malloc failed for diskloop '%s' state\n", who, dlname);
         exit(1);
     }
     if ((map_put(info_map, dlname, info)) == 0)
     {
-        fprintf(stderr, "%s: could not diskloop '%s' to map\n", who, dlname);
+        fprintf(stderr, "%s: could not add diskloop '%s' to map\n", who, dlname);
         exit(1);
     }
 
@@ -114,7 +114,7 @@ void addDiskloop(const char *dlname)
     // Optional debug level
     logioSetThreshold(&(info->logio), LOG_ERR);
 
-    fprintf(stderr, "%s: attempting to open diskloop '%s'\n", who, info->dlname);
+    fprintf(stderr, "%s: opening diskloop '%s'\n", who, info->dlname);
     if ((info->pkt.dl = isidlOpenDiskLoop(&info->glob, info->par.site, &info->logio, ISI_RDWR)) == NULL)
     {
         fprintf(stderr, "%s: isidlOpenDiskLoop failed: %s\n",
@@ -122,22 +122,21 @@ void addDiskloop(const char *dlname)
         exit(1);
     }
 
-    if (info->pkt.raw.hdr.len.used == 0)
+    if (!isiInitRawPacket(&info->pkt.raw, NULL, info->pkt.dl->sys->maxlen))
     {
-        if (!isiInitRawPacket(&info->pkt.raw, NULL, info->pkt.dl->sys->maxlen))
-        {
-            fprintf(stderr, "isiInitRawPacket: %s", strerror(errno));
-            exit(1);
-        }
-      
-        info->pkt.raw.hdr.len.used = info->pkt.dl->sys->maxlen;
-        info->pkt.raw.hdr.len.native = info->pkt.dl->sys->maxlen;
-        info->pkt.raw.hdr.desc.comp = ISI_COMP_NONE;
-        info->pkt.raw.hdr.desc.type = ISI_TYPE_MSEED;
-        info->pkt.raw.hdr.desc.order = ISI_TYPE_UNDEF;
-        info->pkt.raw.hdr.desc.size = sizeof(UINT8);
+        fprintf(stderr, "isiInitRawPacket: %s", strerror(errno));
+        exit(1);
     }
+  
+    info->pkt.raw.hdr.len.used = info->pkt.dl->sys->maxlen;
+    info->pkt.raw.hdr.len.native = info->pkt.dl->sys->maxlen;
+    info->pkt.raw.hdr.desc.comp = ISI_COMP_NONE;
+    info->pkt.raw.hdr.desc.type = ISI_TYPE_MSEED;
+    info->pkt.raw.hdr.desc.order = ISI_TYPE_UNDEF;
+    info->pkt.raw.hdr.desc.size = sizeof(UINT8);
+
     strcpy(info->pkt.raw.hdr.site, info->pkt.dl->sys->site);
+
 }
 
 DLINFO *getDiskloop(const char *dlname) 
@@ -182,9 +181,14 @@ char *idaInit(const char *dlname, const char *whoami)
   who = whoami;
 
   if (hasDiskloop(dlname)) {
-      fprintf(stderr, "%s: have already added diskloop '%s'\n", whoami, dlname);
+      fprintf(stderr, "%s: already connected to diskloop '%s'\n", whoami, dlname);
       return;
   }
+
+  if (g_bDebug)
+    fprintf(stderr, "%s connecting to diskloop '%s'", who, dlname);
+  else
+    syslog(LOG_INFO, "%s connecting to diskloop '%s'", who, dlname);
 
   addDiskloop(dlname);  
   return NULL;
@@ -222,8 +226,8 @@ char *idaWriteChan(
 
   if (!isidlWriteToDiskLoop(info->pkt.dl, &info->pkt.raw, ISI_OPTION_GENERATE_SEQNO))
   {
-        fprintf(stderr, "isidlWriteToDiskLoop failed: %s\n", strerror(errno));
-        exit(1);
+    fprintf(stderr, "isidlWriteToDiskLoop failed: %s\n", strerror(errno));
+    exit(1);
   }
 
   return NULL;

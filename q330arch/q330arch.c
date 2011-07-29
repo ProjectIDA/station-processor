@@ -41,6 +41,7 @@ const char *VersionIdentString = "Release 1.5";
 #include <syslog.h>
 #include <pthread.h>
 #include <sys/shm.h>
+#include "include/idaapi.h"
 #include "include/diskloop.h"
 #include "include/shmstatus.h"
 #include "include/q330arch.h"

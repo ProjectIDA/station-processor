@@ -20,7 +20,7 @@ mmddyy who Changes
 #define BUFFER_TIME_SEC 60
 
 // Each client will have 8200 bytes reserved for buffering
-#define MAX_CLIENTS 8
+#define MAX_CLIENTS 32
 
 // Server structure for inner thread comm
 struct s_mapshm

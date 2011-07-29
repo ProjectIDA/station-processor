@@ -173,6 +173,7 @@ int main (int argc, char **argv)
   if ((retmsg=ParseDiskLoopConfig(argv[1])) != NULL)
   {
     fprintf(stderr, "%s: %s\n", WHOAMI, retmsg);
+    //syslog(LOG_ERR, "%s: %s", WHOAMI, retmsg);
     exit(1);
   }
   LoopRecordSize(&iSeedRecordSize);
@@ -215,7 +216,7 @@ int main (int argc, char **argv)
     if (g_bDebug)
       fprintf(stderr, "%s:main %s\n", WHOAMI, retmsg);
     else
-      syslog(LOG_ERR, "%s:main %s\n", WHOAMI, retmsg);
+      syslog(LOG_ERR, "%s:main %s", WHOAMI, retmsg);
     exit(1);
   }
   memset(mapshm, 0, sizeof(struct s_mapshm));
@@ -289,7 +290,7 @@ int main (int argc, char **argv)
         if (g_bDebug)
           fprintf(stderr, "Exiting %s via quit flag\n", WHOAMI);
         else
-          syslog(LOG_INFO, "Exiting %s\n", WHOAMI);
+          syslog(LOG_INFO, "Exiting %s", WHOAMI);
         exit(EXIT_SUCCESS);
       }
       usleep(10000);

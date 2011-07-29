@@ -21,6 +21,7 @@ mmddyy who Changes
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <syslog.h>
 #include <ctype.h>
 #include <arpa/inet.h>    // Needed for ntohl,ntohs 
 #include "include/idaapi.h"
@@ -80,19 +81,21 @@ void addDiskloop(const char *dlname)
     }
 
     if ((info = malloc(sizeof(DLINFO))) == 0) {
-        fprintf(stderr, "%s: malloc failed for diskloop '%s' state\n", who, dlname);
-        exit(1);
-    }
-    if ((map_put(info_map, dlname, info)) == 0)
-    {
-        fprintf(stderr, "%s: could not add diskloop '%s' to map\n", who, dlname);
+        if (g_bDebug)
+            fprintf(stderr, "%s: memory allocation failed for diskloop '%s' state\n", who, dlname);
+        else
+            syslog(LOG_ERR, "%s: memory allocation failed for diskloop '%s' state", who, dlname);
         exit(1);
     }
 
     if (!isidlSetGlobalParameters(NULL, "q330serv", &info->glob))
     {
-        fprintf(stderr, "%s: isidlSetGlobalParameters failed: %s\n",
-                who, strerror(errno));
+        if (g_bDebug)
+            fprintf(stderr, "%s: isidlSetGlobalParameters failed: %s\n",
+                    who, strerror(errno));
+        else
+            syslog(LOG_ERR, "%s: isidlSetGlobalParameters failed: %s",
+                   who, strerror(errno));
         exit(1);
     }
 
@@ -104,7 +107,11 @@ void addDiskloop(const char *dlname)
     if (!qdpInitHLPRules(&info->par.lcq.rules, 512, QDP_HLP_FORMAT_NOCOMP32,
                          mseed, (void *)&(info->pkt), flags))
     {
-        perror("qdpInitHLPRules");
+        //perror("qdpInitHLPRules");
+        if (g_bDebug)
+            fprintf(stderr, "%s: qdpInitHLPRules: %s\n", who, strerror(errno));
+        else
+            syslog(LOG_ERR, "%s: qdpInitHLPRules: %s", who, strerror(errno));
         exit(1);
     }
 
@@ -117,14 +124,21 @@ void addDiskloop(const char *dlname)
     fprintf(stderr, "%s: opening diskloop '%s'\n", who, info->dlname);
     if ((info->pkt.dl = isidlOpenDiskLoop(&info->glob, info->par.site, &info->logio, ISI_RDWR)) == NULL)
     {
+      if (g_bDebug)
         fprintf(stderr, "%s: isidlOpenDiskLoop failed: %s\n",
                 who, strerror(errno));
-        exit(1);
+      else
+        syslog(LOG_WARNING, "%s: isidlOpenDiskLoop failed: %s",
+                who, strerror(errno));
+      return;
     }
 
     if (!isiInitRawPacket(&info->pkt.raw, NULL, info->pkt.dl->sys->maxlen))
     {
-        fprintf(stderr, "isiInitRawPacket: %s", strerror(errno));
+        if (g_bDebug)
+            fprintf(stderr, "%s: isiInitRawPacket: %s\n", who, strerror(errno));
+        else
+            syslog(LOG_ERR, "%s: isiInitRawPacket: %s", who, strerror(errno));
         exit(1);
     }
   
@@ -137,6 +151,14 @@ void addDiskloop(const char *dlname)
 
     strcpy(info->pkt.raw.hdr.site, info->pkt.dl->sys->site);
 
+    if ((map_put(info_map, dlname, info)) == 0)
+    {
+        if (g_bDebug)
+            fprintf(stderr, "%s: could not add diskloop '%s' to map\n", who, dlname);
+        else
+            syslog(LOG_ERR, "%s: could not add diskloop '%s' to map", who, dlname);
+        exit(1);
+    }
 }
 
 DLINFO *getDiskloop(const char *dlname) 
@@ -186,7 +208,7 @@ char *idaInit(const char *dlname, const char *whoami)
   }
 
   if (g_bDebug)
-    fprintf(stderr, "%s connecting to diskloop '%s'", who, dlname);
+    fprintf(stderr, "%s connecting to diskloop '%s'\n", who, dlname);
   else
     syslog(LOG_INFO, "%s connecting to diskloop '%s'", who, dlname);
 
@@ -217,8 +239,11 @@ char *idaWriteChan(
   info = getDiskloop(dlname);
 
   if (info == 0) {
-    fprintf(stderr, "%s: could not retrieve info for diskloop '%s'. Exiting!\n", who, dlname);
-    exit(1);
+    if (g_bDebug)
+      fprintf(stderr, "%s: could not retrieve info for diskloop '%s'. Exiting!\n", who, dlname);
+    else
+      syslog(LOG_WARNING, "%s: could not retrieve info for diskloop '%s'. Exiting!", who, dlname);
+    return NULL;
   }
 
   // Copy data to IDA buffer
@@ -226,7 +251,10 @@ char *idaWriteChan(
 
   if (!isidlWriteToDiskLoop(info->pkt.dl, &info->pkt.raw, ISI_OPTION_GENERATE_SEQNO))
   {
-    fprintf(stderr, "isidlWriteToDiskLoop failed: %s\n", strerror(errno));
+    if (g_bDebug)
+        fprintf(stderr, "isidlWriteToDiskLoop failed: %s\n", strerror(errno));
+    else
+        syslog(LOG_ERR, "isidlWriteToDiskLoop failed: %s\n", strerror(errno));
     exit(1);
   }
 

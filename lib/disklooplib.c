@@ -33,8 +33,10 @@ Routines:
             records that fall within that range
     DumpSpans
             Debug type print of all the spans in the circular buffer
+    NoArchive
+            Don't archive records
     NoIDA
-            Add records to archive, but don't put them on IDA disk loop
+            Don't add records to the IDA diskloop
     RemapStationName
             Used to implement diskloop.config MapStation: keyword
             Changes seed header station name if a MapStation match is found
@@ -49,6 +51,7 @@ mmddyy who Changes
 102209 fcs Support for new Falcon configuration keywords
 040110 fcs Add NoIDA keyword supporting channels for archive only
 091410 fcs Add RemapStationName routine
+081111 jde Add NoArchive keyword supporting channels for IDA diskloop only
 ******************************************************************************/
 
 #include <stdio.h>
@@ -77,6 +80,9 @@ static int parse_state=0;
 
 // Will get filled in by Buffer: entries in configuration file
 static struct s_bufconfig *pChanSizeList=NULL;
+
+// Will get filled in by NoArchive: entries in configuration file
+static struct s_bufconfig *pNoArchiveList=NULL;
 
 // Will get filled in by NoIDA: entries in configuration file
 static struct s_bufconfig *pNoIDAList=NULL;
@@ -294,6 +300,58 @@ char *ParseDiskLoopConfig(
       } // location/channel syntax appears to be okay
     } // NoIDA: keyword parsed
 
+    // NoArchive: <loc>/<chan>
+    loc[0] = 0;
+    chan[0] = 0;
+    if ((iArgs=sscanf(linestr, "NoArchive: %s", argstr)) == 1)
+    {
+      // test for blank location code
+      int i=0;
+      if (argstr[0] == '/')
+      {
+        strcpy(loc, "  ");
+        for (i=0; i < 3; i++)
+         chan[i] = argstr[i+1];
+      }
+      else if (argstr[2] == '/')
+      {
+        loc[0] = argstr[0];
+        loc[1] = argstr[1];
+        loc[2] = 0;
+
+        for (i=0; i < 3; i++)
+          chan[i] = argstr[i+3];
+        chan[i] = 0;
+      } // else location code is not blank
+      else argstr[0] = 0;
+
+      if (argstr[0] != 0)
+      {
+        // allocate space for new entry
+        newbuf = (struct s_bufconfig *) malloc(sizeof (struct s_bufconfig));
+        if (newbuf == NULL)
+        {
+          fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
+                   __FILE__, __LINE__);
+          exit(1);
+        }
+
+        // Fill  in record
+        strncpy(newbuf->loc, loc, 4);
+        newbuf->loc[3] = 0;
+        strncpy(newbuf->chan, chan, 4);
+        newbuf->chan[3] = 0;
+        newbuf->records = 0;
+
+        // Insert new record at head of the list
+        newbuf->next = pNoArchiveList;
+        pNoArchiveList = newbuf;
+
+        bParsed = 1;
+        continue;
+      } // location/channel syntax appears to be okay
+    } // NoArchive: keyword parsed
+
     if ((iArgs=sscanf(linestr, "MapStation: %s %s\n", argstr, argstr2)) == 2)
     {
       // Verify station name lengths
@@ -483,6 +541,54 @@ char *LoopRecordSize(
   *size = iLoopRecordSize;
   return NULL;
 } // LoopRecordSize()
+
+//////////////////////////////////////////////////////////////////////////////
+// Tell whether the given location/channel is on the NoArchive channel list
+int CheckNoArchive(
+  const char  *chan,      // Channel ID
+  const char  *loc        // Location ID
+  )
+{
+  int bFound = 0;
+  int bMatch = 0;
+  int i;
+  struct s_bufconfig *ptr;
+  struct s_bufconfig entry;
+
+  if (parse_state == 0)
+  {
+    return 0;
+  }
+  
+  // Loop through list, return last entry to match
+  for (ptr=pNoArchiveList; ptr != NULL; ptr = ptr->next)
+  {
+    // Check location code for match
+    bMatch = 1;
+    for (i=0; i < 2 && bMatch; i++)
+    {
+      if ((toupper(loc[i]) != toupper(ptr->loc[i]))
+          && (ptr->loc[i] != '?'))
+        bMatch = 0; 
+    }
+
+    // Check channel name for match
+    for (i=0; i < 3 && bMatch; i++)
+    {
+      if ((toupper(chan[i]) != toupper(ptr->chan[i]))
+          && (ptr->chan[i] != '?'))
+        bMatch = 0; 
+    }
+
+    if (bMatch)
+    {
+      bFound = 1;
+      entry = *ptr;
+    }
+  } // check all entries
+
+  return bFound;
+} // CheckNoArchive()
 
 //////////////////////////////////////////////////////////////////////////////
 // Tell whether the given location/channel is on the NoIDA channel list

@@ -143,6 +143,13 @@ char *NumChanRecords(
   );                      // returns NULL or an error string pointer
 
 //////////////////////////////////////////////////////////////////////////////
+// Tell whether the given location/channel is on the NoArchive channel list
+int CheckNoArchive(
+  const char  *chan,      // Channel ID
+  const char  *loc        // Location ID
+  );
+
+//////////////////////////////////////////////////////////////////////////////
 // Tell whether the given location/channel is on the NoIDA channel list
 int CheckNoIDA(
   const char  *chan,      // Channel ID

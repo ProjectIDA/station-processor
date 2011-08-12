@@ -118,14 +118,14 @@ char *ArchiveSeed(char *record)
 
   // We write to archive first to give archive max chance of being complete
   retmsg2=NULL;
-  if (!CheckNoArchive(channel, location))
+  if (!CheckNoArchive(station, channel, location))
   {
     retmsg2 = WriteChan(station, channel, location, record);
   }
 
   // Make sure channel isn't listed with a NoIDA keyword in diskloop.config
   retmsg1=NULL;
-  if (!CheckNoIDA(channel, location))
+  if (!CheckNoIDA(station, channel, location))
   {
     retmsg1 = idaWriteChan(station, channel, location, record, station);
   }

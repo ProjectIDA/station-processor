@@ -133,6 +133,7 @@ char *ParseDiskLoopConfig(
   char  linestr[MAXCONFIGLINELEN+2];
   char  argstr[MAXCONFIGLINELEN+2];
   char  argstr2[MAXCONFIGLINELEN+2];
+  char  station[MAXCONFIGLINELEN+2];
   char  chan[MAXCONFIGLINELEN+2];
   char  loc[MAXCONFIGLINELEN+2];
   int   bOK=1;
@@ -142,6 +143,7 @@ char *ParseDiskLoopConfig(
   int   count;
   int   i;
   int   iMaxLoopSize;
+  int   parseType = PARSE_NONE;
   struct s_bufconfig *newbuf;
   struct s_mapstation *newmap;
 
@@ -187,7 +189,127 @@ char *ParseDiskLoopConfig(
       continue;
     }
 
-    // Buffer: <loc>/<chan> size
+    //    Buffer: [[station]-][loc]/<chan> size
+    //     NoIDA: [[station]-][loc]/<chan>
+    // NoArchive: [[station]-][loc]/<chan>
+    station[0] = 0;
+    loc[0] = 0;
+    chan[0] = 0;
+    parseType = PARSE_NONE;
+    if ((iArgs=sscanf(linestr, "Buffer: %s %d", argstr, &count)) == 2) {
+        parseType = PARSE_BUFFER;
+    }
+    else if ((iArgs=sscanf(linestr, "NoArchive: %s", argstr)) == 1) {
+        parseType = PARSE_NO_ARCHIVE;
+    }
+    else if ((iArgs=sscanf(linestr, "NoIDA: %s", argstr)) == 1) {
+        parseType = PARSE_NO_IDA;
+    }
+    if (parseType != PARSE_NONE) {
+      int i=0;
+      int locStart = 0;
+      int stFound = 0;
+      // check for station name
+      if (argstr[0] == '-')
+      {
+        station[0] = 0;
+        locStart = 1;
+      } 
+      else
+      {
+        for (i=0; i < 6; i++) {
+          if (argstr[i] == '-') 
+          {
+            stFound = 1;
+            locStart = i+1;
+          }
+          else 
+          {
+            station[i] = argstr[i];
+          }
+        }
+        if (!stFound) {
+          station[0] = 0;
+        }
+      }
+      // test for blank location code
+      if (argstr[locStart] == '/')
+      {
+        strcpy(loc, "  ");
+        for (i=locStart; i < (locStart+3); i++)
+         chan[i] = argstr[i+1];
+      }
+      else if (argstr[locStart+2] == '/')
+      {
+        loc[0] = argstr[locStart+0];
+        loc[1] = argstr[locStart+1];
+        loc[2] = 0;
+
+        for (i=locStart+0; i < (locStart+3); i++)
+          chan[i] = argstr[i+3];
+        chan[i] = 0;
+      } // else location code is not blank
+      else argstr[0] = 0;
+
+      if (argstr[0] != 0)
+      {
+        if ((parseType == PARSE_BUFFER) && (count < 4))
+        {
+          sprintf(looperrstr, "Count %d < minimum of 4, Line %d in %s",
+            count, iLineNum, filename);
+          fprintf(stderr, "%s\n%s\n", looperrstr, linestr);
+        }
+        else
+        {
+          // allocate space for new entry
+          newbuf = (struct s_bufconfig *) malloc(sizeof (struct s_bufconfig));
+          if (newbuf == NULL)
+          {
+            fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
+                    __FILE__, __LINE__);
+            exit(1);
+          }
+
+          // Fill  in record
+          strncpy(newbuf->station, station, 8);
+          newbuf->station[7] = 0;
+          strncpy(newbuf->loc, loc, 4);
+          newbuf->loc[3] = 0;
+          strncpy(newbuf->chan, chan, 4);
+          newbuf->chan[3] = 0;
+          if (parseType == PARSE_BUFFER) 
+          {
+            newbuf->records = count;
+          } 
+          else 
+          {
+            newbuf->records = 0;
+          }
+
+          // Insert new record at head of the list
+          switch (parseType) {
+              case PARSE_BUFFER:
+                newbuf->next = pChanSizeList;
+                pChanSizeList = newbuf;
+                break;
+              case PARSE_NO_ARCHIVE:
+                newbuf->next = pNoArchiveList;
+                pNoArchiveList = newbuf;
+                break;
+              case PARSE_NO_IDA:
+                newbuf->next = pNoIDAList;
+                pNoIDAList = newbuf;
+                break;
+          }
+
+          bParsed = 1;
+          continue;
+        } // else everything appears to be in order
+      } // location/channel syntax appears to be okay
+    }
+
+/* Replaced by cleaner approach above.
+    // Buffer: [loc]/<chan> size
     loc[0] = 0;
     chan[0] = 0;
     if ((iArgs=sscanf(linestr, "Buffer: %s %d", argstr, &count)) == 2)
@@ -248,59 +370,7 @@ char *ParseDiskLoopConfig(
       } // location/channel syntax appears to be okay
     } // Buffer: keyword parsed
 
-    // NoIDA: <loc>/<chan>
-    loc[0] = 0;
-    chan[0] = 0;
-    if ((iArgs=sscanf(linestr, "NoIDA: %s", argstr)) == 1)
-    {
-      // test for blank location code
-      int i=0;
-      if (argstr[0] == '/')
-      {
-        strcpy(loc, "  ");
-        for (i=0; i < 3; i++)
-         chan[i] = argstr[i+1];
-      }
-      else if (argstr[2] == '/')
-      {
-        loc[0] = argstr[0];
-        loc[1] = argstr[1];
-        loc[2] = 0;
-
-        for (i=0; i < 3; i++)
-          chan[i] = argstr[i+3];
-        chan[i] = 0;
-      } // else location code is not blank
-      else argstr[0] = 0;
-
-      if (argstr[0] != 0)
-      {
-        // allocate space for new entry
-        newbuf = (struct s_bufconfig *) malloc(sizeof (struct s_bufconfig));
-        if (newbuf == NULL)
-        {
-          fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
-                   __FILE__, __LINE__);
-          exit(1);
-        }
-
-        // Fill  in record
-        strncpy(newbuf->loc, loc, 4);
-        newbuf->loc[3] = 0;
-        strncpy(newbuf->chan, chan, 4);
-        newbuf->chan[3] = 0;
-        newbuf->records = 0;
-
-        // Insert new record at head of the list
-        newbuf->next = pNoIDAList;
-        pNoIDAList = newbuf;
-
-        bParsed = 1;
-        continue;
-      } // location/channel syntax appears to be okay
-    } // NoIDA: keyword parsed
-
-    // NoArchive: <loc>/<chan>
+    // NoArchive: [loc]/<chan>
     loc[0] = 0;
     chan[0] = 0;
     if ((iArgs=sscanf(linestr, "NoArchive: %s", argstr)) == 1)
@@ -351,6 +421,59 @@ char *ParseDiskLoopConfig(
         continue;
       } // location/channel syntax appears to be okay
     } // NoArchive: keyword parsed
+
+    // NoIDA: [loc]/<chan>
+    loc[0] = 0;
+    chan[0] = 0;
+    if ((iArgs=sscanf(linestr, "NoIDA: %s", argstr)) == 1)
+    {
+      // test for blank location code
+      int i=0;
+      if (argstr[0] == '/')
+      {
+        strcpy(loc, "  ");
+        for (i=0; i < 3; i++)
+         chan[i] = argstr[i+1];
+      }
+      else if (argstr[2] == '/')
+      {
+        loc[0] = argstr[0];
+        loc[1] = argstr[1];
+        loc[2] = 0;
+
+        for (i=0; i < 3; i++)
+          chan[i] = argstr[i+3];
+        chan[i] = 0;
+      } // else location code is not blank
+      else argstr[0] = 0;
+
+      if (argstr[0] != 0)
+      {
+        // allocate space for new entry
+        newbuf = (struct s_bufconfig *) malloc(sizeof (struct s_bufconfig));
+        if (newbuf == NULL)
+        {
+          fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
+                   __FILE__, __LINE__);
+          exit(1);
+        }
+
+        // Fill  in record
+        strncpy(newbuf->loc, loc, 4);
+        newbuf->loc[3] = 0;
+        strncpy(newbuf->chan, chan, 4);
+        newbuf->chan[3] = 0;
+        newbuf->records = 0;
+
+        // Insert new record at head of the list
+        newbuf->next = pNoIDAList;
+        pNoIDAList = newbuf;
+
+        bParsed = 1;
+        continue;
+      } // location/channel syntax appears to be okay
+    } // NoIDA: keyword parsed
+*/
 
     if ((iArgs=sscanf(linestr, "MapStation: %s %s\n", argstr, argstr2)) == 2)
     {
@@ -543,33 +666,45 @@ char *LoopRecordSize(
 } // LoopRecordSize()
 
 //////////////////////////////////////////////////////////////////////////////
-// Tell whether the given location/channel is on the NoArchive channel list
-int CheckNoArchive(
-  const char  *chan,      // Channel ID
-  const char  *loc        // Location ID
+// Tell whether the given station-location/channel is on the supplied channel list
+int CheckChannelList(
+  const char          *station,   // Station Name
+  const char          *chan,      // Channel ID
+  const char          *loc,       // Location ID
+  struct s_bufconfig  *ptr,       // List of entries
+  struct s_bufconfig  **entry     // Matching entry if found
   )
 {
   int bFound = 0;
   int bMatch = 0;
   int i;
-  struct s_bufconfig *ptr;
-  struct s_bufconfig entry;
 
-  if (parse_state == 0)
-  {
-    return 0;
-  }
-  
   // Loop through list, return last entry to match
-  for (ptr=pNoArchiveList; ptr != NULL; ptr = ptr->next)
+  for (ptr=pChanSizeList; ptr != NULL; ptr = ptr->next)
   {
-    // Check location code for match
     bMatch = 1;
+
+    // Check location code for match
+    for (i=0; i < 5 && bMatch; i++)
+    {
+      if ((station[i] == 0) && (ptr->station[i] == 0)) {
+        break;
+      }
+      else if ((station[i] == 0) || (ptr->station[i] == 0)) {
+        bMatch = 0;
+      }
+      else if ((toupper(station[i]) != toupper(ptr->station[i])) &&
+               (ptr->station[i] != '?')) {
+        bMatch = 0;
+      }
+    }
+
+    // Check location code for match
     for (i=0; i < 2 && bMatch; i++)
     {
       if ((toupper(loc[i]) != toupper(ptr->loc[i]))
           && (ptr->loc[i] != '?'))
-        bMatch = 0; 
+        bMatch = 0;
     }
 
     // Check channel name for match
@@ -577,80 +712,62 @@ int CheckNoArchive(
     {
       if ((toupper(chan[i]) != toupper(ptr->chan[i]))
           && (ptr->chan[i] != '?'))
-        bMatch = 0; 
+        bMatch = 0;
     }
 
     if (bMatch)
     {
       bFound = 1;
-      entry = *ptr;
+      if (entry != NULL) {
+        *entry = ptr;
+      }
     }
   } // check all entries
 
   return bFound;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Tell whether the given location/channel is on the NoArchive channel list
+int CheckNoArchive(
+  const char  *station,   // Station Name
+  const char  *chan,      // Channel ID
+  const char  *loc        // Location ID
+  )
+{
+  if (parse_state == 0)
+  {
+    return 0;
+  }
+  return CheckChannelList(station, chan, loc, pNoArchiveList, NULL);
 } // CheckNoArchive()
 
 //////////////////////////////////////////////////////////////////////////////
 // Tell whether the given location/channel is on the NoIDA channel list
 int CheckNoIDA(
+  const char  *station,   // Station Name
   const char  *chan,      // Channel ID
   const char  *loc        // Location ID
   )
 {
-  int bFound = 0;
-  int bMatch = 0;
-  int i;
-  struct s_bufconfig *ptr;
-  struct s_bufconfig entry;
-
   if (parse_state == 0)
   {
     return 0;
   }
-  
-  // Loop through list, return last entry to match
-  for (ptr=pNoIDAList; ptr != NULL; ptr = ptr->next)
-  {
-    // Check location code for match
-    bMatch = 1;
-    for (i=0; i < 2 && bMatch; i++)
-    {
-      if ((toupper(loc[i]) != toupper(ptr->loc[i]))
-          && (ptr->loc[i] != '?'))
-        bMatch = 0; 
-    }
-
-    // Check channel name for match
-    for (i=0; i < 3 && bMatch; i++)
-    {
-      if ((toupper(chan[i]) != toupper(ptr->chan[i]))
-          && (ptr->chan[i] != '?'))
-        bMatch = 0; 
-    }
-
-    if (bMatch)
-    {
-      bFound = 1;
-      entry = *ptr;
-    }
-  } // check all entries
-
-  return bFound;
+  return CheckChannelList(station, chan, loc, pNoArchiveList, NULL);
 } // CheckNoIDA()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns the number of records for the given channel
 char *NumChanRecords(
+  const char  *station,   // Station Name
   const char  *chan,      // Channel ID
   const char  *loc,       // Location ID
   int         *records
   )                       // returns NULL or an error string pointer
 {
   int bFound = 0;
-  int bMatch = 0;
-  int i;
-  struct s_bufconfig *ptr;
-  struct s_bufconfig entry;
+  struct s_bufconfig *entry;
 
   if (parse_state == 0)
   {
@@ -658,35 +775,11 @@ char *NumChanRecords(
     return looperrstr;
   }
   
-  // Loop through list, return last entry to match
-  for (ptr=pChanSizeList; ptr != NULL; ptr = ptr->next)
-  {
-    // Check location code for match
-    bMatch = 1;
-    for (i=0; i < 2 && bMatch; i++)
-    {
-      if ((toupper(loc[i]) != toupper(ptr->loc[i]))
-          && (ptr->loc[i] != '?'))
-        bMatch = 0; 
-    }
+  bFound = CheckChannelList(station, chan, loc, pNoArchiveList, &entry);
 
-    // Check channel name for match
-    for (i=0; i < 3 && bMatch; i++)
-    {
-      if ((toupper(chan[i]) != toupper(ptr->chan[i]))
-          && (ptr->chan[i] != '?'))
-        bMatch = 0; 
-    }
-
-    if (bMatch)
-    {
-      bFound = 1;
-      entry = *ptr;
-    }
-  } // check all entries
-
-  if (bFound)
-    *records = entry.records;
+  if (bFound && (entry != NULL)) {
+    *records = entry->records;
+  }
 
   if (!bFound)
   {
@@ -1000,7 +1093,7 @@ char *NewBuffer(
   } // unable to create index file
 
   // Get how many records this channel should have
-  if (NumChanRecords(chan, loc, &iMaxRecord) != NULL)
+  if (NumChanRecords(station, chan, loc, &iMaxRecord) != NULL)
   {
     fclose(fp_idx);
     return looperrstr;

@@ -22,6 +22,12 @@ mmddyy who Changes
 // associated with reading records from a circular buffer while writting
 #define LOOPDEADRECORDS  2
 
+// 
+#define PARSE_NONE          0
+#define PARSE_BUFFER        1
+#define PARSE_NO_ARCHIVE    2
+#define PARSE_NO_IDA        3
+
 // When diskloop.config is parsed, the channel buffersize data goes here
 struct s_bufconfig
 {
@@ -134,9 +140,21 @@ char *GetRecordRange(
   int         *iLoopSize  // Returns size of circular buffer in records
   );                      // returns NULL or an error string pointer
                           // iFirst == -1 if no records were found
+
+//////////////////////////////////////////////////////////////////////////////
+// Tell whether the given station-location/channel is on the supplied channel list
+int CheckChannelList(
+  const char          *station,   // Station Name
+  const char          *chan,      // Channel ID
+  const char          *loc,       // Location ID
+  struct s_bufconfig  *ptr,       // List of entries
+  struct s_bufconfig  **entry     // Matching entry if found
+  );
+
 //////////////////////////////////////////////////////////////////////////////
 // Returns the number of records for the given channel                       
 char *NumChanRecords(             
+  const char  *station,
   const char  *chan,      // Channel ID
   const char  *loc,       // Location ID
   int         *records
@@ -145,6 +163,7 @@ char *NumChanRecords(
 //////////////////////////////////////////////////////////////////////////////
 // Tell whether the given location/channel is on the NoArchive channel list
 int CheckNoArchive(
+  const char  *station,
   const char  *chan,      // Channel ID
   const char  *loc        // Location ID
   );
@@ -152,6 +171,7 @@ int CheckNoArchive(
 //////////////////////////////////////////////////////////////////////////////
 // Tell whether the given location/channel is on the NoIDA channel list
 int CheckNoIDA(
+  const char  *station,
   const char  *chan,      // Channel ID
   const char  *loc        // Location ID
   );

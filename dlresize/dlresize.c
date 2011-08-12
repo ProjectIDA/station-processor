@@ -177,7 +177,7 @@ int main (int argc, char **argv)
     }
 
     // Get how many records diskloop.config says this loc/channel should have
-    if ((retmsg=NumChanRecords(chan, loc, &config_numrecords)) != NULL)
+    if ((retmsg=NumChanRecords(station, chan, loc, &config_numrecords)) != NULL)
     {
       fprintf(stderr, "%s Line %d NumChanRecords() call failed: %s\n", 
               __FILE__, __LINE__, retmsg);

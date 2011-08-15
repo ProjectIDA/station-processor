@@ -8,10 +8,11 @@ mmddyy who Changes
 ==============================================================================
 071309 fcs idaapi changed to only log errors or worse Release 1.2
 020910 fcs New diskloop.config keywords for falcon
+081511 jde NoArchive in diskloop.config means don't add record to Archives
 ******************************************************************************/
 
 const char *WHOAMI="ida2arch";
-const char *VersionIdentString = "Release 1.3";
+const char *VersionIdentString = "Release 1.4";
 
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include <stdio.h>

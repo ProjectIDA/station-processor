@@ -27,9 +27,10 @@ mmddyy who Changes
 020910 fcs New diskloop.config keywords for falcon, new lib330_91005
 040110 fcs NoIDA in diskloop.config means don't add record to IDA disk loop
 042811 fcs Use station name to determine IDA disk loop, not diskloop.config
+081511 jde NoArchive in diskloop.config means don't add record to Archives
 ******************************************************************************/
 #define WHOAMI "q330arch"
-const char *VersionIdentString = "Release 1.5";
+const char *VersionIdentString = "Release 1.6";
 
 #include <stdio.h>
 #include <string.h>

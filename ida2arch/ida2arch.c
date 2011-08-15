@@ -312,11 +312,19 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
 //            utilPrintHexDump(stderr, raw.payload, 64);
 //      }
 
-        // See if location/channel match our filter string
         SeedHeaderSNLC(raw.payload, station,chan,loc);
-        sprintf(loc_station, "%2.2s/%3.3s", loc, chan);
-        if (check_filter(filter, loc_station) != 1)
-          continue;
+        if (filter == NULL) {
+          // If no filter argument was supplied, use the NoArchive filter(s) 
+          // from the config file
+          if (CheckNoArchive(station, chan, loc))
+            continue;
+        }
+        else {
+          // See if location/channel match our filter string
+          sprintf(loc_station, "%2.2s/%3.3s", loc, chan);
+          if (check_filter(filter, loc_station) != 1)
+            continue;
+        }
         int2x32 = (int *)&raw.hdr.seqno.counter;
 
         if (gDebug)

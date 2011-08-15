@@ -686,11 +686,11 @@ int CheckChannelList(
   int i;
 
   // Loop through list, return last entry to match
-  for (ptr=pChanSizeList; ptr != NULL; ptr = ptr->next)
+  for (; ptr != NULL; ptr = ptr->next)
   {
     bMatch = 1;
 
-    // Check location code for match
+    // Check station name for match
     for (i=0; i < 5 && bMatch; i++)
     {
       if ((station[i] == 0) && (ptr->station[i] == 0)) {

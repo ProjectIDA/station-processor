@@ -222,6 +222,12 @@ char *ParseDiskLoopConfig(
           {
             stFound = 1;
             locStart = i+1;
+            station[i] = 0;
+            i=6;
+          }
+          else if (argstr[i] == 0) 
+          {
+            i=6;
           }
           else 
           {
@@ -249,9 +255,9 @@ char *ParseDiskLoopConfig(
           chan[i] = argstr[i+3];
         chan[i] = 0;
       } // else location code is not blank
-      else argstr[0] = 0;
+      else argstr[locStart] = 0;
 
-      if (argstr[0] != 0)
+      if (argstr[locStart] != 0)
       {
         if ((parseType == PARSE_BUFFER) && (count < 4))
         {

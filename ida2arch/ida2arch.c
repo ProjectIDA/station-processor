@@ -398,6 +398,8 @@ static char *VerboseHelp =
 "                    Format is one or more location/channel entries\n"
 "                    separated by commas, * and ? wildcards allowed\n"
 "                    For a blank location code start with a /\n"
+"                    (If this option is not supplied, the NoArchive entries\n"
+"                     from diskloop.config will be used instead)\n"
 "\n"
 "Data feeds are done using 'raw' ISI (sequence number based) disk loops.\n"
 "A 'raw' feed defaults to all packets from all data sources, starting with the\n"

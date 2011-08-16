@@ -8,7 +8,6 @@ mmddyy who Changes
 ==============================================================================
 071309 fcs idaapi changed to only log errors or worse Release 1.2
 020910 fcs New diskloop.config keywords for falcon
-081511 jde NoArchive in diskloop.config means don't add record to Archives
 ******************************************************************************/
 
 const char *WHOAMI="ida2arch";
@@ -314,13 +313,7 @@ static void raw(char *server, ISI_PARAM *par, int compress, ISI_SEQNO *begseqno,
 //      }
 
         SeedHeaderSNLC(raw.payload, station,chan,loc);
-        if (filter == NULL) {
-          // If no filter argument was supplied, use the NoArchive filter(s) 
-          // from the config file
-          if (CheckNoArchive(station, chan, loc))
-            continue;
-        }
-        else {
+        if (filter != NULL) {
           // See if location/channel match our filter string
           sprintf(loc_station, "%2.2s/%3.3s", loc, chan);
           if (check_filter(filter, loc_station) != 1)
@@ -398,8 +391,6 @@ static char *VerboseHelp =
 "                    Format is one or more location/channel entries\n"
 "                    separated by commas, * and ? wildcards allowed\n"
 "                    For a blank location code start with a /\n"
-"                    (If this option is not supplied, the NoArchive entries\n"
-"                     from diskloop.config will be used instead)\n"
 "\n"
 "Data feeds are done using 'raw' ISI (sequence number based) disk loops.\n"
 "A 'raw' feed defaults to all packets from all data sources, starting with the\n"

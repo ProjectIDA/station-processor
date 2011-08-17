@@ -77,7 +77,7 @@ void addDiskloop(const char *dlname)
     DLINFO *info;
 
     if (info_map == 0) {
-        info_map = map_new(100, NULL, NULL);
+        info_map = map_new(64, NULL, NULL);
     }
 
     if ((info = malloc(sizeof(DLINFO))) == 0) {

@@ -45,9 +45,10 @@ typedef void*(*map_value_dup_func)(const void *value);
 Map    *map_new(unsigned int capacity, map_value_free_func free_func, map_value_dup_func dup_func);
 void    map_delete(Map *map);
 
+int     map_put(Map *map, const char *key, void *value);
 void   *map_get(const Map *map, const char *key);
 int     map_exists(const Map *map, const char *key);
-int     map_put(Map *map, const char *key, void *value);
+int     map_remove(const Map *map, const char *key);
 int     map_get_count(const Map *map);
 int     map_enum(const Map *map, map_enum_func enum_func, const void *obj);
 

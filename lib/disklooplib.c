@@ -80,15 +80,19 @@ static int parse_state=0;
 
 // Will get filled in by Buffer: entries in configuration file
 static struct s_bufconfig *pChanSizeList=NULL;
+static Map *pChanSizeShortcut=NULL;
 
 // Will get filled in by NoArchive: entries in configuration file
 static struct s_bufconfig *pNoArchiveList=NULL;
+static Map *pNoArchiveShortcut=NULL;
 
 // Will get filled in by NoIDA: entries in configuration file
 static struct s_bufconfig *pNoIDAList=NULL;
+static Map *pNoIDAShortcut=NULL;
 
 // Need a list of remapped station names
 static struct s_mapstation *pMapStationList=NULL;
+static Map *pMapStationShortcut=NULL;
 
 // Should either be 512 or 4096 to match SEED record size
 static int                iLoopRecordSize=512;
@@ -760,7 +764,7 @@ int CheckNoIDA(
   {
     return 0;
   }
-  return CheckChannelList(station, chan, loc, pNoArchiveList, NULL);
+  return CheckChannelList(station, chan, loc, pNoIDAList, NULL);
 } // CheckNoIDA()
 
 //////////////////////////////////////////////////////////////////////////////
@@ -781,7 +785,7 @@ char *NumChanRecords(
     return looperrstr;
   }
   
-  bFound = CheckChannelList(station, chan, loc, pNoArchiveList, &entry);
+  bFound = CheckChannelList(station, chan, loc, pChanSizeList, &entry);
 
   if (bFound && (entry != NULL)) {
     *records = entry->records;

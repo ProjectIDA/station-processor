@@ -142,6 +142,56 @@ char *GetRecordRange(
                           // iFirst == -1 if no records were found
 
 //////////////////////////////////////////////////////////////////////////////
+// Add a channel to the Archive bypass hash
+int SetChannelToArchive(
+  const char  *station,   // Station Name
+  const char  *chan,      // Channel ID
+  const char  *loc,       // Location ID
+  int          send       // Save to archive
+  );
+
+//////////////////////////////////////////////////////////////////////////////
+// Check whether this channel should be archived
+int CheckChannelToArchive(
+  const char  *station,   // Station Name
+  const char  *chan,      // Channel ID
+  const char  *loc        // Location ID
+  );
+
+//////////////////////////////////////////////////////////////////////////////
+// Remove a channel from the Archive bypass hash
+int DefaultChannelToArchive(
+  const char  *station,   // Station Name
+  const char  *chan,      // Channel ID
+  const char  *loc        // Location ID
+  );
+
+//////////////////////////////////////////////////////////////////////////////
+// Add a channel to the IDA bypass hash
+int SetChannelToIDA(
+  const char  *station,   // Station Name
+  const char  *chan,      // Channel ID
+  const char  *loc,       // Location ID
+  int          send       // Save to IDA diskloop
+  );
+
+//////////////////////////////////////////////////////////////////////////////
+// Check whether this channel should be added to the IDA diskloop
+int CheckChannelToIDA(
+  const char  *station,   // Station Name
+  const char  *chan,      // Channel ID
+  const char  *loc        // Location ID
+  );
+
+//////////////////////////////////////////////////////////////////////////////
+// Remove a channel from the IDA bypass hash
+int DefaultChannelToIDA(
+  const char  *station,   // Station Name
+  const char  *chan,      // Channel ID
+  const char  *loc        // Location ID
+  );
+
+//////////////////////////////////////////////////////////////////////////////
 // Tell whether the given station-location/channel is on the supplied channel list
 int CheckChannelList(
   const char          *station,   // Station Name

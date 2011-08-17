@@ -61,6 +61,7 @@ mmddyy who Changes
 #include <arpa/inet.h>    // Needed for ntohl,ntohs 
 #include "include/diskloop.h"
 #include "include/dcc_time_proto2.h"
+#include "include/map.h"
 #include "include/netreq.h"
 
 /*
@@ -93,6 +94,15 @@ static Map *pNoIDAShortcut=NULL;
 // Need a list of remapped station names
 static struct s_mapstation *pMapStationList=NULL;
 static Map *pMapStationShortcut=NULL;
+
+// Populated durion operation. Override settings in NoIDA and 
+// NoArchive if matching entries exist. These can be modified
+// while the program is running.
+static Map *pChannelToIDA;
+static Map *pChannelToArchive;
+static int CHANNEL_NF  = -1;
+static int CHANNEL_OFF = 0;
+static int CHANNEL_ON  = 1;
 
 // Should either be 512 or 4096 to match SEED record size
 static int                iLoopRecordSize=512;
@@ -150,6 +160,10 @@ char *ParseDiskLoopConfig(
   int   parseType = PARSE_NONE;
   struct s_bufconfig *newbuf;
   struct s_mapstation *newmap;
+
+  pChanSizeShortcut  = map_new(128, NULL, NULL);
+  pNoArchiveShortcut = map_new(128, NULL, NULL);
+  pNoIDAShortcut     = map_new(128, NULL, NULL);
 
   // Open the configuration file
   if ((fp = fopen(filename, "r")) == NULL)
@@ -737,6 +751,110 @@ int CheckChannelList(
   return bFound;
 }
 
+
+//////////////////////////////////////////////////////////////////////////////
+// Add a channel to the Archive bypass hash
+int SetChannelToArchive(
+  const char  *station,   // Station Name
+  const char  *chan,      // Channel ID
+  const char  *loc,       // Location ID
+  int          send       // Save to archive
+  )
+{
+  char key[20];
+  int *value = send ? &CHANNEL_ON : &CHANNEL_OFF;
+  int result = *value;
+
+  sprintf(key, "%s-%s-%s", station, loc, chan);
+  if (!map_put(pChannelToArchive, key, value)) {
+    result = CHANNEL_NF;
+  }
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Check whether this channel should be archived.
+int CheckChannelToArchive(
+  const char  *station,   // Station Name
+  const char  *chan,      // Channel ID
+  const char  *loc        // Location ID
+  )
+{
+  char key[20];
+  int *result;
+  sprintf(key, "%s-%s-%s", station, loc, chan);
+  result = (int *)map_get(pChannelToArchive, key);
+  if (result == NULL) {
+    result = &CHANNEL_NF;
+  }
+  return *result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Remove a channel from the Archive bypass hash
+int DefaultChannelToArchive(
+  const char  *station,   // Station Name
+  const char  *chan,      // Channel ID
+  const char  *loc        // Location ID
+  )
+{
+  char key[20];
+  sprintf(key, "%s-%s-%s", station, loc, chan);
+  return map_remove(pChannelToArchive, key);
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Add a channel to the IDA bypass hash
+int SetChannelToIDA(
+  const char  *station,   // Station Name
+  const char  *chan,      // Channel ID
+  const char  *loc,       // Location ID
+  int          send       // Save to IDA diskloop
+  )
+{
+  char key[20];
+  int *value = send ? &CHANNEL_ON : &CHANNEL_OFF;
+  int result = *value;
+
+  sprintf(key, "%s-%s-%s", station, loc, chan);
+  if (!map_put(pChannelToIDA, key, value)) {
+    result = CHANNEL_NF;
+  }
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Check whether this channel should be added to the IDA diskloop.
+int CheckChannelToIDA(
+  const char  *station,   // Station Name
+  const char  *chan,      // Channel ID
+  const char  *loc        // Location ID
+  )
+{
+  char key[20];
+  int *result;
+  sprintf(key, "%s-%s-%s", station, loc, chan);
+  result = (int *)map_get(pChannelToIDA, key);
+  if (result == NULL) {
+    result = &CHANNEL_NF;
+  }
+  return *result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Remove a channel from the IDA bypass hash
+int DefaultChannelToIDA(
+  const char  *station,   // Station Name
+  const char  *chan,      // Channel ID
+  const char  *loc        // Location ID
+  )
+{
+  char key[20];
+  sprintf(key, "%s-%s-%s", station, loc, chan);
+  return map_remove(pChannelToIDA, key);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // Tell whether the given location/channel is on the NoArchive channel list
 int CheckNoArchive(
@@ -745,11 +863,35 @@ int CheckNoArchive(
   const char  *loc        // Location ID
   )
 {
-  if (parse_state == 0)
+  int bypass;
+  int bFound = 0;
+  struct s_bufconfig *entry;
+  char key[20];
+
+  if (parse_state != 0)
   {
-    return 0;
+    // Check if this channel is in the bypass hash
+    bypass = CheckChannelToArchive(station, chan, loc);
+    if (bypass == CHANNEL_NF) {
+      // If channel is not in the bypass hash, check it against the config
+      sprintf(key, "%s-%s-%s", station, loc, chan);
+      entry = (struct s_bufconfig *)map_get(pNoArchiveShortcut, key);
+      if (entry == NULL) {
+        bFound = CheckChannelList(station, chan, loc, pNoArchiveList, &entry);
+        if (bFound && (entry != NULL)) {
+            map_put(pNoArchiveShortcut, key, entry);
+        }
+      }
+      else {
+        bFound = 1;
+      }
+    }
+    else {
+      bFound = bypass;
+    }
   }
-  return CheckChannelList(station, chan, loc, pNoArchiveList, NULL);
+
+  return bFound;
 } // CheckNoArchive()
 
 //////////////////////////////////////////////////////////////////////////////
@@ -760,11 +902,35 @@ int CheckNoIDA(
   const char  *loc        // Location ID
   )
 {
-  if (parse_state == 0)
+  int bypass;
+  int bFound = 0;
+  struct s_bufconfig *entry;
+  char key[20];
+
+  if (parse_state != 0)
   {
-    return 0;
+    // Check if this channel is in the bypass hash
+    bypass = CheckChannelToIDA(station, chan, loc);
+    if (bypass == CHANNEL_NF) {
+      // If channel is not in the bypass hash, check it against the config
+      sprintf(key, "%s-%s-%s", station, loc, chan);
+      entry = (struct s_bufconfig *)map_get(pNoIDAShortcut, key);
+      if (entry == NULL) {
+        bFound = CheckChannelList(station, chan, loc, pNoIDAList, &entry);
+        if (bFound && (entry != NULL)) {
+            map_put(pNoIDAShortcut, key, entry);
+        }
+      }
+      else {
+        bFound = 1;
+      }
+    }
+    else {
+      bFound = bypass;
+    }
   }
-  return CheckChannelList(station, chan, loc, pNoIDAList, NULL);
+
+  return bFound;
 } // CheckNoIDA()
 
 //////////////////////////////////////////////////////////////////////////////
@@ -778,6 +944,7 @@ char *NumChanRecords(
 {
   int bFound = 0;
   struct s_bufconfig *entry;
+  char key[20];
 
   if (parse_state == 0)
   {
@@ -785,7 +952,17 @@ char *NumChanRecords(
     return looperrstr;
   }
   
-  bFound = CheckChannelList(station, chan, loc, pChanSizeList, &entry);
+  sprintf(key, "%s-%s-%s", station, loc, chan);
+  entry = (struct s_bufconfig *)map_get(pChanSizeShortcut, key);
+  if (entry == NULL) {
+    bFound = CheckChannelList(station, chan, loc, pChanSizeList, &entry);
+    if (bFound && (entry != NULL)) {
+      map_put(pChanSizeShortcut, key, entry);
+    }
+  }
+  else {
+    bFound = 1;
+  }
 
   if (bFound && (entry != NULL)) {
     *records = entry->records;
@@ -991,14 +1168,21 @@ int RemapStationName(
   station[i] = 0;
 
   // Now remap q330 station name if match found
-  for (ptr=pMapStationList; ptr != NULL; ptr=ptr->next)
-  {
-    if (strcmp(station, ptr->station_q330) == 0)
+  ptr = (struct s_mapstation *)map_get(pMapStationShortcut, station);
+  if (ptr != NULL) {
+    mapstation = ptr->station;
+  }
+  else {
+    for (ptr=pMapStationList; ptr != NULL; ptr=ptr->next)
     {
-      mapstation = ptr->station;
-      break;
-    }
-  } // check all station name remap entries
+      if (strcmp(station, ptr->station_q330) == 0)
+      {
+        mapstation = ptr->station;
+        map_put(pMapStationShortcut, ptr->station_q330, ptr);
+        break;
+      }
+    } // check all station name remap entries
+  }
 
   // Change seed record station name if we are remapping
   if (mapstation != NULL)
@@ -1039,14 +1223,21 @@ char *StripNetworkID(
     retstation = (char *)station;
 
   // Now remap q330 station name if match found
-  for (ptr=pMapStationList; ptr != NULL; ptr=ptr->next)
-  {
-    if (strcmp(retstation, ptr->station_q330) == 0)
+  ptr = (struct s_mapstation *)map_get(pMapStationShortcut, retstation);
+  if (ptr != NULL) {
+    retstation = ptr->station;
+  }
+  else {
+    for (ptr=pMapStationList; ptr != NULL; ptr=ptr->next)
     {
-      retstation = ptr->station;
-      break;
-    }
-  } // check all station name remap entries
+      if (strcmp(retstation, ptr->station_q330) == 0)
+      {
+        retstation = ptr->station;
+        map_put(pMapStationShortcut, ptr->station_q330, ptr);
+        break;
+      }
+    } // check all station name remap entries
+  }
 
   return retstation;
 } // StripNetworkID()

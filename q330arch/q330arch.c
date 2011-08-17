@@ -94,6 +94,96 @@ static void sigterm_q330arch()
     exit(0);
 } // sigterm_q330arch()
 
+int ChannelControl(char *command)
+{
+    int i, setResult = 0;
+    size_t base = 14;
+    char station[6];
+    char loc[3];
+    char chan[4];
+    char c;
+
+    if (command[base] != '-') return -1;
+    base++;
+
+    // Copy station name
+    for (i=0; i < 5; i++) {
+        c = command[base+i];
+        if (c == '-') {
+          base += i;
+          break;
+        }
+        else if (isalnum(c)) {
+          station[i] = c;
+        }
+        else {
+          return -1;
+        }
+    }
+
+    if (command[base] != '-') return -1;
+    base++;
+
+    // Copy location code
+    for (i=0; i < 2; i++) {
+        c = command[base+i];
+        if (c == '-') {
+          base += i;
+          break;
+        }
+        else if (isalnum(c)) {
+          loc[i] = c;
+        }
+        else {
+          return -1;
+        }
+    }
+
+    if (command[base] != '-') return -1;
+    base++;
+
+    // Copy channel name
+    for (i=0; i < 3; i++) {
+        c = command[base+i];
+        if (c == '-') {
+          base += i;
+          break;
+        }
+        else if (isalnum(c)) {
+          chan[i] = c;
+        }
+        else {
+          return -1;
+        }
+    }
+
+    if (command[base] != '-') return -1;
+    base++;
+
+    if (strncmp("ARCHIVE-OFF", (char *)(command + base), 11)) {
+        setResult = SetChannelToArchive(station, chan, loc, 0);
+    }
+    else if (strncmp("ARCHIVE-ON", (char *)(command + base), 10)) {
+        setResult = SetChannelToArchive(station, chan, loc, 1);
+    }
+    else if (strncmp("ARCHIVE-DEFAULT", (char *)(command + base), 15)) {
+        setResult = DefaultChannelToArchive(station, chan, loc);
+    }
+    else if (strncmp("IDA-OFF", (char *)(command + base), 7)) {
+        setResult = SetChannelToIDA(station, chan, loc, 0);
+    }
+    else if (strncmp("IDA-ON", (char *)(command + base), 6)) {
+        setResult = SetChannelToIDA(station, chan, loc, 1);
+    }
+    else if (strncmp("IDA-DEFAULT", (char *)(command + base), 11)) {
+        setResult = DefaultChannelToIDA(station, chan, loc);
+    } else {
+        return -1;
+    }
+
+    return (setResult > 0);
+}
+
 char *ArchiveSeed(char *record)
 {
   int  i;
@@ -150,6 +240,8 @@ int main (int argc, char **argv)
   char  chan[4];
   char  network[4];
   char  *retmsg;
+  char  tempMsg[128];
+  int   result;
   int   iSeedRecordSize;
   int   iPort;
   int   iClient;
@@ -322,6 +414,39 @@ int main (int argc, char **argv)
       if (mapshm->read_index[iClient] != mapshm->write_index[iClient])
       {
 	    touched = 1;
+
+        // Handle channel control commands
+        if (strncmp("CHANNELCONTROL", &mapshm->buffer[iClient][iBuf][0], 14) == 0)
+        {
+          strncpy(tempMsg, &mapshm->buffer[iClient][iBuf], 128);
+          for (i=124; i<127; i++) tempMsg[i] = '.';
+
+          result = ChannelControl((char *)&mapshm->buffer[iClient][iBuf]);
+          if (result < 1) {
+            if (result == 0) {
+                if (g_bDebug)
+                  fprintf(stderr, "%s: Failed to apply channel control: '%s'\n",
+                          WHOAMI, tempMsg);
+                else
+                  syslog(LOG_ERR, "%s: Failed to apply channel control: '%s'",
+                         WHOAMI, retmsg);
+            } else {
+                if (g_bDebug)
+                  fprintf(stderr, "%s: Invalid channel control message: '%s'\n",
+                          WHOAMI, tempMsg);
+                else
+                  syslog(LOG_ERR, "%s: Invalid channel control message: '%s'",
+                         WHOAMI, retmsg);
+            }
+          }
+          if (g_bDebug)
+            fprintf(stderr, "%s: Channel control applied: '%s'\n",
+                    WHOAMI, tempMsg);
+          else
+            syslog(LOG_ERR, "%s: Channel control applied: '%s'",
+                   WHOAMI, retmsg);
+          continue;
+        } // Channel control command
 
         // Immediately archive non LOG seed record
         if (strncmp("LOG", &mapshm->buffer[iClient][iBuf][15], 3) != 0)

@@ -97,6 +97,12 @@ char *FalconIP(char *ip);
 char *FalconPort(int *port);
 
 //////////////////////////////////////////////////////////////////////////////
+// Returns the UDP port where channel set commands are sent to
+char *ChannelSetPort(
+  int *port               // returns port number
+  );                      // returns NULL or an error string pointer
+
+//////////////////////////////////////////////////////////////////////////////
 // Returns the TCP port where log messages are sent to
 char *LogServerPort(
   int *port               // returns port number
@@ -142,7 +148,7 @@ char *GetRecordRange(
                           // iFirst == -1 if no records were found
 
 //////////////////////////////////////////////////////////////////////////////
-// Add a channel to the Archive bypass hash
+// Add a channel to the Archive bypass map
 int SetChannelToArchive(
   const char  *station,   // Station Name
   const char  *chan,      // Channel ID
@@ -159,7 +165,7 @@ int CheckChannelToArchive(
   );
 
 //////////////////////////////////////////////////////////////////////////////
-// Remove a channel from the Archive bypass hash
+// Remove a channel from the Archive bypass map
 int DefaultChannelToArchive(
   const char  *station,   // Station Name
   const char  *chan,      // Channel ID
@@ -167,7 +173,7 @@ int DefaultChannelToArchive(
   );
 
 //////////////////////////////////////////////////////////////////////////////
-// Add a channel to the IDA bypass hash
+// Add a channel to the IDA bypass map
 int SetChannelToIDA(
   const char  *station,   // Station Name
   const char  *chan,      // Channel ID
@@ -184,7 +190,7 @@ int CheckChannelToIDA(
   );
 
 //////////////////////////////////////////////////////////////////////////////
-// Remove a channel from the IDA bypass hash
+// Remove a channel from the IDA bypass map
 int DefaultChannelToIDA(
   const char  *station,   // Station Name
   const char  *chan,      // Channel ID

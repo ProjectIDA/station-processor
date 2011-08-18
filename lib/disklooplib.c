@@ -987,7 +987,7 @@ int CheckNoIDA(
       // If channel is not in the bypass map, check it against the config
       sprintf(key, "%s-%s-%s", station, loc, chan);
       strToUpper(key);
-      state = (struct s_bufconfig *)map_get(pNoIDAShortcut, key);
+      state = (int *)map_get(pNoIDAShortcut, key);
       if (state == NULL) {
         //fprintf(stderr, "CheckNoIDA: record not found; performing list lookup\n");
         bFound = CheckChannelList(station, chan, loc, pNoIDAList, &entry);

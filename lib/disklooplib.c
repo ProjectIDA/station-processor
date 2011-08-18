@@ -98,8 +98,8 @@ static Map *pMapStationShortcut=NULL;
 // Populated durion operation. Override settings in NoIDA and 
 // NoArchive if matching entries exist. These can be modified
 // while the program is running.
-static Map *pChannelToIDA;
-static Map *pChannelToArchive;
+static Map *pChannelToArchive=NULL;
+static Map *pChannelToIDA=NULL;
 static int CHANNEL_NF  = -1;
 static int CHANNEL_OFF = 0;
 static int CHANNEL_ON  = 1;
@@ -177,6 +177,8 @@ char *ParseDiskLoopConfig(
   pChanSizeShortcut  = map_new(128, NULL, NULL);
   pNoArchiveShortcut = map_new(128, NULL, NULL);
   pNoIDAShortcut     = map_new(128, NULL, NULL);
+  pChannelToArchive  = map_new(128, NULL, NULL);
+  pChannelToIDA      = map_new(128, NULL, NULL);
 
   // Open the configuration file
   if ((fp = fopen(filename, "r")) == NULL)
@@ -282,14 +284,22 @@ char *ParseDiskLoopConfig(
         loc[1] = argstr[locStart+1];
         loc[2] = 0;
 
-        for (i=locStart+0; i < (locStart+3); i++)
-          chan[i] = argstr[i+3];
+        for (i=0; i < (3); i++)
+          chan[i] = argstr[locStart+3+i];
         chan[i] = 0;
       } // else location code is not blank
       else argstr[locStart] = 0;
 
+
       if (argstr[locStart] != 0)
       {
+        /*
+        fprintf(stderr, "%s: %5.5s-%2.2s-%3.3s\n", 
+                parseType == PARSE_BUFFER     ? "Buffer" :
+                parseType == PARSE_NO_ARCHIVE ? "NoArchive" :
+                parseType == PARSE_NO_IDA     ? "NoIDA" : "None",
+                station, loc, chan);
+        */
         if ((parseType == PARSE_BUFFER) && (count < 4))
         {
           sprintf(looperrstr, "Count %d < minimum of 4, Line %d in %s",
@@ -731,6 +741,8 @@ int CheckChannelList(
     // Check station name for match
     for (i=0; i < 5 && bMatch; i++)
     {
+      if (ptr->station[0] == 0)
+          break;
       if ((station[i] == 0) && (ptr->station[i] == 0)) {
         break;
       }
@@ -746,6 +758,8 @@ int CheckChannelList(
     // Check location code for match
     for (i=0; i < 2 && bMatch; i++)
     {
+      if (ptr->loc[0] == 0)
+          break;
       if ((toupper(loc[i]) != toupper(ptr->loc[i]))
           && (ptr->loc[i] != '?'))
         bMatch = 0;
@@ -787,6 +801,7 @@ int SetChannel (
   int result = *value;
 
   sprintf(key, "%s-%s-%s", station, loc, chan);
+  //fprintf(stderr, "SetChannel(): Adding key='%s' : value=%d\n", key, *value);
   strToUpper(key);
   if (!map_put(map, key, value)) {
     result = CHANNEL_NF;
@@ -812,6 +827,7 @@ int CheckChannel (
   if (result == NULL) {
     result = &CHANNEL_NF;
   }
+  //fprintf(stderr, "CheckChannel(): Checking key='%s', result=%d\n", key, *result);
   return *result;
 }
 
@@ -827,6 +843,7 @@ int DefaultChannel(
   char key[20];
 
   sprintf(key, "%s-%s-%s", station, loc, chan);
+  //fprintf(stderr, "DefaultChannel(): Removing key='%s'\n", key);
   strToUpper(key);
   return map_remove(map, key);
 }
@@ -909,6 +926,7 @@ int CheckNoArchive(
 {
   int bypass;
   int bFound = 0;
+  int *state;
   struct s_bufconfig *entry;
   char key[20];
 
@@ -920,19 +938,27 @@ int CheckNoArchive(
       // If channel is not in the bypass map, check it against the config
       sprintf(key, "%s-%s-%s", station, loc, chan);
       strToUpper(key);
-      entry = (struct s_bufconfig *)map_get(pNoArchiveShortcut, key);
-      if (entry == NULL) {
+      state = (int *)map_get(pNoArchiveShortcut, key);
+      if (state == NULL) {
+        //fprintf(stderr, "CheckNoArchive: record not found; performing list lookup\n");
         bFound = CheckChannelList(station, chan, loc, pNoArchiveList, &entry);
-        if (bFound && (entry != NULL)) {
-            map_put(pNoArchiveShortcut, key, entry);
+        if (bFound) {
+            map_put(pNoArchiveShortcut, key, &CHANNEL_OFF);
+        } 
+        else {
+            map_put(pNoArchiveShortcut, key, &CHANNEL_ON);
         }
       }
-      else {
-        bFound = 1;
+      else { 
+        //fprintf(stderr, "CheckNoArchive: found record in shortcut map\n");
+        if (*state == CHANNEL_OFF) {
+            bFound = 1;
+        }
       }
     }
-    else {
-      bFound = bypass;
+    else if (bypass == CHANNEL_OFF){
+      //fprintf(stderr, "CheckNoArchive: found record in bypass map\n");
+      bFound = 1;
     }
   }
 
@@ -949,6 +975,7 @@ int CheckNoIDA(
 {
   int bypass;
   int bFound = 0;
+  int *state;
   struct s_bufconfig *entry;
   char key[20];
 
@@ -960,19 +987,27 @@ int CheckNoIDA(
       // If channel is not in the bypass map, check it against the config
       sprintf(key, "%s-%s-%s", station, loc, chan);
       strToUpper(key);
-      entry = (struct s_bufconfig *)map_get(pNoIDAShortcut, key);
-      if (entry == NULL) {
+      state = (struct s_bufconfig *)map_get(pNoIDAShortcut, key);
+      if (state == NULL) {
+        //fprintf(stderr, "CheckNoIDA: record not found; performing list lookup\n");
         bFound = CheckChannelList(station, chan, loc, pNoIDAList, &entry);
-        if (bFound && (entry != NULL)) {
-            map_put(pNoIDAShortcut, key, entry);
+        if (bFound) {
+            map_put(pNoIDAShortcut, key, &CHANNEL_OFF);
+        } 
+        else {
+            map_put(pNoIDAShortcut, key, &CHANNEL_ON);
         }
       }
-      else {
-        bFound = 1;
+      else { 
+        //fprintf(stderr, "CheckNoIDA: found channel in shortcut map\n");
+        if (*state == CHANNEL_OFF) {
+            bFound = 1;
+        }
       }
     }
-    else {
-      bFound = bypass;
+    else if (bypass == CHANNEL_OFF){
+      //fprintf(stderr, "CheckNoIDA: found channel in bypass map\n");
+      bFound = 1;
     }
   }
 
@@ -1002,12 +1037,14 @@ char *NumChanRecords(
   strToUpper(key);
   entry = (struct s_bufconfig *)map_get(pChanSizeShortcut, key);
   if (entry == NULL) {
+    fprintf(stderr, "NumChanRecords: record not found in map, performing list lookup\n");
     bFound = CheckChannelList(station, chan, loc, pChanSizeList, &entry);
     if (bFound && (entry != NULL)) {
       map_put(pChanSizeShortcut, key, entry);
     }
   }
   else {
+    fprintf(stderr, "NumChanRecords: found record in shortcupt map\n");
     bFound = 1;
   }
 

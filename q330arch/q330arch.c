@@ -94,7 +94,7 @@ static void sigterm_q330arch()
     exit(0);
 } // sigterm_q330arch()
 
-int ChannelControl(char *command)
+int ChannelControl(const char *command)
 {
     int i, setResult = 0;
     size_t base = 14;
@@ -102,82 +102,131 @@ int ChannelControl(char *command)
     char loc[3];
     char chan[4];
     char c;
+    char recordStartString[128];
+    char *ptr = command + 14;
 
-    if (command[base] != '-') return -1;
-    base++;
+    for (i=0; i < 128; i++) {
+        c = command[i];
+        if (c == 0) break;
+        recordStartString[i] = c;
+    }
+    recordStartString[i] = 0;
+    
+    if (g_bDebug)
+        fprintf(stderr, "%s: Channel Control Command: %s\n", WHOAMI, recordStartString);
+
+    if (*ptr != '-') {
+        if (g_bDebug)
+            fprintf(stderr, "%s: CHANNELCONTROL Parse: bad separator character '%c' after base\n", WHOAMI, *ptr);
+        return -1;
+    }
+    ptr++;
 
     // Copy station name
-    for (i=0; i < 5; i++) {
-        c = command[base+i];
+    for (i=0; i < 5; i++, ptr++) {
+        c = *ptr;
         if (c == '-') {
-          base += i;
-          break;
+            break;
         }
         else if (isalnum(c)) {
-          station[i] = c;
+            station[i] = c;
         }
         else {
-          return -1;
+            if (g_bDebug)
+                fprintf(stderr, "%s: CHANNELCONTROL Parse: bad station name character '%c'\n", WHOAMI, c);
+            return -1;
         }
     }
+    station[i] = 0;
 
-    if (command[base] != '-') return -1;
-    base++;
+    if (*ptr != '-') {
+        if (g_bDebug)
+            fprintf(stderr, "%s: CHANNELCONTROL Parse: bad separator character '%c' after station\n", WHOAMI, *ptr);
+        return -1;
+    }
+    ptr++;
 
     // Copy location code
-    for (i=0; i < 2; i++) {
-        c = command[base+i];
+    for (i=0; i < 2; i++, ptr++) {
+        c = *ptr;
         if (c == '-') {
-          base += i;
-          break;
+            break;
         }
         else if (isalnum(c)) {
-          loc[i] = c;
+            loc[i] = c;
         }
         else {
-          return -1;
+            if (g_bDebug)
+                fprintf(stderr, "%s: CHANNELCONTROL Parse: bad location code character '%c'\n", WHOAMI, c);
+            return -1;
         }
     }
+    loc[i] = 0;
 
-    if (command[base] != '-') return -1;
-    base++;
+    if (*ptr != '-') {
+        if (g_bDebug)
+            fprintf(stderr, "%s: CHANNELCONTROL Parse: bad separator character '%c' after location\n", WHOAMI, *ptr);
+        return -1;
+    }
+    ptr++;
 
     // Copy channel name
-    for (i=0; i < 3; i++) {
-        c = command[base+i];
+    for (i=0; i < 3; i++, ptr++) {
+        c = *ptr;
         if (c == '-') {
-          base += i;
-          break;
+            break;
         }
         else if (isalnum(c)) {
-          chan[i] = c;
+            chan[i] = c;
         }
         else {
-          return -1;
+            if (g_bDebug)
+                fprintf(stderr, "%s: CHANNELCONTROL Parse: bad channel name character '%c'\n", WHOAMI, c);
+            return -1;
         }
     }
+    chan[i] = 0;
 
-    if (command[base] != '-') return -1;
-    base++;
+    if (*ptr != '-')  {
+        if (g_bDebug)
+            fprintf(stderr, "%s: CHANNELCONTROL Parse: bad separator character '%c' after channel\n", WHOAMI, *ptr);
+        return -1;
+    }
+    ptr++;
 
-    if (strncmp("ARCHIVE-OFF", (char *)(command + base), 11)) {
-        setResult = SetChannelToArchive(station, chan, loc, 0);
-    }
-    else if (strncmp("ARCHIVE-ON", (char *)(command + base), 10)) {
-        setResult = SetChannelToArchive(station, chan, loc, 1);
-    }
-    else if (strncmp("ARCHIVE-DEFAULT", (char *)(command + base), 15)) {
+    if (strncmp("ARCHIVE-DEFAULT", ptr, 15) == 0) {
         setResult = DefaultChannelToArchive(station, chan, loc);
+        if (g_bDebug)
+            fprintf(stderr, "%s: CHANNELCONTROL: Archive [DEFAULT] result=%d\n", WHOAMI, setResult);
     }
-    else if (strncmp("IDA-OFF", (char *)(command + base), 7)) {
-        setResult = SetChannelToIDA(station, chan, loc, 0);
+    else if (strncmp("ARCHIVE-OFF", ptr, 11) == 0) {
+        setResult = SetChannelToArchive(station, chan, loc, 0) == 0;
+        if (g_bDebug)
+            fprintf(stderr, "%s: CHANNELCONTROL: Archive [OFF] result=%d\n", WHOAMI, setResult);
     }
-    else if (strncmp("IDA-ON", (char *)(command + base), 6)) {
-        setResult = SetChannelToIDA(station, chan, loc, 1);
+    else if (strncmp("ARCHIVE-ON", ptr, 10) == 0) {
+        setResult = SetChannelToArchive(station, chan, loc, 1) == 1;
+        if (g_bDebug)
+            fprintf(stderr, "%s: CHANNELCONTROL: Archive [ON] result=%d\n", WHOAMI, setResult);
     }
-    else if (strncmp("IDA-DEFAULT", (char *)(command + base), 11)) {
+    else if (strncmp("IDA-DEFAULT", ptr, 11) == 0) {
         setResult = DefaultChannelToIDA(station, chan, loc);
-    } else {
+        if (g_bDebug)
+            fprintf(stderr, "%s: CHANNELCONTROL: IDA [DEFAULT] result=%d\n", WHOAMI, setResult);
+    }
+    else if (strncmp("IDA-OFF", ptr, 7) == 0) {
+        setResult = SetChannelToIDA(station, chan, loc, 0) == 0;
+        if (g_bDebug)
+            fprintf(stderr, "%s: CHANNELCONTROL: IDA [OFF] result=%d\n", WHOAMI, setResult);
+    }
+    else if (strncmp("IDA-ON", ptr, 6) == 0) {
+        setResult = SetChannelToIDA(station, chan, loc, 1) == 1;
+        if (g_bDebug)
+            fprintf(stderr, "%s: CHANNELCONTROL: IDA [ON] result=%d\n", WHOAMI, setResult);
+    }
+    else {
+        if (g_bDebug)
+            fprintf(stderr, "%s: CHANNELCONTROL Parse: unrecognized command\n", WHOAMI);
         return -1;
     }
 
@@ -186,13 +235,14 @@ int ChannelControl(char *command)
 
 char *ArchiveSeed(char *record)
 {
-  int  i;
+  int  i, to = 0;
   seed_header *seedrec;
   char station[6];
   char channel[4];
   char location[4];
   char *retmsg1;
   char *retmsg2;
+  char *toMessage;
 
   seedrec = (seed_header *)record;
 
@@ -212,6 +262,7 @@ char *ArchiveSeed(char *record)
   if (!CheckNoArchive(station, channel, location))
   {
     retmsg2 = WriteChan(station, channel, location, record);
+    to |= 1;
   }
 
   // Make sure channel isn't listed with a NoIDA keyword in diskloop.config
@@ -219,12 +270,28 @@ char *ArchiveSeed(char *record)
   if (!CheckNoIDA(station, channel, location))
   {
     retmsg1 = idaWriteChan(station, channel, location, record, station);
+    to |= 2;
+  }
+
+  switch (to) {
+    case 0:
+      toMessage = "Neither";
+      break;
+    case 1:
+      toMessage = "Archive Only";
+      break;
+    case 2:
+      toMessage = "IDA Diskloop Only";
+      break;
+    case 3:
+      toMessage = "Both";
+      break;
   }
 
   if (g_bDebug)
   {
-    fprintf(stderr, "DEBUG q330arch wrote record %6.6s %2.2s/%3.3s\n",
-    &record[0], &record[13], &record[15]);
+    fprintf(stderr, "DEBUG q330arch wrote record %6.6s %5.5s-%2.2s/%3.3s to %s\n",
+    &record[0], &record[8], &record[13], &record[15], toMessage);
   }
   if (retmsg1 != NULL)
     return retmsg1;
@@ -246,7 +313,7 @@ int main (int argc, char **argv)
   int   iPort;
   int   iClient;
   int   iBuf;
-  int   i;
+  int   i,j;
   int   iDeltaTime;
   int   year, doy, hour, min, sec;
   int   touched;
@@ -418,8 +485,9 @@ int main (int argc, char **argv)
         // Handle channel control commands
         if (strncmp("CHANNELCONTROL", &mapshm->buffer[iClient][iBuf][0], 14) == 0)
         {
-          strncpy(tempMsg, &mapshm->buffer[iClient][iBuf], 128);
+          strncpy(tempMsg, &mapshm->buffer[iClient][iBuf][0], 128);
           for (i=124; i<127; i++) tempMsg[i] = '.';
+          tempMsg[127] = 0;
 
           result = ChannelControl((char *)&mapshm->buffer[iClient][iBuf]);
           if (result < 1) {
@@ -438,13 +506,18 @@ int main (int argc, char **argv)
                   syslog(LOG_ERR, "%s: Invalid channel control message: '%s'",
                          WHOAMI, retmsg);
             }
+            mapshm->write_index[iClient] = iBuf;
+            continue;
           }
-          if (g_bDebug)
-            fprintf(stderr, "%s: Channel control applied: '%s'\n",
-                    WHOAMI, tempMsg);
-          else
-            syslog(LOG_ERR, "%s: Channel control applied: '%s'",
-                   WHOAMI, retmsg);
+          else {
+            if (g_bDebug)
+              fprintf(stderr, "%s: Channel control applied: '%s'\n",
+                      WHOAMI, tempMsg);
+            else
+              syslog(LOG_ERR, "%s: Channel control applied: '%s'",
+                     WHOAMI, retmsg);
+          }
+          mapshm->write_index[iClient] = iBuf;
           continue;
         } // Channel control command
 

@@ -94,30 +94,65 @@ static void sigterm_q330arch()
     exit(0);
 } // sigterm_q330arch()
 
-int ChannelControl(const char *command)
+int ChannelControl(char *command, int *msgId)
 {
     int i, setResult = 0;
     size_t base = 14;
     char station[6];
     char loc[3];
     char chan[4];
+    char idString[9];
     char c;
     char recordStartString[128];
     char *ptr = command + 14;
 
-    for (i=0; i < 128; i++) {
+    for (i=0; i < 127; i++) {
         c = command[i];
-        if (c == 0) break;
+        if (c == 0) {
+            break;
+        }
+        if (!isprint(c)) {
+            c = '*';
+        }
         recordStartString[i] = c;
     }
     recordStartString[i] = 0;
-    
     if (g_bDebug)
-        fprintf(stderr, "%s: Channel Control Command: %s\n", WHOAMI, recordStartString);
+        fprintf(stderr, "%s: CHANNELCONTRL Command: %s\n", WHOAMI, recordStartString);
 
     if (*ptr != '-') {
         if (g_bDebug)
-            fprintf(stderr, "%s: CHANNELCONTROL Parse: bad separator character '%c' after base\n", WHOAMI, *ptr);
+            fprintf(stderr, "%s: CHANNELCONTROL Parse: invalid separator '%c' after base\n", WHOAMI, *ptr);
+        return -1;
+    }
+    ptr++;
+
+    // Parse message ID
+    for (i=0; i < 8; i++, ptr++) {
+        c = *ptr;
+        if (c == '-') {
+            if (i == 0) {
+                if (g_bDebug)
+                    fprintf(stderr, "%s: CHANNELCONTROL Parse: no message ID\n", WHOAMI);
+                return -1;
+            }
+            break;
+        }
+        else if (isdigit(c)) {
+            idString[i] = c;
+        } 
+        else {
+            if (g_bDebug)
+                fprintf(stderr, "%s: CHANNELCONTROL Parse: invalid message ID character\n", WHOAMI);
+            return -1;
+        }
+    }
+    idString[i] = 0;
+    *msgId = atoi(idString);
+
+    if (*ptr != '-') {
+        if (g_bDebug)
+            fprintf(stderr, "%s: CHANNELCONTROL Parse: invalid separator '%c' after message ID\n", WHOAMI, *ptr);
         return -1;
     }
     ptr++;
@@ -133,7 +168,7 @@ int ChannelControl(const char *command)
         }
         else {
             if (g_bDebug)
-                fprintf(stderr, "%s: CHANNELCONTROL Parse: bad station name character '%c'\n", WHOAMI, c);
+                fprintf(stderr, "%s: CHANNELCONTROL Parse: invalid station name character '%c'\n", WHOAMI, c);
             return -1;
         }
     }
@@ -141,7 +176,7 @@ int ChannelControl(const char *command)
 
     if (*ptr != '-') {
         if (g_bDebug)
-            fprintf(stderr, "%s: CHANNELCONTROL Parse: bad separator character '%c' after station\n", WHOAMI, *ptr);
+            fprintf(stderr, "%s: CHANNELCONTROL Parse: invalid separator '%c' after station\n", WHOAMI, *ptr);
         return -1;
     }
     ptr++;
@@ -157,7 +192,7 @@ int ChannelControl(const char *command)
         }
         else {
             if (g_bDebug)
-                fprintf(stderr, "%s: CHANNELCONTROL Parse: bad location code character '%c'\n", WHOAMI, c);
+                fprintf(stderr, "%s: CHANNELCONTROL Parse: invalid location code character '%c'\n", WHOAMI, c);
             return -1;
         }
     }
@@ -165,7 +200,7 @@ int ChannelControl(const char *command)
 
     if (*ptr != '-') {
         if (g_bDebug)
-            fprintf(stderr, "%s: CHANNELCONTROL Parse: bad separator character '%c' after location\n", WHOAMI, *ptr);
+            fprintf(stderr, "%s: CHANNELCONTROL Parse: invalid separator '%c' after location\n", WHOAMI, *ptr);
         return -1;
     }
     ptr++;
@@ -181,7 +216,7 @@ int ChannelControl(const char *command)
         }
         else {
             if (g_bDebug)
-                fprintf(stderr, "%s: CHANNELCONTROL Parse: bad channel name character '%c'\n", WHOAMI, c);
+                fprintf(stderr, "%s: CHANNELCONTROL Parse: invalid channel name character '%c'\n", WHOAMI, c);
             return -1;
         }
     }
@@ -189,7 +224,7 @@ int ChannelControl(const char *command)
 
     if (*ptr != '-')  {
         if (g_bDebug)
-            fprintf(stderr, "%s: CHANNELCONTROL Parse: bad separator character '%c' after channel\n", WHOAMI, *ptr);
+            fprintf(stderr, "%s: CHANNELCONTROL Parse: invalid separator '%c' after channel\n", WHOAMI, *ptr);
         return -1;
     }
     ptr++;
@@ -307,13 +342,13 @@ int main (int argc, char **argv)
   char  chan[4];
   char  network[4];
   char  *retmsg;
-  char  tempMsg[128];
+  int   msgId;
   int   result;
   int   iSeedRecordSize;
   int   iPort;
   int   iClient;
   int   iBuf;
-  int   i,j;
+  int   i,j,k;
   int   iDeltaTime;
   int   year, doy, hour, min, sec;
   int   touched;
@@ -324,6 +359,8 @@ int main (int argc, char **argv)
   char   queuebuf[4096];
   char   tempbuf[4096];
   char   *queuemsg=NULL; 
+  char   tempMsg[64];
+  char   *bufPtr, *msgPtr, c;
   time_t  queuetimetag=0;
 
   // Check for right number off arguments
@@ -483,39 +520,50 @@ int main (int argc, char **argv)
 	    touched = 1;
 
         // Handle channel control commands
-        if (strncmp("CHANNELCONTROL", &mapshm->buffer[iClient][iBuf][0], 14) == 0)
+        if (strncmp("CHANNELCONTROL-", &mapshm->buffer[iClient][iBuf][0], 15) == 0)
         {
-          strncpy(tempMsg, &mapshm->buffer[iClient][iBuf][0], 128);
-          for (i=124; i<127; i++) tempMsg[i] = '.';
-          tempMsg[127] = 0;
+          bufPtr = &mapshm->buffer[iClient][iBuf][0];
+          msgPtr = tempMsg;
+          for (k=0; k < 63; k++, bufPtr++, msgPtr++) {
+            c = *bufPtr;
+            if (c == 0) {
+              break;
+            }
+            else if (k > 60) {
+              c = '.';
+            }
+            else if (!isprint(c)) {
+              c = '*';
+            }
+            *msgPtr = c;
+          }
+          *msgPtr = 0;
 
-          result = ChannelControl((char *)&mapshm->buffer[iClient][iBuf]);
+          result = ChannelControl((char *)&mapshm->buffer[iClient][iBuf], &msgId);
           if (result < 1) {
             if (result == 0) {
-                if (g_bDebug)
-                  fprintf(stderr, "%s: Failed to apply channel control: '%s'\n",
-                          WHOAMI, tempMsg);
-                else
-                  syslog(LOG_ERR, "%s: Failed to apply channel control: '%s'",
-                         WHOAMI, retmsg);
+              if (g_bDebug)
+                fprintf(stderr, "%s: Failed to apply channel control: '%s'\n", WHOAMI, tempMsg);
+              else
+                syslog(LOG_ERR, "%s: Failed to apply channel control: '%s'", WHOAMI, retmsg);
+              mapshm->result[iClient][0] = msgId;
+              mapshm->result[iClient][1] = RESULT_CHAN_CMD_FAIL; 
             } else {
-                if (g_bDebug)
-                  fprintf(stderr, "%s: Invalid channel control message: '%s'\n",
-                          WHOAMI, tempMsg);
-                else
-                  syslog(LOG_ERR, "%s: Invalid channel control message: '%s'",
-                         WHOAMI, retmsg);
+              if (g_bDebug)
+                fprintf(stderr, "%s: Invalid channel control message: '%s'\n", WHOAMI, tempMsg);
+              else
+                syslog(LOG_ERR, "%s: Invalid channel control message: '%s'", WHOAMI, retmsg);
+              mapshm->result[iClient][0] = -1;
+              mapshm->result[iClient][1] = RESULT_CHAN_CMD_INVALID; 
             }
-            mapshm->write_index[iClient] = iBuf;
-            continue;
           }
           else {
             if (g_bDebug)
-              fprintf(stderr, "%s: Channel control applied: '%s'\n",
-                      WHOAMI, tempMsg);
+              fprintf(stderr, "%s: Channel control applied: '%s'\n", WHOAMI, tempMsg);
             else
-              syslog(LOG_ERR, "%s: Channel control applied: '%s'",
-                     WHOAMI, retmsg);
+              syslog(LOG_ERR, "%s: Channel control applied: '%s'", WHOAMI, retmsg);
+            mapshm->result[iClient][0] = msgId;
+            mapshm->result[iClient][1] = RESULT_CHAN_CMD_OKAY; 
           }
           mapshm->write_index[iClient] = iBuf;
           continue;

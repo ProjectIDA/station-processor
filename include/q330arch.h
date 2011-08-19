@@ -22,6 +22,12 @@ mmddyy who Changes
 // Each client will have 8200 bytes reserved for buffering
 #define MAX_CLIENTS 32
 
+// Message result
+#define RESULT_RECORD_SENT      0
+#define RESULT_CHAN_CMD_OKAY    1
+#define RESULT_CHAN_CMD_FAIL    2
+#define RESULT_CHAN_CMD_INVALID 3
+
 // Server structure for inner thread comm
 struct s_mapshm
 {
@@ -33,6 +39,7 @@ struct s_mapshm
   pthread_t client_tid[MAX_CLIENTS];
   int     read_index[MAX_CLIENTS];
   int     write_index[MAX_CLIENTS];
+  int     result[MAX_CLIENTS][2];
   char    buffer[MAX_CLIENTS][2][4096];
 };
 

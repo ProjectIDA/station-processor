@@ -100,6 +100,7 @@ void *ServerReadThread(void *params)
   int   j;
   int   iBuf;
   struct s_readthread *thread_args;
+  char  msgBuf[128];
 
   thread_args = (struct s_readthread *) params;
   iClient = thread_args->iClient;
@@ -180,7 +181,23 @@ void *ServerReadThread(void *params)
     } // while server has not finished writing last record
 
     // Send acknowledgement response back to client
-    send(iSocket, &mapshm->buffer[iClient][iBuf][5], 1, 0);
+    switch (mapshm->result[iClient][1]) {
+      case RESULT_CHAN_CMD_OKAY:
+        sprintf(msgBuf, "CHANNELCONTROL-%d-OKAY", mapshm->result[iClient][0]);
+        send(iSocket, msgBuf, strlen(msgBuf)+1, 0);
+        break;
+      case RESULT_CHAN_CMD_FAIL:
+        sprintf(msgBuf, "CHANNELCONTROL-%d-FAIL", mapshm->result[iClient][0]);
+        send(iSocket, msgBuf, strlen(msgBuf)+1, 0);
+        break;
+      case RESULT_CHAN_CMD_INVALID:
+        sprintf(msgBuf, "CHANNELCONTROL-INVALID");
+        send(iSocket, msgBuf, strlen(msgBuf)+1, 0);
+        break;
+      default:
+        // Least significant digit of the sequence number
+        send(iSocket, &mapshm->buffer[iClient][iBuf][5], 1, 0);
+    } 
 
   } // loop forever
 

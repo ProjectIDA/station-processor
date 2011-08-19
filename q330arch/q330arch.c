@@ -545,14 +545,14 @@ int main (int argc, char **argv)
               if (g_bDebug)
                 fprintf(stderr, "%s: Failed to apply channel control: '%s'\n", WHOAMI, tempMsg);
               else
-                syslog(LOG_ERR, "%s: Failed to apply channel control: '%s'", WHOAMI, retmsg);
+                syslog(LOG_ERR, "%s: Failed to apply channel control: '%s'", WHOAMI, tempMsg);
               mapshm->result[iClient][0] = msgId;
               mapshm->result[iClient][1] = RESULT_CHAN_CMD_FAIL; 
             } else {
               if (g_bDebug)
                 fprintf(stderr, "%s: Invalid channel control message: '%s'\n", WHOAMI, tempMsg);
               else
-                syslog(LOG_ERR, "%s: Invalid channel control message: '%s'", WHOAMI, retmsg);
+                syslog(LOG_ERR, "%s: Invalid channel control message: '%s'", WHOAMI, tempMsg);
               mapshm->result[iClient][0] = -1;
               mapshm->result[iClient][1] = RESULT_CHAN_CMD_INVALID; 
             }
@@ -561,7 +561,7 @@ int main (int argc, char **argv)
             if (g_bDebug)
               fprintf(stderr, "%s: Channel control applied: '%s'\n", WHOAMI, tempMsg);
             else
-              syslog(LOG_ERR, "%s: Channel control applied: '%s'", WHOAMI, retmsg);
+              syslog(LOG_ERR, "%s: Channel control applied: '%s'", WHOAMI, tempMsg);
             mapshm->result[iClient][0] = msgId;
             mapshm->result[iClient][1] = RESULT_CHAN_CMD_OKAY; 
           }

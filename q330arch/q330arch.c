@@ -118,7 +118,7 @@ int ChannelControl(char *command, int *msgId)
     }
     recordStartString[i] = 0;
     if (g_bDebug)
-        fprintf(stderr, "%s: CHANNELCONTRL Command: %s\n", WHOAMI, recordStartString);
+        fprintf(stderr, "%s: CHANNELCONTROL Command: %s\n", WHOAMI, recordStartString);
 
     if (*ptr != '-') {
         if (g_bDebug)

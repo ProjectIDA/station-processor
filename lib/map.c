@@ -47,8 +47,8 @@ struct Map {
     Bucket *buckets;
 };
 
-static Pair *get_pair(Bucket *bucket, const char *key);
-static int   remove_pair(Bucket *bucket, const char *key);
+static Pair *get_pair(Map *map, Bucket *bucket, const char *key);
+static int   remove_pair(Map *map, Bucket *bucket, const char *key);
 static unsigned long hash(const char *str);
 
 Map *map_new(unsigned int capacity, map_value_free_func free_func, map_value_dup_func dup_func)
@@ -117,14 +117,14 @@ void *map_get(const Map *map, const char *key)
     }
     index = hash(key) % map->count;
     bucket = &(map->buckets[index]);
-    pair = get_pair(bucket, key);
+    pair = get_pair(map, bucket, key);
     if (pair == NULL) {
         return NULL;
     }
     return pair->value;
 }
 
-int map_exists(const Map *map, const char *key)
+int map_contains(const Map *map, const char *key)
 {
     return (map_get(map, key) != NULL);
 }
@@ -143,7 +143,7 @@ int map_remove(const Map *map, const char *key)
 
     index = hash(key) % map->count;
     bucket = &(map->buckets[index]);
-    return remove_pair(bucket, key);
+    return remove_pair(map, bucket, key);
 }
 
 int map_put(Map *map, const char *key, void *value)
@@ -168,7 +168,7 @@ int map_put(Map *map, const char *key, void *value)
     /* Check if we can handle insertion by simply replacing
      * an existing value in a key-value pair in the bucket.
      */
-    if ((pair = get_pair(bucket, key)) != NULL) {
+    if ((pair = get_pair(map, bucket, key)) != NULL) {
         /* The bucket contains a pair that matches the provided key,
          * change the value for that pair to the new value.
          */
@@ -307,10 +307,14 @@ int map_enum(const Map *map, map_enum_func enum_func, const void *obj)
  * Returns a pair from the bucket that matches the provided key,
  * or null if no such pair exist.
  */
-static Pair * get_pair(Bucket *bucket, const char *key)
+static Pair * get_pair(Map *map, Bucket *bucket, const char *key)
 {
     unsigned int i, n;
     Pair *pair;
+
+    if (key == NULL) {
+        return NULL;
+    }
 
     n = bucket->count;
     if (n == 0) {
@@ -330,7 +334,7 @@ static Pair * get_pair(Bucket *bucket, const char *key)
     return NULL;
 }
 
-static int remove_pair(Bucket *bucket, const char *key)
+static int remove_pair(Map *map, Bucket *bucket, const char *key)
 {
     unsigned int i, n, moves, found;
     Pair *pair;
@@ -347,9 +351,16 @@ static int remove_pair(Bucket *bucket, const char *key)
     while (i < n) {
         /* shuffle down for each NULL or match */
         if ((pair->key == NULL)) {
+            if (map->free_func != 0) {
+                map->free_func(pair->value);
+            }
             memmove(pair, pair+sizeof(Pair), (n - i - 1) * sizeof(Pair));
             moves++;
         } else if (strcmp(pair->key, key) == 0) {
+            if (map->free_func != 0) {
+                map->free_func(pair->value);
+            }
+            free(pair->key);
             memmove(pair, pair+sizeof(Pair), (n - i - 1) * sizeof(Pair));
             moves++;
             found = 1;
@@ -357,6 +368,7 @@ static int remove_pair(Bucket *bucket, const char *key)
         pair++;
         i++;
     }
+    bucket->count -= moves;
     new_pairs = realloc(bucket->pairs, (bucket->count - moves) * sizeof(Pair));
     if (new_pairs != NULL) {
         bucket->pairs = new_pairs;

@@ -168,7 +168,7 @@ DLINFO *getDiskloop(const char *dlname)
 
 int hasDiskloop(const char *dlname) 
 {
-    return map_exists(info_map, dlname);
+    return map_contains(info_map, dlname);
 }
 
 void closeDiskloop(DLINFO *info) {

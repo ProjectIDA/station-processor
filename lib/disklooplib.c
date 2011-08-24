@@ -821,12 +821,40 @@ int CheckChannel (
   char key[20];
   int *result;
 
+  // Check keys starting with the most specific, and moving to the least 
+  // spcific. This will allow the user to create blanket rules, then poke
+  // holes with more specific exceptions.
+
+  // Check station, location & channel
   sprintf(key, "%s-%s-%s", station, loc, chan);
   strToUpper(key);
   result = (int *)map_get(map, key);
+
   if (result == NULL) {
-    result = &CHANNEL_NF;
+      // check station & channel
+      sprintf(key, "%s--%s", station, chan);
+      strToUpper(key);
+      result = (int *)map_get(map, key);
   }
+
+  if (result == NULL) {
+      // check location & channel
+      sprintf(key, "-%s-%s", loc, chan);
+      strToUpper(key);
+      result = (int *)map_get(map, key);
+  }
+
+  if (result == NULL) {
+      // check channel
+      sprintf(key, "--%s", chan);
+      strToUpper(key);
+      result = (int *)map_get(map, key);
+  }
+
+  if (result == NULL) {
+      result == &CHANNEL_NF;
+  }
+
   //fprintf(stderr, "CheckChannel(): Checking key='%s', result=%d\n", key, *result);
   return *result;
 }

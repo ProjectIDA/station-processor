@@ -59,6 +59,7 @@ mmddyy who Changes
 #include <stdlib.h>
 #include <ctype.h>
 #include <arpa/inet.h>    // Needed for ntohl,ntohs 
+#include <sys/time.h>
 #include "include/diskloop.h"
 #include "include/dcc_time_proto2.h"
 #include "include/map.h"
@@ -819,7 +820,7 @@ int CheckChannel (
   )
 {
   char key[20];
-  int *result;
+  int *result = NULL;
 
   // Check keys starting with the most specific, and moving to the least 
   // spcific. This will allow the user to create blanket rules, then poke
@@ -880,9 +881,8 @@ int CheckChannel (
   }
 
   if (result == NULL) {
-      result == &CHANNEL_NF;
+      result = &CHANNEL_NF;
   }
-
   //fprintf(stderr, "CheckChannel(): Checking key='%s', result=%d\n", key, *result);
   return *result;
 }

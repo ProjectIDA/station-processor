@@ -838,6 +838,20 @@ int CheckChannel (
   }
 
   if (result == NULL) {
+      // check station & location
+      sprintf(key, "%s-%s-", station, loc);
+      strToUpper(key);
+      result = (int *)map_get(map, key);
+  }
+
+  if (result == NULL) {
+      // check station
+      sprintf(key, "%s--", station);
+      strToUpper(key);
+      result = (int *)map_get(map, key);
+  }
+
+  if (result == NULL) {
       // check location & channel
       sprintf(key, "-%s-%s", loc, chan);
       strToUpper(key);
@@ -847,6 +861,20 @@ int CheckChannel (
   if (result == NULL) {
       // check channel
       sprintf(key, "--%s", chan);
+      strToUpper(key);
+      result = (int *)map_get(map, key);
+  }
+
+  if (result == NULL) {
+      // check location
+      sprintf(key, "-%s-", loc);
+      strToUpper(key);
+      result = (int *)map_get(map, key);
+  }
+
+  if (result == NULL) {
+      // check all data
+      sprintf(key, "--");
       strToUpper(key);
       result = (int *)map_get(map, key);
   }

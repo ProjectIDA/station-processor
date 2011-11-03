@@ -4,10 +4,10 @@ Copyright:  (C) 2007 by Albuquerque Seismological Laboratory
 Purpose:    Allows user to do basic examination of diskloop files
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-020807 fcs Creation
-020910 fcs New diskloop.config keywords for falcon
+2007-02-08 FCS - Creation
+2010-02-09 FCS - New diskloop.config keywords for falcon
 ******************************************************************************/
 #define FILENAME "dlutil"
 const char *VersionIdentString = "Release 1.3";

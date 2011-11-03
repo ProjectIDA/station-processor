@@ -6,9 +6,9 @@ Copyright (c) 2007 Albuquerque Seismological Laboratory
 Purpose:  Library routines for using Seed format message records
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-041607 fcs Creation
+2007-04-16 FCS - Creation
 *****************************************************************************/
 
 #include <stdio.h>

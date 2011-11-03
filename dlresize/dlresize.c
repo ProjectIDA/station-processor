@@ -22,12 +22,12 @@ Resize cases:
             to create a duplicate of the file so the existing file has to
             be reorganized in place.
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-071509 fcs Creation
-073109 fcs Implement case 2 and 3 fixes
-080609 fcs Add truncate option to more quickly and gracefuly downsize
-020910 fcs New diskloop.config keywords for falcon
+2009-07-15 FCS - Creation
+2009-07-31 FCS - Implement case 2 and 3 fixes
+2009-08-06 FCS - Add truncate option to more quickly and gracefuly downsize
+2010-02-09 FCS - New diskloop.config keywords for falcon
 ******************************************************************************/
 #define FILENAME "dlresize"
 const char *VersionIdentString = "Release 1.3";

@@ -4,11 +4,11 @@ Copyright:  (C) 2009 by Albuquerque Seismological Laboratory USGS
 Purpose:    Displays status information about a remote station
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-020509 fcs Creation
-021910 fcs Add beg= and end=arguments
-030211 fcs Add save= argument to save the seed records downloaded
+2009-02-05 FCS - Creation
+2010-02-19 FCS - Add beg= and end=arguments
+2011-03-02 FCS - Add save= argument to save the seed records downloaded
 ******************************************************************************/
 #define WHOAMI "isirstat"
 const char *VersionIdentString = "Release 1.3";

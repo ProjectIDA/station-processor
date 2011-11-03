@@ -23,10 +23,10 @@ Indexing variables:
  
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-031208 fcs Creation
-110310 fcs Add place to store vacuum pressure readings
+2008-03-12 FCS - Creation
+2010-11-03 FCS - Add place to store vacuum pressure readings
 ******************************************************************************/
 
 #ifndef _SHMSTATUS_H_

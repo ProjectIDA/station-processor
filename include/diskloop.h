@@ -3,10 +3,11 @@ File:       diskloop.h
 Copyright:  (C) 2007 by Albuquerque Seismological Laboratory
 Author:     Frank Shelly
 Purpose:    Common definitions for working with disk loop archive
+
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-012507 fcs Creation
+2007-012-5 FCS - Creation
 ******************************************************************************/
 
 #ifndef _DISKLOOP_H_

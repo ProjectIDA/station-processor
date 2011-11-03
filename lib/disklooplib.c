@@ -42,16 +42,16 @@ Routines:
             Changes seed header station name if a MapStation match is found
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-012507 fcs Creation
-050207 fcs Eliminate seed record time overlap caused by restarts
-060107 fcs Add sequence number and samples return values to ParseSeedHeader
-060107 fcs Use sequence number and samples for overwrite last record
-102209 fcs Support for new Falcon configuration keywords
-040110 fcs Add NoIDA keyword supporting channels for archive only
-091410 fcs Add RemapStationName routine
-081111 jde Add NoArchive keyword supporting channels for IDA diskloop only
+2007-01-25 FCS - Creation
+2007-05-02 FCS - Eliminate seed record time overlap caused by restarts
+2007-06-01 FCS - Add sequence number and samples return values to ParseSeedHeader
+2007-06-01 FCS - Use sequence number and samples for overwrite last record
+2009-10-22 FCS - Support for new Falcon configuration keywords
+2010-04-01 FCS - Add NoIDA keyword supporting channels for archive only
+2010-09-14 FCS - Add RemapStationName routine
+2011-08-11 JDE - Add NoArchive keyword supporting channels for IDA diskloop only
 ******************************************************************************/
 
 #include <stdio.h>

@@ -11,9 +11,9 @@ char *MapStatusMem(void **mapstatus)
 Maps shared memory area for status display into current program
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-031208 fcs Creation
+2008-03-12 FCS - Creation
 *****************************************************************************/
 
 #include <stdio.h>

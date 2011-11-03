@@ -7,12 +7,12 @@ Purpose:    Server for collecting data from falcon and sending it out as seed
 Algorithm:  
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-041009 fcs Create skeleton
-102809 fcs Add lock file to allow only one invocation
-010311 fcs Improve recovery from falcon connection issues
-042711 fcs Tone down syslog verbosity every half hour
+2009-04-10 FCS - Create skeleton
+2009-10-28 FCS - Add lock file to allow only one invocation
+2011-01-03 FCS - Improve recovery from falcon connection issues
+2011-04-27 FCS - Tone down syslog verbosity every half hour
 ******************************************************************************/
 #define FILENAME "falcon"
 const char *VersionIdentString = "Release 1.2";

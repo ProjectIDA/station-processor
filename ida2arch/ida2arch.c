@@ -4,10 +4,10 @@ Date:    2 January 2008
 Purpose: convert IDA isi server feed to a ASL archive disk loop
          Modified from isi general purpose client
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-071309 fcs idaapi changed to only log errors or worse Release 1.2
-020910 fcs New diskloop.config keywords for falcon
+2009-07-13 FCS - idaapi changed to only log errors or worse Release 1.2
+2010-02-09 FCS - New diskloop.config keywords for falcon
 ******************************************************************************/
 
 const char *WHOAMI="ida2arch";

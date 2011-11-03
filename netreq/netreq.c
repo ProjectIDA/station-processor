@@ -2,9 +2,9 @@
 Network server program to fill SEED data rerequests
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-020910 fcs New diskloop.config keywords for falcon
+2010-02-09 FCS - New diskloop.config keywords for falcon
 ******************************************************************************/
 
 const char *VersionIdentString = "Release 1.2";

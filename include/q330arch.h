@@ -3,10 +3,11 @@ File:       q330arch.h
 Copyright:  (C) 2007 by Albuquerque Seismological Laboratory
 Author:     Frank Shelly
 Purpose:    Common definitions for using q330 archive server
+
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-041107 fcs Creation
+2007-04-11 FCS - Creation
 ******************************************************************************/
 
 #ifndef _Q330ARCH_H_

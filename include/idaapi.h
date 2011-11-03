@@ -3,10 +3,11 @@ File:       idaapi.h
 Copyright:  (C) 2007 by Albuquerque Seismological Laboratory
 Author:     Frank Shelly
 Purpose:    Interface to IDA disk loop library
+
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-061207 fcs Creation
+2007-06-12 FCS - Creation
 ******************************************************************************/
 
 #ifndef _IDAAPI_H_

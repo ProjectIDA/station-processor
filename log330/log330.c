@@ -5,7 +5,7 @@ Purpose:    Server for log messages that go into common LOG seed file
 
 Algorithm:  
 Starts a message server in a backround thread.
-The message server thread accepts connection reqeusts and spawns threads
+The message server thread accepts connection requests and spawns threads
 Each client connection thread reads messages, and copies them to shared mem
 loop in main program checks for new messages in shared mem
   When a new message arrives combine it with queued message if possible.
@@ -16,12 +16,12 @@ loop in main program checks for new messages in shared mem
 end loop
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-032607 fcs Creation
-053008 fcs Remove daemon run options, q330arch serves this funcition now
-050809 fcs Add release number to Usage help
-020910 fcs New diskloop.config keywords for falcon
+2007-03-26 FCS - Creation
+2008-05-30 FCS - Remove daemon run options, q330arch serves this funcition now
+2009-05-08 FCS - Add release number to Usage help
+2010-02-09 FCS - New diskloop.config keywords for falcon
 ******************************************************************************/
 #define FILENAME "log330"
 const char *VersionIdentString = "Release 1.2";

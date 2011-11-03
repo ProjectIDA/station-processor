@@ -22,22 +22,23 @@ along with q330serv; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-012207 fcs Creation
-050707 fcs Add argument for config directory for multiple q330 support
-111907 fcs Convert to q330serv working with q330arch to merge multiple q330s
-041408 fcs Add status information to mapstatus shared memory region
-122208 fcs Give more time to shutdown server and flush data queues
-050809 fcs Add release number to ShowUsage
-020910 fcs New diskloop.config keywords for falcon, new lib330_91005
-110310 fcs Add 1 sec callback to get timely vacuum data
-110910 fcs Initialize baler_callback = NIL to fix segmentation fault
-041311 fcs Fixed bug where de-registering would cause program to terminate
-061411 fcs Every midnight, and at program start, sync clock to Q330 GPS
+2007-01-22 FCS - Creation
+2007-05-07 FCS - Add argument for config directory for multiple q330 support
+2007-11-19 FCS - Convert to q330serv working with q330arch to merge multiple q330s
+2008-04-14 FCS - Add status information to mapstatus shared memory region
+2008-12-22 FCS - Give more time to shutdown server and flush data queues
+2009-05-08 FCS - Add release number to ShowUsage
+2010-02-09 FCS - New diskloop.config keywords for falcon, new lib330_91005
+2010-11-03 FCS - Add 1 sec callback to get timely vacuum data
+2010-11-09 FCS - Initialize baler_callback = NIL to fix segmentation fault
+2011-04-13 FCS - Fixed bug where de-registering would cause program to terminate
+2011-06-14 FCS - Every midnight, and at program start, sync clock to Q330 GPS
+2011-11-03 JDE - updated lib330 (2011-08-05)
 ******************************************************************************/
 #define WHOAMI "q330serv"
-const char *VersionIdentString="Release 1.6";
+const char *VersionIdentString="Release 2.0";
 
 #include "globals.h"
 #include "libtypes.h"

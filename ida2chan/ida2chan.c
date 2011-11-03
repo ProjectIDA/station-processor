@@ -4,9 +4,9 @@ Copyright:  (C) 2007 by Albuquerque Seismological Laboratory
 Purpose:    Breaks apart an ida disk loop into seed channel data
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-080207 fcs Creation
+2007-08-02 FCS - Creation
 ******************************************************************************/
 #define WHOAMI "ida2chan"
 const char *VersionIdentString = "Release 1.1";

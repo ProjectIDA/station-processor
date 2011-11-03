@@ -17,20 +17,21 @@ A loop in main program checks for new messages in shared mem
 end loop
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-032607 fcs Creation
-020808 fcs Converted fork calls to pthread_create calls
-031709 fcs Add pthread_detach calls to free up thread memory after halting
-050809 fcs Add Release number to ShowUsage
-071309 fcs logapi lowered log message threshold Release 1.3
-020910 fcs New diskloop.config keywords for falcon, new lib330_91005
-040110 fcs NoIDA in diskloop.config means don't add record to IDA disk loop
-042811 fcs Use station name to determine IDA disk loop, not diskloop.config
-081511 jde NoArchive in diskloop.config means don't add record to Archives
+2007-03-26 FCS - Creation
+2008-02-08 FCS - Converted fork calls to pthread_create calls
+2001-03-17 FCS - Add pthread_detach calls to free up thread memory after halting
+2009-05-08 FCS - Add Release number to ShowUsage
+2009-07-13 FCS - logapi lowered log message threshold Release 1.3
+2010-02-09 FCS - New diskloop.config keywords for falcon, new lib330_91005
+2010-04-01 FCS - NoIDA in diskloop.config means don't add record to IDA disk loop
+2011-04-28 FCS - Use station name to determine IDA disk loop, not diskloop.config
+2011-08-15 JDE - NoArchive in diskloop.config means don't add record to Archives
+2011-11-01 JDE - new lib330 (2011-08-05)
 ******************************************************************************/
 #define WHOAMI "q330arch"
-const char *VersionIdentString = "Release 1.6";
+const char *VersionIdentString = "Release 2.0";
 
 #include <stdio.h>
 #include <string.h>

@@ -31,14 +31,15 @@ Algorithm:
         to get data stored in this region.
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-031208 fcs Creation
-040910 fcs Built with new lib330
-110910 fcs Display vacuum readings for STS1 on last line
+2008-03-12 FCS - Creation
+2010-04-09 FCS - Built with new lib330
+2010-11-09 FCS - Display vacuum readings for STS1 on last line
+2011-11-03 JDE - Build with new lib330 (2011-08-05)
 ******************************************************************************/
 #define WHOAMI "dispstatus"
-const char *VersionIdentString="Release 1.4";
+const char *VersionIdentString="Release 2.0";
 
 #include <stdio.h>
 #include <stdlib.h>

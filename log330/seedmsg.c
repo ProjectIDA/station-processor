@@ -6,9 +6,9 @@ Copyright (c) 2007 Albuquerque Seismological Laboratory
 Purpose:  Library routines for building opaque seed records
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-041709 fcs Creation
+2009-04-17 FCS - Creation
 *****************************************************************************/
 
 #include <stdio.h>
@@ -195,7 +195,8 @@ char *MakeOpaqueSeed(
     memcpy(&recptr[iSeedRecordSize*i
                    + ntohs(b1000->next_blockette_start)
                    + ntohs(b2000->data_offset)],
-           &dataptr[i*iFreeSpace], ntohs(b2000->data_record_length));
+           &dataptr[i*iFreeSpace],
+           ntohs(b2000->data_record_length));
   } // for each seed record we need to create
 
   return NULL;

@@ -10,12 +10,12 @@ Routines:
               Write a new seed record to ida disk loop
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-061207 fcs Creation
-071809 fcs Make Log threshold LOG_ERR instead of LOG_DEBUG
-042911 fcs Move to q330arch, add whoami parameter to initialization
-           do a new isidlOpenDiskLoop and isidlCloseDiskLoop on every write
+2007-06-12 FCS - Creation
+2009-07-18 FCS - Make Log threshold LOG_ERR instead of LOG_DEBUG
+2011-04-29 FCS - Move to q330arch, add whoami parameter to initialization
+                 do a new isidlOpenDiskLoop and isidlCloseDiskLoop on every write
 ******************************************************************************/
 
 #include <stdio.h>

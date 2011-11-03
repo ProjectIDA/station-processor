@@ -6,9 +6,9 @@ Copyright (c) 2007 Albuquerque Seismological Laboratory
 Purpose:  Library routines for building opaque seed records
 
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-041709 fcs Creation
+2009-04-17 FCS - Creation
 *****************************************************************************/
 
 #include <stdio.h>

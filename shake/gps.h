@@ -3,10 +3,11 @@ File:       gps.h
 Copyright:  (C) 2011 by Albuquerque Seismological Laboratory
 Author:     Frank Shelly
 Purpose:    Interface to get time from a GPS card
+
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-033922 fcs Creation
+2011-03-39 FCS - Creation
 ******************************************************************************/
 
 #ifndef _GSP_H_

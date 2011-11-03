@@ -11,10 +11,10 @@ Purpose: convert IDA isi sever feed to a LISS feed
            NOTE: Only supports single client.  If the client disconnects
              then it will pick up back where it left off when it reconnects
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-071309 fcs Change idaapi to log errors only Release 1.2
-022511 fcs Fix exit with no message when collecting data for ufors
+2009-07-13 FCS - Change idaapi to log errors only Release 1.2
+2011-02-25 FCS - Fix exit with no message when collecting data for ufors
 ========================================================================*/
 
 const char *WHOAMI="ida2liss";

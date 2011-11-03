@@ -11,13 +11,14 @@ Once a connection is made, Seed message blocks are read in. LOG Message blocks
 will be buffered for up to 60 seconds or until a seed log record can be filled.  Then output to a circular buffer.
 Any other seed message blocks are put directly into the buffer.
 The main program takes seed records from the buffer and archives them
+
 Update History:
-mmddyy who Changes
+yyyy-mm-dd WHO - Changes
 ==============================================================================
-032607 fcs Creation
-111907 fcs Modified to work with all seed records, not just log messages
-020808 fcs Use pthread_create instead of fork calls
-031709 fcs Call pthread_detach after pthread_create to reclaim memory
+2007-03-26 FCS - Creation
+2007-11-19 FCS - Modified to work with all seed records, not just log messages
+2008-02-08 FCS - Use pthread_create instead of fork calls
+2009-03-17 FCS - Call pthread_detach after pthread_create to reclaim memory
 *****************************************************************************/
 
 #include <stdio.h>

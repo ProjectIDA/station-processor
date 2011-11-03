@@ -1,5 +1,5 @@
 /*   Lib330 structures relating to Q330 communications
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -29,12 +29,13 @@ Edit History:
     6 2008-04-29 rdr Add FAT_DIRCLOSE.
     7 2008-08-20 rdr Add tcp support.
     8 2009-08-02 rdr Add opt_dss_memory.
+    9 2010-03-27 rdr Add Q335 State subtype definitions.
 }
 */
 #ifndef libclient_h
 /* Flag this file as included */
 #define libclient_h
-#define VER_LIBCLIENT 14
+#define VER_LIBCLIENT 15
 
 /* Make sure libtypes.h is included */
 #ifndef libtypes_h
@@ -182,6 +183,8 @@ enum tacctype {AC_GAPS, AC_BOOTS, AC_READ, AC_WRITE, AC_COMATP, AC_COMSUC, AC_PA
 #define AC_STATUS_LATENCY ((integer)AC_DATA_LATENCY + 1)
 #define INVALID_ENTRY -1 /* no data for this time period */
 #define INVALID_LATENCY -66666666 /* not yet available */
+#define SCS_Q335 1 /* State Call subtype indicating connected to Q335 */
+#define SCS_Q330 0 /* State Call subtype indicating connected to Q330 */
 
 typedef struct {
   word low_seq ; /* last packet number acked */
@@ -288,7 +291,8 @@ enum tbaler_type {BT_Q330TIME, /* number of seconds since 2000 from Q330 */
                   BT_REGRESP, /* Registration response */
                   BT_TIMER, /* 100ms timer */
                   BT_BACK,  /* Baler Acknowledge */
-                  BT_SOCKET} ; /* Opening a baler socket */
+                  BT_SOCKET, /* Opening a baler socket */
+                  BT_BACK335} ; /* Baler Acknowledge for Q335 */
 enum tbaler_socket {BS_CONTROL, BS_DATA, BS_BCASTCTRL} ;
 enum tfileacc_type {FAT_OPEN,      /* Open File */
                     FAT_CLOSE,     /* Close File */

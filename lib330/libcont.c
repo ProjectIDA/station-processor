@@ -34,6 +34,8 @@ Edit History:
                      Remove Q330 continuity media off callback at the end of save_thread_continuity.
     8 2008-01-09 rdr Add special handling for LOG DP LCQ. DPLCQ buffers come out of thrbuf
                      instead of using getmem.
+    9 2010-07-21 rdr Add high frequency to connection continuity.
+   10 2010-07-22 rdr Add updating of thread memory required. 
 */
 #ifndef libcont_h
 #include "libcont.h"
@@ -73,9 +75,9 @@ Edit History:
 #endif
 
 #ifdef OMIT_SEED
-#define CT_VER 50
+#define CT_VER 51
 #else
-#define CT_VER 100
+#define CT_VER 101
 #endif
 #define CTY_STATIC 0 /* Static storage for status, etc */
 #define CTY_SYSTEM 1 /* system identification */
@@ -128,6 +130,7 @@ typedef struct {
   word id ; /* what kind of entry */
   word size ; /* size of this entry */
   byte version ;
+  byte high_freq ; /* high frequency encoding */
   t64 serial ; /* serial number of q330 */
   double lasttime ; /* data_timetag of last second of data */
   word last_dataqual ; /* 0-100% */
@@ -586,6 +589,8 @@ begin
   paqstruc paqs ;
   tfile_handle cf ;
   string fname ;
+  pmem_manager pm ;
+  integer mem ;
 
   paqs = q330->aqstruc ;
   if (q330->par_create.opt_contfile[0] == 0)
@@ -622,7 +627,15 @@ begin
   memcpy(addr(pstat->accmstats), addr(q330->share.accmstats), sizeof(taccmstats)) ;
   unlock (q330) ;
   pstat->mem_required = q330->cur_memory_required ;
-  pstat->thrmem_required = q330->cur_thrmem_required ;
+  mem = 0 ;
+  pm = q330->thrmem_head ;
+  while (pm)
+    begin
+      mem = mem + pm->sofar ;
+      pm = pm->next ;
+    end
+  mem = (mem + 0xFFFF) and 0xFFFF0000 ; /* lib_round up to nearest 64KB */
+  pstat->thrmem_required = mem ;
   pstat->crc = gcrccalc (addr(q330->crc_table), (pointer)((integer)pstat + 4), sizeof(tstatic) - 4) ;
   lib_file_write (q330->par_create.file_owner, cf, pstat, sizeof(tstatic)) ;
   q = paqs->dplcqs ;
@@ -734,6 +747,7 @@ begin
   longword newreboots ;
   string fname, s ;
   tcont_cache *pcc ;
+  byte newhf ;
 
   paqs = q330->aqstruc ;
   if (q330->par_create.opt_contfile[0] == 0)
@@ -770,6 +784,7 @@ begin
       return ;
   lock (q330) ;
   newreboots = q330->share.fixed.reboots ;
+  newhf = q330->share.fixed.freq7 ;
   unlock (q330) ;
   if (system.reboot_counter != newreboots)
     then
@@ -777,6 +792,12 @@ begin
         sprintf(s, "%d Q330 Reboot(s)", newreboots - system.reboot_counter) ;
         libmsgadd (q330, LIBMSG_CONTBOOT, addr(s)) ;
         add_status (q330, AC_BOOTS, newreboots - system.reboot_counter) ;
+        return ;
+      end
+  else if (system.high_freq != newhf)
+    then
+      begin
+        libmsgadd (q330, LIBMSG_CONTBOOT, "change in high frequency configuration") ;
         return ;
       end
   paqs->data_qual = system.last_dataqual ;
@@ -1166,12 +1187,16 @@ begin
   psystem->comm_event_bitmask = bm ;
   lock (q330) ;
   psystem->reboot_counter = q330->share.fixed.reboots ;
+  psystem->high_freq = q330->share.fixed.freq7 ;
   unlock (q330) ;
   psystem->crc = gcrccalc (addr(q330->crc_table), (pointer)((integer)psystem + 4), sizeof(tsystem) - 4) ;
   q330cont_write (q330, psystem, sizeof(tsystem)) ;
   q = paqs->lcqs ;
   while (q)
     begin
+      if (memcmp(addr(q->seedname), "SLZ", sizeof(tseed_name)) == 0)
+        then
+          bm = 42 ;
       pldest = (pointer)q330->cbuf ;
 #ifndef OMIT_SEED
       pfdest = (pointer)q330->cbuf ;

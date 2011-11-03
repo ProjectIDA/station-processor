@@ -1,5 +1,5 @@
 /*   Lib330 Time Series data routines
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -33,6 +33,8 @@ Edit History:
                      Don't reset records_written at 999999.
     7 2009-04-06 rdr Fix Gap offset for channels decimated from Paros input.
     8 2009-09-05 rdr Ignore data for EP channels that don't yet have a valid delay.
+    9 2010-03-27 rdr Fix building segmented data structure.
+   10 2011-03-17 rdr For Q335 new usage of deb_flags.
 */
 #ifndef libsample_h
 #include "libsample.h"
@@ -330,7 +332,11 @@ begin
       phdr->deb.next_blockette = 64 ;
     else
       phdr->deb.next_blockette = 0 ;
-  phdr->deb.deb_flags = DEB_Q330 or DEB_PB14_FIX ;
+  if (q330->q335)
+    then
+      phdr->deb.deb_flags = DEB_NEWBITS or q->gain_bits ;
+    else
+      phdr->deb.deb_flags = DEB_Q330 or DEB_PB14_FIX ;
   if (q->lcq_opt and LO_EVENT)
     then
       phdr->deb.deb_flags = phdr->deb.deb_flags or DEB_EVENT_ONLY ;
@@ -1103,7 +1109,6 @@ begin
                   begin /* enqueue this pkt, set ppkt non-NIL, and return */
                     q->dholdq->ppkt = addr(q->dholdq->pkt) ;
                     memcpy (addr(q->dholdq->pkt), psave, size and DMSZ) ;
-                    return ;
                   end
             end
         size = size and DMSZ ;

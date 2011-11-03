@@ -29,6 +29,9 @@ Edit History:
     6 2009-02-21 rdr Add loadepcfg and storeepcfg.
     7 2009-03-11 rdr Add new fields in loadepstat.
     8 2009-04-18 rdr Changes due to field changes in EP structures.
+    9 2010-04-14 rdr loadfestat updated.
+   10 2010-12-26 rdr loadboomstat now handles sensor currents.
+   11 2011-01-12 rdr Sensor currents now overlay cal_timeouts.
 */
 #ifndef libtypes_h
 #include "libtypes.h"
@@ -405,7 +408,7 @@ begin
   pwrstat->loads_off = loadbyte (p) ;
 end
 
-void loadboomstat (pbyte *p, tstat_boom *boomstat)
+void loadboomstat (pbyte *p, tstat_boom *boomstat, boolean q335)
 begin
   integer i ;
 
@@ -419,8 +422,20 @@ begin
   boomstat->ant_cur = loadword (p) ;
   boomstat->seis1_temp = loadint16 (p) ;
   boomstat->seis2_temp = loadint16 (p) ;
-  boomstat->cal_timeouts = loadlongword (p) ;
-  end
+  if (q335)
+    then
+      begin
+        boomstat->cal_timeouts = 0 ;
+        boomstat->sensa_cur = loadword (p) ;
+        boomstat->sensb_cur = loadword (p) ;
+      end
+    else
+      begin
+        boomstat->cal_timeouts = loadlongword (p) ;
+        boomstat->sensa_cur = 0 ;
+        boomstat->sensb_cur = 0 ;
+      end
+end
 
 void loadpllstat (pbyte *p, tstat_pll *pllstat)
 begin
@@ -927,6 +942,46 @@ begin
     end
 end
 
+void loadfestats (pbyte *p, tstat_fes *fes)
+begin
+  integer i, j ;
+  tfestat *pfs ;
+
+  fes->hdr.count = loadword (p) ;
+  fes->hdr.lth = loadword (p) ;
+  if (fes->hdr.count < 2)
+    then
+      memset (addr(fes->boards[1]), 0, sizeof(tfestat)) ; /* no data for second board */
+  for (i = 0 ; i < fes->hdr.count ; i++)
+    begin
+      pfs = addr(fes->boards[i]) ;
+      pfs->start_km = loadsingle (p) ;
+      pfs->time_error = loadsingle (p) ;
+      pfs->best_vco = loadsingle (p) ;
+      pfs->ticks_track_lock = loadlongword (p) ;
+      pfs->km = loadlongint (p) ;
+      pfs->state = loadword (p) ;
+      pfs->flags = loadword (p) ;
+      pfs->secs_resync = loadlongword (p) ;
+      pfs->resyncs = loadlongword (p) ;
+      pfs->secs_boot = loadlongword (p) ;
+      pfs->cp_comm_errors = loadlongword (p) ;
+      pfs->inp_volts = loadword (p) ;
+      pfs->sensor_bitmap = loadword (p) ;
+      pfs->cal_status = loadword (p) ;
+      pfs->sensor_temp = loadint16 (p) ;
+#ifdef ENDIAN_LITTLE
+      pfs->sensor_serial[1] = loadlongword (p) ;
+      pfs->sensor_serial[0] = loadlongword (p) ;
+#else
+      pfs->sensor_serial[0] = loadlongword (p) ;
+      pfs->sensor_serial[1] = loadlongword (p) ;
+#endif
+      for (j = 0 ; j <= 3 ; i++)
+        pfs->booms[j] = loadbyte (p) ;
+    end
+end
+
 void loadepd (pbyte *p, tepdelay *epdelay)
 begin
   integer i ;
@@ -972,6 +1027,60 @@ begin
       storebyte (p, epcfg->chanmasks[i].chan) ;
       storebyte (p, epcfg->chanmasks[i].mask) ;
     end
+end
+
+void loadcomm (pbyte *p, tcomm *comm)
+begin
+  byte lp ;
+  integer i ;
+
+#ifdef ENDIAN_LITTLE
+  comm->serial[1] = loadlongword (p) ;
+  comm->serial[0] = loadlongword (p) ;
+#else
+  comm->serial[0] = loadlongword (p) ;
+  comm->serial[1] = loadlongword (p) ;
+#endif
+  comm->version = loadword (p) ;
+  comm->active_lth = loadword (p) ;
+  comm->mtu = loadword (p) ;
+  comm->base_port = loadword (p) ;
+  comm->eth_ip = loadlongword (p) ;
+  comm->eth_mask = loadlongword (p) ;
+  comm->eth_gate = loadlongword (p) ;
+  comm->pwr_cycling = loadlongword (p) ;
+  for (lp = LP_TEL1 ; lp <= LP_TEL4 ; lp++)
+    begin
+      comm->timeouts[lp].idle_timeout = loadword (p) ;
+      comm->timeouts[lp].busy_timeout = loadword (p) ;
+    end
+  for (lp = LP_TEL1 ; lp <= LP_TEL4 ; lp++)
+    comm->triggers[lp] = loadword (p) ;
+  comm->min_off = loadword (p) ;
+  comm->listopts = loadword (p) ;
+  comm->max_off = loadword (p) ;
+  comm->baler_min_perc = loadword (p) ;
+  for (i = 0 ; i < IP_LIST_SIZE ; i++)
+    begin
+      comm->iplist[i].low = loadlongword (p) ;
+      comm->iplist[i].high = loadlongword (p) ;
+    end
+  comm->eth_flags = loadlongword (p) ;
+  comm->min_on = loadword (p) ;
+  comm->spare = loadword (p) ;
+  loadblock (p, 364, addr(comm->other_exp)) ;
+end
+
+void loadbalecfg (pbyte *p, tbalecfg *bcfg)
+begin
+
+  bcfg->sub_command = loadword (p) ;
+  bcfg->sub_response = loadword (p) ;
+  bcfg->size = loadword (p) ;
+  bcfg->phyport = loadword (p) ;
+  bcfg->balertype = loadword (p) ;
+  bcfg->version = loadword (p) ;
+  loadstring (p, 236, addr(bcfg->opaque)) ;
 end
 
 #ifndef OMIT_SDUMP

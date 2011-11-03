@@ -1,5 +1,5 @@
 /*   Lib330 time series configuration routines
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -49,6 +49,8 @@ Edit History:
                      previous value (which is normally zero) or the show flag is on. Don't
                      get an update unless the udpate flag is set.
    14 2009-09-07 rdr Fix recursive mutex locking in verify_mapping.
+   15 2010-03-27 rdr Q335 support added.
+   16 2011-03-17 rdr Setup new gain_bits in LCQ init for deb_flags usage.
 */
 #ifndef libsampcfg_h
 #include "libsampcfg.h"
@@ -336,6 +338,23 @@ begin
       new_cmd (q330, C2_SEPCFG, sizeof(tepcfg)) ;
 end
 
+void set_gain_bits (pq330 q330, plcq q, byte *gb)
+begin
+  word w, chan ;
+
+  chan = q->raw_data_source and not DCM ; /* get channel */
+  if (chan >= 3)
+    then
+      w = (q330->share.global.input_map shr (2 + (chan shl 1))) and 3 ;
+    else
+      w = (q330->share.global.input_map shr (chan shl 1)) and 3 ;
+  if (((q330->share.global.gain_map shr (chan shl 1)) and 3) == GAIN_PON)
+    then
+      w = w or DEB_LOWV ;
+  *gb = (byte)w ;
+end
+
+
 void init_lcq (paqstruc paqs)
 begin
   plcq p, pl ;
@@ -362,13 +381,22 @@ begin
       getbuf (q330, addr(pl->databuf), pl->datasize) ;
       if (pl->rate > 1)
         then
-          getbuf (q330, addr(pl->idxbuf), pl->rate + 1) ;
+          getbuf (q330, addr(pl->idxbuf), (pl->rate + 1) * sizeof(word)) ;
       switch (pl->rate) begin
         case 100 :
           pl->segsize = SS_100 ;
           break ;
         case 200 :
           pl->segsize = SS_200 ;
+          break ;
+        case 250 :
+          pl->segsize = SS_250 ;
+          break ;
+        case 500 :
+          pl->segsize = SS_500 ;
+          break ;
+        case 1000 :
+          pl->segsize = SS_1000 ;
           break ;
         default :
           pl->segsize = 0 ;
@@ -451,6 +479,7 @@ begin
                           p = p->dispatch_link ;
                         p->dispatch_link = pl ;
                       end
+                  set_gain_bits (q330, pl, addr(pl->gain_bits)) ;
                   lock (q330) ;
                   if (i <= 2)
                     then
@@ -536,10 +565,10 @@ begin
                   libmsgadd (q330, LIBMSG_FILTDLY, addr(s)) ;
                 end
             pl->com->charging = TRUE ;
-            /* see if root source is 1hz */
             p = pl->prev_link ;
             while (p->prev_link)
               p = p->prev_link ;
+            /* see if root source is 1hz */
             if ((p) land (p->rate == 1))
               then
                 begin
@@ -547,6 +576,10 @@ begin
                   pl->slipping = TRUE ;
                   pl->slip_modulus = abs(pl->rate) ; /* .1hz has modulus of 10 */
                 end
+            /* see if root source is main digitizer */
+            if ((p) land ((p->raw_data_source and DCM) == DC_D32))
+              then
+                set_gain_bits (q330, p, addr(pl->gain_bits)) ;
 #endif
           end
       else if ((pl->raw_data_source >= MESSAGE_STREAM) land (pl->raw_data_source <= CFG_STREAM))

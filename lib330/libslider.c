@@ -40,6 +40,8 @@ Edit History:
    11 2009-02-09 rdr Add EP support.
    12 2009-07-28 rdr Add DSS support.
    13 2009-09-13 rdr Fix error message for ST32_DRIFT.
+   14 2010-12-22 rdr Add Sensor control blockette handling.
+   15 2011-02-18 rdr Add handling of FE PLL blockettes.
 */
 #ifndef libtypes_h
 #include "libtypes.h"
@@ -525,6 +527,16 @@ begin
                               break ;
                           end
                           break ;
+                        case 4 :
+                          switch (paqs->proc_lcq->raw_data_field) begin
+                            case 0 :
+                              process_one (q330, subchan) ;
+                              break ;
+                            case 1 :
+                              process_one (q330, wordval shr 8) ;
+                              break ;
+                          end
+                          break ;
                       end
                       paqs->proc_lcq = paqs->proc_lcq->dispatch_link ;
                     end
@@ -749,7 +761,28 @@ begin
                     end
                   break ;
                 case DC_AG32 :
-                  loadlongint (addr(p)) ;
+                  lval1 = loadlongint (addr(p)) ;
+                  paqs->proc_lcq = paqs->dispatch[idx] ;
+                  while (paqs->proc_lcq)
+                    begin
+                      switch (sub) begin
+                        case 0 :
+                        case 1 :
+                          switch (paqs->proc_lcq->raw_data_field) begin
+                            case 0 :
+                              process_one (q330, subchan) ; /* Clock quality */
+                              break ;
+                            case 1 :
+                              process_one (q330, sex(wordval)) ; /* VCO Control */
+                              break ;
+                            case 2 :
+                              process_one (q330, lval1) ; /* Clock phase */
+                              break ;
+                          end
+                          break ;
+                      end
+                      paqs->proc_lcq = paqs->proc_lcq->dispatch_link ;
+                    end
                   break ;
                 case DC_AG232 :
                   loadlongint (addr(p)) ;

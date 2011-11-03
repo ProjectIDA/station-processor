@@ -1,5 +1,5 @@
 /*   Lib330 Q330 I/O Communications routine
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -39,6 +39,8 @@ Edit History:
    10 2007-10-03 rdr Remove setting access_timer.
    11 2008-08-20 rdr Add TCP support.
    12 2010-01-04 rdr Use fcntl instead of ioctl to set socket non-blocking.
+   13 2010-03-27 rdr Add Q335 support.
+   14 2010-05-13 rdr Add detection of 127.0.0.1 as additional baler port.
 */
 #ifdef CMEX32
 #include "cmexserial.h"
@@ -94,6 +96,8 @@ Edit History:
 #define ESC_FRM 0xDC /* SLIP_ESC|ESC_FRM = 0xC0 */
 #define ESC_ESC 0xDD /* SLIP_ESC|ESC_ESC = 0xDB */
 #endif
+
+#define LOOPBACK_PORT 2066 /* For getting C2_BACK */
 
 void close_sockets (pq330 q330)
 begin
@@ -204,6 +208,15 @@ begin
               q330->balesim = TRUE ;
               q330->tcp = FALSE ; /* TCP doesn't do broadcasts */
             end
+        else if (strcmp(q330->par_register.q330id_address, "127.0.0.1") == 0)
+          then
+            begin
+              q330->q330ip = 0x7F000001 ;
+              q330->q330cport = LOOPBACK_PORT ;
+              both = FALSE ; /* don't both with data port for announcement */
+              q330->balesim = TRUE ;
+              q330->tcp = FALSE ; /* TCP doesn't do broadcasts */
+            end
           else
             begin
               q330->balesim = FALSE ;
@@ -248,7 +261,7 @@ begin
   ioctlsocket (q330->cpath, FIONBIO, addr(flag)) ;
 #else
   flag = fcntl (q330->cpath, F_GETFL, 0) ;
-  fcntl (q330->cpath, F_SETFL, flag or O_NONBLOCK) ;  
+  fcntl (q330->cpath, F_SETFL, flag or O_NONBLOCK) ;
 #endif
   if (q330->tcp)
     then
@@ -407,7 +420,7 @@ begin
         getsockname (q330->dpath, addr(xyz), addr(lth)) ;
 #else
         flag = fcntl (q330->dpath, F_GETFL, 0) ;
-        fcntl (q330->dpath, F_SETFL, flag or O_NONBLOCK) ;  
+        fcntl (q330->dpath, F_SETFL, flag or O_NONBLOCK) ;
         getsockname (q330->dpath, addr(xyz), addr(lth)) ;
 #endif
         psock = (pointer) addr(xyz) ;
@@ -512,10 +525,14 @@ begin
   if (flgs and LNKFLG_BASE96)
     then
       begin /* am expecting encoded */
+        memcpy (addr(q330->datasave.qdp), addr(q330->datain.qdp), plth) ;
         actual = decode(q330, plth) ; /* convert to binary */
         if (actual < 0)
           then
-            actual = check_crc (q330, plth) ;
+            begin
+              memcpy (addr(q330->datain.qdp), addr(q330->datasave.qdp), plth) ;
+              actual = check_crc (q330, plth) ;
+            end
       end
     else
       begin /* am expecting binary */
@@ -541,7 +558,7 @@ begin
     then
       return ;
   lth = sizeof(struct sockaddr) ;
-  err = recvfrom (q330->dpath, addr(q330->datain.qdp), QDP_HDR_LTH + MAXDATA, 0, addr(q330->dsockin), addr(lth)) ;
+  err = recvfrom (q330->dpath, addr(q330->datain.qdp), QDP_HDR_LTH + MAXDATA96, 0, addr(q330->dsockin), addr(lth)) ;
   if (err == SOCKET_ERROR)
     then
       begin
@@ -679,7 +696,7 @@ begin
     else
       begin
         lth = sizeof(struct sockaddr) ;
-        err = recvfrom (q330->cpath, addr(q330->commands.cmsgin.qdp), QDP_HDR_LTH + MAXDATA, 0, addr(q330->csockin), addr(lth)) ;
+        err = recvfrom (q330->cpath, addr(q330->commands.cmsgin.qdp), QDP_HDR_LTH + MAXDATA96, 0, addr(q330->csockin), addr(lth)) ;
         if (err == SOCKET_ERROR)
           then
             begin
@@ -708,6 +725,7 @@ begin
                             begin
                               new_state (q330, LIBSTATE_WAIT) ;
                               q330->registered = FALSE ;
+                              q330->share.target_state = LIBSTATE_WAIT ;
                               libmsgadd (q330, LIBMSG_ROUTEFAULT, "Waiting 10 minutes") ;
                             end
                       end
@@ -974,7 +992,7 @@ begin
 #endif
   pin = addr(inbuf) ;
   pout = q330->bufptr ;
-  maxp = addr((q330->commands.cmsgin.qdp_data)[MAXDATA - 1]) ;
+  maxp = addr((q330->commands.cmsgin.qdp_data)[MAXDATA96 - 1]) ;
   for (i = 1 ; i <= numread ; i++)
     begin
       c = *pin++ ;

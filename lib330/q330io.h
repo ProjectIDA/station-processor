@@ -1,5 +1,5 @@
 /*   Lib330 Q330 I/O Communications routine headers
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -25,7 +25,7 @@ Edit History:
 #ifndef q330io_h
 /* Flag this file as included */
 #define q330io_h
-#define VER_Q330IO 12
+#define VER_Q330IO 13
 
 /* Make sure libtypes.h is included */
 #ifndef libtypes_h

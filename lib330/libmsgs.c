@@ -1,5 +1,5 @@
 /*   Lib330 Message Handlers
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -29,6 +29,8 @@ Edit History:
     6 2008-02-18 rdr Don't use LOG lcq if network not yet set.
     7 2009-02-09 rdr Add EP Support.
     8 2009-09-28 rdr Add AUXMSG_DSS.
+    9 2010-03-27 rdr Add messages for Q335.
+   10 2010-08-21 rdr Change order of evaluation in msgadd and dump_msgqueue. 
 */
 #ifndef libmsgs_h
 #include "libmsgs.h"
@@ -109,6 +111,7 @@ begin
         case LIBMSG_DEREGTO : strcpy(s, "De-Registration Timeout") ; break ;
         case LIBMSG_BACK : strcpy(s, "Baler Acknowledged by Q330") ; break ;
         case LIBMSG_CONN : strcpy(s, "Connected to TCP Tunnel") ; break ;
+        case LIBMSG_Q335 : strcpy(s, "Q335 Architecture Detected") ; break ;
       end
       break ;
     case 3 : /* converted Q330 blockettes */
@@ -174,6 +177,7 @@ begin
         case LIBMSG_RECOMP : strcpy(s, "Re-compression error on ") ; break ;
         case LIBMSG_SEGOVER : strcpy(s, "Segment buffer overflow on ") ; break ;
         case LIBMSG_TCPTUN : strcpy(s, "TCP Tunnelling error: ") ; break ;
+        case LIBMSG_HFRATE : strcpy(s, "Sampling Rate mis-match ") ; break ;
       end
       break ;
     case 6 :
@@ -212,9 +216,8 @@ begin
   paqstruc paqs ;
 
   paqs = q330->aqstruc ;
-  if ((q330->aqstruc) land (paqs->msgq_out != paqs->msgq_in) land (paqs->msg_lcq) land
-     (paqs->msg_lcq->com->ring) land (q330->libstate != LIBSTATE_TERM) land
-     ((q330->network)[0]))
+  if ((q330->libstate != LIBSTATE_TERM) land ((q330->network)[0]) land (q330->aqstruc) land
+      (paqs->msgq_out != paqs->msgq_in) land (paqs->msg_lcq) land (paqs->msg_lcq->com->ring))
     then
       begin
         msglock (q330) ;
@@ -258,9 +261,8 @@ begin
         if (lnot q330->nested_log)
           then
             begin
-              if ((paqs->msg_lcq == NIL) lor (paqs->msg_lcq->com->ring == NIL) lor
-                  (client) lor (q330->libstate == LIBSTATE_TERM) lor
-                   ((q330->network)[0] == 0))
+              if ((client) lor (q330->libstate == LIBSTATE_TERM) lor ((q330->network)[0] == 0) lor
+                  (paqs->msg_lcq == NIL) lor (paqs->msg_lcq->com->ring == NIL))
                 then
                   begin
                     if (paqs->msgq_in->link != paqs->msgq_out)
@@ -420,6 +422,7 @@ begin
     case C1_DCP : strcpy(s, "Digitizer Calibration Packet") ; break ;
     case C1_RQMAN : strcpy(s, "Request Manufacturer''s Area") ; break ;
     case C1_MAN : strcpy(s, "Manufacturer''s Area") ; break ;
+    case C1_COM : strcpy(s, "Communications packet") ; break ;
     case C2_RQGPS : strcpy(s, "Request GPS Parameters") ; break ;
     case C2_GPS : strcpy(s, "GPS Parameters") ; break ;
     case C2_BRDY : strcpy(s, "Baler Ready") ; break ;

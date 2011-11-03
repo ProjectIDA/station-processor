@@ -1,5 +1,5 @@
 /*   Lib330 structures relating to Q330 communications
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -25,6 +25,7 @@ Edit History:
     2 2007-08-04 rdr Move tcp/ip structure definitions to libtypes.h
     3 2009-02-08 rdr Add EP definitions.
     4 2009-04-18 rdr Changes in EP structures.
+    5 2010-03-07 rdr Add Q335 support.
 */
 #ifndef q330types_h
 /* Flag this file as included */
@@ -74,6 +75,7 @@ Edit History:
 #define C1_DCP 0xB2 /* Digitizer Calibration Packet */
 #define C1_RQDEV 0x36 /* Request Devices */
 #define C1_DEV 0xB3 /* Device list */
+#define C1_COM 0xB4 /* Communications */
 #define C1_PING 0x38 /* Ping Q330 */
 #define C1_RQMAN 0x1E /* Request Manufacturer's Area */
 #define C1_MAN 0xA8 /* Manufacturer's Area */
@@ -87,12 +89,17 @@ Edit History:
 #define C2_BOFF 0x5B /* Baler Off */
 #define C2_BACK 0xC6 /* Baler Acknowledge */
 #define C2_REGCHK 0x5D /* Registration Check */
+#define C2_TERC 0x69   /* Tertiary Commands */
+#define C2_TERR 0x6A   /* Tertiary Response */
 #define C2_REGRESP 0xC9 /* Registration Response */
 #define C2_RQEPD 0x70 /* Request Environmental Processor Filter Delays */
 #define C2_EPD 0xD0 /* Environmental Processor Filter Delays */
 #define C2_RQEPCFG 0x71 /* Request Environmental Processor Configuration */
 #define C2_SEPCFG 0x72 /* Set Environmental Processor Configuration */
 #define C2_EPCFG 0xD1 /* Environmental Processor Configuration */
+/* Deprecated Commands */
+#define C3_BCFG 0x3 /* Baler Configuraiotn */
+#define C3_RQBCFG 0x4 /* Request Baler Configuration */
 /* Cal Status Bits */
 #define CAL_ENON 1 /* Calibration enable on */
 #define CAL_SGON 2 /* Calibration signal on */
@@ -205,7 +212,7 @@ Any qdp packet at the Q330 binary level
 typedef struct {
   byte headers[28] ; /* for ip and udp */
   byte qdp[QDP_HDR_LTH] ; /* size of qdp header */
-  byte qdp_data[MAXDATA] ;
+  byte qdp_data[MAXDATA96] ;
 } tany ;
 typedef tany *pany ;
 typedef struct {

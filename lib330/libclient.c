@@ -1,5 +1,5 @@
 /*   Lib330 client interface
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -34,6 +34,7 @@ Edit History:
                      with parameter to allow getting current values as well as changing.
     9 2009-02-09 rdr Add EP Support.
    10 2010-01-04 rdr Add version for libdss.
+   11 2010-03-27 rdr Add Q335 support.
 */
 #ifndef q330types_h
 #include "q330types.h"
@@ -195,6 +196,12 @@ begin
     then
       return ;
   lock (q330) ;
+      /* Eliminate status that can't be obtained */
+  if (q330->q335)
+    then
+      bitmap = bitmap and 0x310FEB ;
+    else
+      bitmap = bitmap and 0x1FFFFF ;
   q330->share.extra_status = bitmap ;
   q330->share.status_interval = interval ;
   q330->share.interval_counter = interval + 1 ; /* client is probably in a hurry if they are changing status */
@@ -215,6 +222,26 @@ begin
     then
       begin
         result = LIBERR_NOERR ; /* assume good */
+        if (q330->q335)
+          then
+            switch (bitnum) begin
+              case SRB_PWR :
+              case SRB_THR :
+              case SRB_SER1 :
+              case SRB_SER2 :
+              case SRB_ETH :
+              case SRB_DYN :
+              case SRB_AUX :
+              case SRB_SS :
+                unlock (q330) ;
+                return LIBERR_INVSTAT ;
+            end
+        else if (bitnum == SRB_FES)
+          then
+            begin
+              unlock (q330) ;
+              return LIBERR_INVSTAT ;
+            end
         switch (bitnum) begin
           case SRB_GLB :
             memcpy(buf, addr(q330->share.stat_global), sizeof(tstat_global)) ; /* Global Status */
@@ -274,6 +301,9 @@ begin
           case SRB_EP :
             memcpy(buf, addr(q330->share.stat_ep), sizeof(tstat_ep)) ; /* Environmental Processor Status */
             break ;
+          case SRB_FES :
+            memcpy(buf, addr(q330->share.stat_fes), sizeof(tstat_fes)) ; /* Front End Status */
+            break ;
           default :
             result = LIBERR_INVSTAT ;
             break ;
@@ -329,6 +359,9 @@ begin
             end
         end
       end
+    else if ((q330->q335) land ((bitnum == CRB_ROUTES) lor (bitnum == CRB_DEVS)))
+      then
+        result = LIBERR_INVCFG ;
     else
       begin
         result = LIBERR_CFGWAIT ;

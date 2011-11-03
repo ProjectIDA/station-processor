@@ -23,6 +23,7 @@ Edit History:
     0 2006-10-12 rdr Created
     1 2008-01-03 rdr Add log_timer handling.
     2 2008-03-13 rdr Don't reset records_written at 999999.
+    3 2010-08-08 rdr In spad protect against negative length difference.
 */
 #ifndef liblogs_h
 #include "liblogs.h"
@@ -79,7 +80,7 @@ begin
 
   len = strlen(s) ;
   diff = lth - len ;
-  if (diff)
+  if (diff > 0)
     then
       begin
         memmove (addr(s[diff]), addr(s[0]), len + 1) ; /* shift existing string right */

@@ -26,7 +26,7 @@ Edit History:
 #ifndef libcont_h
 /* Flag this file as included */
 #define libcont_h
-#define VER_LIBCONT 9
+#define VER_LIBCONT 11
 
 #ifndef libtypes_h
 #include "libtypes.h"

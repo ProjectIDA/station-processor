@@ -1,5 +1,5 @@
 /*   Lib330 internal data structures
-     Copyright 2006-2007 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -35,11 +35,13 @@ Edit History:
     8 2009-02-09 rdr Add EP support.
     9 2009-07-28 rdr Add DSS support.
    10 2009-09-15 rdr Add DSS support when connected to 330 via serial.
+   11 2010-03-27 rdr Add Q335 flag.
+   12 2010-05-07 rdr Add comm structure.
 }*/
 #ifndef libstrucs_h
 /* Flag this file as included */
 #define libstrucs_h
-#define VER_LIBSTRUCS 13
+#define VER_LIBSTRUCS 16
 
 /* Make sure libtypes.h is included */
 #ifndef libtypes_h
@@ -195,6 +197,7 @@ typedef struct { /* shared variables with client. Require mutex protection */
   tstat_auxad stat_auxad ; /* AuxAD status */
   tstat_sersens stat_sersens ; /* Serial sensor status */
   tstat_ep stat_ep ; /* Environmental Processor status */
+  tstat_fes stat_fes ; /* Front-End Status for Q335 */
   tepdelay epdelay ; /* EP Delays from Q330 */
   tepcfg epcfg ; /* EP Configuration */
   tepcfg newepcfg ; /* To change it */
@@ -268,6 +271,7 @@ typedef struct { /* this is the actual context which is hidden from clients */
   boolean media_error ; /* for continuity writing */
   boolean tcp ; /* Using TCP ethernet connection */
   boolean got_connected ; /* UDP or immediate TCP connection */
+  boolean q335 ; /* Connected to Q335 */
 #ifdef X86_WIN32
   HANDLE comid ; /* for serial communications */
   SOCKET cpath ; /* commands socket */
@@ -285,7 +289,7 @@ typedef struct { /* this is the actual context which is hidden from clients */
 #endif
   word ctrlport, dataport ; /* currently used control and data ports */
   longword serial_ip ; /* Host serial IP */
-  tany datain, dataout ;
+  tany datain, dataout, datasave ;
   crc_table_type crc_table ;
   tstate_call state_call ; /* buffer for building state callbacks */
   tmsg_call msg_call ; /* buffer for building message callbacks */
@@ -350,6 +354,8 @@ typedef struct { /* this is the actual context which is hidden from clients */
   tpinghdr pinghdr ; /* for sending pings */
   tpingbuffer pingbuffer ;
   tback back ; /* Baler Acknowledge received */
+  tcomm comm ; /* Communications structure */
+  tbalecfg balecfg ; /* Baler configuration */
   byte raw_global[RAW_GLOBAL_SIZE] ;
   byte raw_fixed[RAW_FIXED_SIZE] ;
   byte raw_log[RAW_LOG_SIZE] ;

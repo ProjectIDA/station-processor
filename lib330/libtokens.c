@@ -1,5 +1,5 @@
 /*   Lib330 DP Token Processing
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -26,6 +26,8 @@ Edit History:
     3 2008-01-10 rdr Move LOG into DP LCQs. DPLCQ buffers come out of thrbuf
                      instead of using getmem.
     4 2009-07-30 rdr Move uppercase to libsupport.
+    5 2010-03-27 rdr Add Q335 support.
+    6 2011-07-24 rdr Fix bug in loading opaque token data.
 */
 #ifndef libclient_h
 #include "libclient.h"
@@ -225,7 +227,9 @@ begin
   byte b ;
   longword mask ;
   pq330 q330 ;
-  string7 s ;
+  int16 real_rate ;
+  string95 s ;
+  string15 s2 ;
 #ifndef OMIT_SEED
   plcq pt ;
   pdownstream_packet pds ;
@@ -251,6 +255,33 @@ begin
   cur_lcq->raw_data_field = loadbyte (p) ;
   cur_lcq->lcq_opt = loadlongword (p) ;
   cur_lcq->rate = loadint16 (p) ;
+  if (((cur_lcq->raw_data_source and DCM) == DC_D32) land (cur_lcq->raw_data_field == HIGH_FREQ_BIT))
+    then
+      begin
+        switch (q330->share.fixed.freq7 and 0x7F) begin
+          case 5 :
+            real_rate = 250 ;
+            break ;
+          case 8 :
+            real_rate = 500 ;
+            break ;
+          case 10 :
+            real_rate = 1000 ;
+            break ;
+          default :
+            real_rate = 0 ;
+            break ;
+        end
+        if (cur_lcq->rate != real_rate)
+          then
+            begin
+              seed2string(cur_lcq->location, cur_lcq->seedname, addr(s2)) ;
+              sprintf (s, "in Token:%d Actual:%d For %s", (integer)cur_lcq->rate,
+                       (integer)real_rate, s2) ;
+              libmsgadd(q330, LIBMSG_HFRATE, addr(s)) ;
+              cur_lcq->rate = real_rate ; /* correct */
+            end
+      end
   cur_lcq->caldly = 60 ;
 #ifndef OMIT_SEED
   getbuf (q330, addr(cur_lcq->com), sizeof(tcom_packet)) ;
@@ -839,7 +870,7 @@ begin
 #ifndef OMIT_SEED
           paqs->opaque_size = next - 2 ; /* don't count length word */
           getbuf (q330, addr(paqs->opaque_buf), paqs->opaque_size) ;
-          loadblock (addr(p), paqs->opaque_size, addr(paqs->opaque_size)) ;
+          loadblock (addr(p), paqs->opaque_size, paqs->opaque_buf) ;
 #endif
           p = tonext(pref, next) ;
           break ;

@@ -1,5 +1,5 @@
 /*   Lib330 time series configuration definitions
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -25,7 +25,7 @@ Edit History:
 #ifndef libsampcfg_h
 /* Flag this file as included */
 #define libsampcfg_h
-#define VER_LIBSAMPCFG 14
+#define VER_LIBSAMPCFG 16
 
 #ifndef libtypes_h
 #include "libtypes.h"

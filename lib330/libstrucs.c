@@ -1,5 +1,5 @@
 /*   Lib330 internal core routines
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -34,6 +34,8 @@ Edit History:
     8 2008-08-20 rdr Add TCP support.
     9 2009-09-28 rdr Add DSS support.
    10 2009-09-15 rdr Add DSS support for serial connection to Q330.
+   11 2010-03-27 rdr Add Q335 support.
+   12 2010-08-21 rdr In lib_destroy_330 clear ct before doing any deallocations.
 */
 /* Make sure libstrucs.h is included */
 #ifndef libstrucs_h
@@ -737,6 +739,7 @@ begin
   pmem_manager pm, pmn ;
 
   q330 = *ct ;
+  *ct = NIL ;
   destroy_mutex (q330) ;
   pm = q330->memory_head ;
   while (pm)
@@ -754,8 +757,7 @@ begin
       free (pm) ;
       pm = pmn ;
     end
-  free (*ct) ;
-  *ct = NIL ;
+  free (q330) ;
   return LIBERR_NOERR ;
 end
 
@@ -843,6 +845,11 @@ begin
         q330->state_call.state_type = stype ;
         memcpy(addr(q330->state_call.station_name), addr(q330->station_ident), sizeof(string9)) ;
         q330->state_call.info = val ;
+        if (q330->q335)
+          then
+            q330->state_call.subtype = SCS_Q335 ;
+          else
+            q330->state_call.subtype = SCS_Q330 ;
         q330->par_create.call_state (addr(q330->state_call)) ;
       end
 end

@@ -1,5 +1,5 @@
 /*   Lib330 Message Definitions
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -29,7 +29,7 @@ Edit History:
 #ifndef libmsgs_h
 /* Flag this file as included */
 #define libmsgs_h
-#define VER_LIBMSGS 8
+#define VER_LIBMSGS 10
 
 /* Make sure libtypes.h is included */
 #ifndef libtypes_h
@@ -101,6 +101,7 @@ Edit History:
 #define LIBMSG_DEREGTO 213
 #define LIBMSG_BACK 214
 #define LIBMSG_CONN 215
+#define LIBMSG_Q335 216
 
 #define LIBMSG_GPSSTATUS 300
 #define LIBMSG_DIGPHASE 301
@@ -157,6 +158,7 @@ Edit History:
 #define LIBMSG_RECOMP 521
 #define LIBMSG_SEGOVER 522
 #define LIBMSG_TCPTUN 523
+#define LIBMSG_HFRATE 524
 
 #define LIBMSG_FIXED 600
 #define LIBMSG_GPSIDS 601

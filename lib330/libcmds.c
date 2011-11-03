@@ -1,5 +1,5 @@
 /*   Lib330 Command Processing
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -49,6 +49,12 @@ Edit History:
    17 2009-02-09 rdr Add EP support.
    18 2009-07-25 rdr Add DSS support.
    19 2009-09-05 rdr Fix LIBMSG_SNV parameter, message is already included in libmsgs.
+   20 2010-03-27 rdr Add Q335 support by not doing SDUMP related structure requests until
+                     the C1_FGLS packet is received. In start_dealocation, if not registered
+                     go to LIBSTATE_WAIT instead of target state.
+   21 2010-04-20 rdr Add processing for LPSF_PWROFF request.
+   22 2010-05-07 rdr If opt_connwait is zero then use a value of ten minutes.
+   23 2010-05-17 rdr Add sending Q335 Aware flag in C1_RQFGLS.
 */
 #ifndef libcmds_h
 #include "libcmds.h"
@@ -215,8 +221,11 @@ begin
                 storerqstat (addr(p), q330->stat_request) ;
                 break ;
               case C1_RQLOG :
+                storeword (addr(p), q330->par_create.q330id_dataport) ;
+                break ;
               case C1_RQFGLS :
                 storeword (addr(p), q330->par_create.q330id_dataport) ;
+                storeword (addr(p), 1) ;
                 break ;
               case C1_POLLSN :
                 storepollsn (addr(p), addr(q330->newpoll)) ;
@@ -480,7 +489,7 @@ begin
   word sz ;
 
   sz = 0 ;
-  for (w = SRB_GLB ; w <= SRB_EP ; w++)
+  for (w = SRB_GLB ; w <= SRB_FES ; w++)
     begin
       if (sz > MAXMTU)
         then
@@ -535,6 +544,9 @@ begin
             case SRB_EP :
               sz = sz + sizeof(tstat_ep) ;
               break ;
+            case SRB_FES :
+              sz = sz + sizeof(tstat_fes) ;
+              break ;
           end
     end
   return sz ;
@@ -550,15 +562,6 @@ begin
   new_cmd (q330, C1_RQFGLS, sizeof(tlog) + sizeof(tfixed) +
            sizeof(tglobal) + sizeof(tsensctrl)) ;
   new_cmd (q330, C1_RQGID, sizeof(tgpsid)) ;
-#ifndef OMIT_SDUMP
-  if (q330->cur_verbosity and VERB_SDUMP)
-    then
-      begin
-        new_cmd (q330, C2_RQGPS, sizeof(tgps2)) ;
-        new_cmd (q330, C1_RQMAN, sizeof(tman)) ;
-        new_cmd (q330, C1_RQDCP, sizeof(tdcp)) ;
-      end
-#endif
   q330->stat_request = make_bitmap(q330->par_create.q330id_dataport + SRB_LOG1) or make_bitmap(SRB_GLB) ;
 #ifndef OMIT_SDUMP
   if (q330->cur_verbosity and VERB_SDUMP)
@@ -615,7 +618,7 @@ begin
     case LIBERR_NOTR :
     case LIBERR_TMSERV :
     case LIBERR_DATATO :
-      new_state (q330, q330->share.target_state) ;
+      new_state (q330, LIBSTATE_WAIT) ;
       q330->registered = FALSE ;
       close_sockets (q330) ;
       break ;
@@ -951,6 +954,7 @@ begin
                         lock (q330) ;
                         memcpy (addr(q330->raw_fixed), p, RAW_FIXED_SIZE) ;
                         loadfix (addr(p), addr(q330->share.fixed)) ;
+                        q330->q335 = ((q330->share.fixed.flags and FF_335) != 0) ;
                         p = psave ;
                         incn(p, fgl.gl_off) ;
                         memcpy (addr(q330->raw_global), p, RAW_GLOBAL_SIZE) ;
@@ -989,9 +993,25 @@ begin
                             reset_link (q330) ;
                         new_cfg (q330, make_bitmap(CRB_GLOB) or make_bitmap(CRB_FIX) or
                                        make_bitmap(CRB_LOG) or make_bitmap(CRB_SENSCTRL)) ;
+#ifndef OMIT_SDUMP
+                        if (q330->cur_verbosity and VERB_SDUMP)
+                          then
+                            begin
+                              new_cmd (q330, C2_RQGPS, sizeof(tgps2)) ;
+                              if (lnot q330->q335)
+                                then
+                                  begin
+                                    new_cmd (q330, C1_RQMAN, sizeof(tman)) ;
+                                    new_cmd (q330, C1_RQDCP, sizeof(tdcp)) ;
+                                  end
+                            end
+#endif
                         if (q330->share.fixed.flags and FF_EP)
                           then
                             new_cmd (q330, C2_RQEPD, sizeof(tepdelay)) ;
+                        if (q330->q335)
+                          then
+                            libmsgadd(q330, LIBMSG_Q335, "") ;
                       end
                   break ;
                 case C1_SLOG :
@@ -1072,7 +1092,7 @@ begin
                         req_mask = req_mask and not (make_bitmap(SRB_UMSG) or
                                     make_bitmap(SRB_LCHG) or make_bitmap(SRB_TOKEN)) ;
                         lock (q330) ;
-                        for (bitnum = SRB_GLB ; bitnum <= SRB_EP ; bitnum++)
+                        for (bitnum = SRB_GLB ; bitnum <= SRB_FES ; bitnum++)
                           begin
                             mask = make_bitmap(bitnum) ;
                             if (mask and req_mask)
@@ -1131,7 +1151,7 @@ begin
                                     loadpwrstat (addr(p), addr(q330->share.stat_pwr)) ;
                                     break ;
                                   case SRB_BOOM :
-                                    loadboomstat (addr(p), addr(q330->share.stat_boom)) ;
+                                    loadboomstat (addr(p), addr(q330->share.stat_boom), q330->q335) ;
                                     for (i = 0 ; i <= 5 ; i++)
                                       q330->share.opstat.mass_pos[i] = q330->share.stat_boom.booms[i] ;
                                     q330->share.opstat.sys_temp = q330->share.stat_boom.sys_temp ;
@@ -1162,6 +1182,9 @@ begin
                                   case SRB_EP :
                                     loadepstat (addr(p), addr(q330->share.stat_ep)) ;
                                     break ;
+                                  case SRB_FES :
+                                    loadfestats (p, addr(q330->share.stat_fes)) ;
+                                    break ;
                                   case SRB_LOG1 :
                                   case SRB_LOG2 :
                                   case SRB_LOG3 :
@@ -1186,14 +1209,17 @@ begin
                                         begin
                                           perc = ((plog->pack_used * 100.0) / l + 0.3) ;
                                           q330->share.opstat.pkt_full = perc ;
-                                          if ((q330->par_register.opt_buflevel) land (perc < q330->par_register.opt_buflevel) land
-                                              (q330->share.freeze_timer <= 0))
+                                          if ((((q330->par_register.opt_buflevel) land (perc < q330->par_register.opt_buflevel)) lor
+                                                (q330->share.stat_log.flags and LPSF_PWROFF)) land (q330->share.freeze_timer <= 0))
                                             then
                                               if (lnot((q330->balesim) land ((q330->share.access_timer) lor
                                                                   (q330->share.stat_log.flags and LPSF_POWER))))
                                                 then
                                                   begin
                                                     q330->reg_wait_timer = (integer)q330->par_register.opt_connwait * 60 ;
+                                                    if (q330->reg_wait_timer == 0)
+                                                      then
+                                                        q330->reg_wait_timer = 600 ; /* if not set, use 10 minutes */
                                                     libmsgadd (q330, LIBMSG_BUFSHUT, "") ;
                                                     unlock (q330) ;
                                                     lib_change_state (q330, LIBSTATE_WAIT, LIBERR_BUFSHUT) ;
@@ -1907,6 +1933,9 @@ begin
                           then
                             break ; /* don't power down yet */
                         q330->reg_wait_timer = (integer)q330->par_register.opt_connwait * 60 ;
+                        if (q330->reg_wait_timer == 0)
+                          then
+                            q330->reg_wait_timer = 600 ; /* if not set, use 10 minutes */
                         lib_change_state (q330, LIBSTATE_WAIT, LIBERR_CONNSHUT) ;
                         libmsgadd (q330, LIBMSG_CONNSHUT, "") ;
                       end

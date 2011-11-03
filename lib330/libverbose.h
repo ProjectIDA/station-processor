@@ -1,5 +1,5 @@
 /*   Lib330 Status Dump Definitions
-     Copyright 2006 Certified Software Corporation
+     Copyright 2006-2010 Certified Software Corporation
 
     This file is part of Lib330
 
@@ -25,7 +25,7 @@ Edit History:
 #ifndef libverbose_h
 /* Flag this file as included */
 #define libverbose_h
-#define VER_LIBVERBOSE 1
+#define VER_LIBVERBOSE 3
 
 #ifndef libtypes_h
 #include "libtypes.h"

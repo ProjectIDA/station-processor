@@ -23,6 +23,11 @@ Edit History:
     0 2006-10-01 rdr Created
     1 2006-10-29 rdr Always update configuration with current Seneca version.
     2 2006-11-30 rdr Add Module versions menu items.
+    3 2007-07-19 rdr Fix show_rate for sub-hertz.
+    4 2007-08-07 rdr Add settings of continuity cache timer.
+    5 2008-01-11 rdr Add F and I commands in run mode.
+    6 2009-07-30 rdr uppercase routine removed.
+    7 2009-08-02 rdr Add DSS memory menu item.
 */
 #ifndef globals_h
 #include "globals.h"
@@ -49,8 +54,8 @@ begin
 #ifdef X86_WIN32
   gets(s) ;
 #else
-  fgets((char *)s, 250, stdin) ;
-  for (i = 0 ; i < strlen((const char *)s) ; i++)
+  fgets(s, 250, stdin) ;
+  for (i = 0 ; i < strlen(s) ; i++)
     if ((*s)[i] < 0x20)
       then
         begin
@@ -82,23 +87,13 @@ begin
 end
 #endif
 
-/* upshift a C string */
-char *uppercase (pchar s)
-begin
-  size_t i ;
-
-  for (i = 0 ; i < strlen(s) ; i++)
-    s[i] = toupper (s[i]) ;
-  return s ;
-end
-
 static boolean yes (boolean default_yes)
 begin
   string7 s ;
   boolean result ;
 
   sscanf(line, "%1s", s) ;
-  uppercase (s) ;
+  lib330_upper (s) ;
   result = default_yes ;
   if (s[0])
     then
@@ -134,8 +129,8 @@ begin
   if (verb and VERB_PACKET)
     then
       strcat(s, " Packet-Debug") ;
-  strcpy((char *)result, s) ;
-  return (char *)result ;
+  strcpy(result, s) ;
+  return result ;
 end
 
 static char *show_rate (integer rate, string *result)
@@ -147,8 +142,8 @@ begin
       sprintf(s, "%d", rate) ;
     else
       sprintf(s, "%5.3f", fabs(1.0 / rate)) ;
-  strcpy((char *)result, s) ;
-  return (char *)result ;
+  strcpy(result, s) ;
+  return result ;
 end
 
 static char *show_yesno (word val, string *result)
@@ -156,13 +151,13 @@ begin
 
   if (val)
     then
-      strcpy((char *)result, "Yes") ;
+      strcpy(result, "Yes") ;
     else
-      strcpy((char *)result, "No") ;
-  return (char *)result ;
+      strcpy(result, "No") ;
+  return result ;
 end
 
-void load_configuration (const char *configfile)
+void load_configuration (void)
 begin
   tfile_handle cf ;
   boolean good ;
@@ -173,15 +168,22 @@ begin
 #endif
 
   good = FALSE ;
-  cf = lib_file_open (NIL, configfile, LFO_OPEN or LFO_READ) ;
+  cf = lib_file_open (NIL, "seneca.config", LFO_OPEN or LFO_READ) ;
   if (cf != INVALID_FILE_HANDLE)
+    then
       begin
+        printf ("Load configuration from Seneca.config? (Y/n) : ") ;
+        getline(line) ;
+        if (yes (TRUE))
+          then
+            begin
               lib_file_read (NIL, cf, addr(configstruc), sizeof(tconfigstruc)) ;
               if (configstruc.cfg_ver == CONFIG_VERSION)
                 then
                   good = TRUE ;
                 else
                   printf ("Configuration file version is not current, values set to defaults\n") ;
+            end
         lib_file_close (NIL, cf) ;
       end
   if (lnot good)
@@ -193,7 +195,7 @@ begin
         pcret = addr(configstruc.par_create) ;
         strcpy(pcret->q330id_station, "SENCA") ;
         pcret->host_timezone = gettz () ;
-        strcpy(pcret->opt_contfile, "cont.bin") ;
+        strcpy(pcret->opt_contfile, "cont/cont.bin") ;
         pcret->opt_verbose = VERB_REGMSG ;
   #ifndef OMIT_SEED
         pcret->amini_exponent = 12 ;
@@ -217,7 +219,7 @@ begin
         pcret->opt_zoneadjust = 1 ;
         pcret->opt_secfilter = OSF_DATASERV ;
       end
-  sprintf(configstruc.par_create.host_software, "q330serv Version %s", SEN_VER) ;
+  sprintf(configstruc.par_create.host_software, "Seneca Version %s", SEN_VER) ;
 end
 
 void save_configuration (void)
@@ -409,7 +411,7 @@ begin
     for (i = 1 ; i <= 6 ; i++)
       begin
         parse (addr(s), i, addr(s1)) ;
-        uppercase(s1) ;
+        lib330_upper(s1) ;
         if (strcmp(s1, "SD") == 0)
           then
             w = w or VERB_SDUMP ;
@@ -475,7 +477,6 @@ begin
   until FALSE) ;
 end
 
-#ifndef OMIT_SERIAL
 static char *show_hostmode (enum thost_mode mode, string *result)
 begin
 
@@ -495,7 +496,7 @@ begin
     printf ("Host Mode (ETH or SER): ") ;
     getline(line) ;
     sscanf (line, "%s", s) ;
-    uppercase(s) ;
+    lib330_upper(s) ;
     if (strcmp(s, "ETH") == 0)
       then
         return HOST_ETH ;
@@ -506,7 +507,6 @@ begin
         printf ("INVALID HOST MODE\n") ;
   until FALSE) ;
 end
-#endif
 
 static char *show_timeout (word val, string *result)
 begin
@@ -569,7 +569,7 @@ begin
     for (i = 1 ; i <= 3 ; i++)
       begin
         parse(addr(s), i, addr(s1)) ;
-        uppercase(s1) ;
+        lib330_upper(s1) ;
         if (strcmp(s1, "ALL") == 0)
           then
             w = w or OSF_ALL ;
@@ -638,7 +638,7 @@ begin
     for (i = 1 ; i <= 5 ; i++)
       begin
         parse (addr(s), i, addr(s1)) ;
-        uppercase(s1) ;
+        lib330_upper(s1) ;
         if (strcmp(s1, "ALL") == 0)
           then
             w = w or OMF_ALL ;
@@ -673,7 +673,7 @@ end
 
 void show_idle_menu (void)
 begin
-/*
+
   printf ("\n") ;
   if (context == NIL)
     then
@@ -696,7 +696,6 @@ begin
         printf ("Q) Quit Seneca\n") ;
         printf ("T) Create station Thread\n") ;
       end
-*/
 end
 
 void show_create_pars (void)
@@ -742,10 +741,8 @@ begin
   printf ("A) Authentication code: %s\n", showsn(preg->q330id_auth, addr(s))) ; /* authentication code */
   printf ("B) Q330 IP address: %s\n", preg->q330id_address) ; /* domain name or IP address in dotted decimal */
   printf ("C) Q330 base port: %u\n", preg->q330id_baseport) ; /* base UDP port number */
-#ifndef OMIT_SERIAL
   show_hostmode(preg->host_mode, addr(s)) ;
   printf ("D) Host mode: %s\n", s) ;
-#endif
   printf ("E) Host interface: %s\n", preg->host_interface) ; /* ethernet or serial port path name */
   show_timeout(preg->host_mincmdretry, addr(s)) ;
   printf ("F) Host minimum command timeout: %s\n", s) ; /* minimum command retry timeout */
@@ -769,6 +766,8 @@ begin
   printf ("N) Maximum registration attempts before hibernation: %u\n", preg->opt_regattempts) ; /* maximum registration attempts before hibernate if non-zero */
   printf ("O) Dynamic IP address expiration in minutes: %u\n", preg->opt_ipexpire) ; /* dyanmic IP address expires after this many minutes since last POC */
   printf ("P) Buffer level to stop connection: %u%%\n", preg->opt_buflevel) ; /* terminate connection when buffer level reaches this value if non-zero */
+  printf ("Q) Minutes before writing Q330 continuity to file: %u\n", preg->opt_q330_cont) ;
+  printf ("R) Maximum DSS memory in KB: %u\n", preg->opt_dss_memory) ;
   printf ("S) Save Configuration\n") ;
   printf ("X) Return to idle menu\n") ;
 end
@@ -796,12 +795,21 @@ begin
   printf ("\n") ;
   printf ("A) ARP Status\n") ;
   printf ("D) Dump Messages\n") ;
+  if (fixed.flags and FF_EP)
+    then
+      printf ("E) EnvProc Status\n") ;
+#ifndef OMIT_SEED
+  if (current_state == LIBSTATE_RUN)
+    then
+      printf ("F) Flush to Disk\n") ;
+#endif
   printf ("G) Get Operating Limits using Tunnelling\n") ;
 #ifndef OMIT_SEED
   if (current_state == LIBSTATE_RUN)
     then
       begin
         printf ("H) Show Detectors\n") ;
+        printf ("I) Ignore Data from Q330 for 30 seconds\n") ;
         printf ("L) LCQ Status\n") ;
       end
 #endif

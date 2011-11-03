@@ -24,3 +24,4 @@ ocf_utils/ocfdiff
 ocf_utils/ocfdump
 *.class
 .*.swp
+.*.un~

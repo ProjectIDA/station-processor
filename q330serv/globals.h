@@ -43,7 +43,7 @@ Edit History:
 #endif
 #endif
 
-#define SEN_VER "1.07"
+#define SEN_VER "1.10"
 #define MSG_QUEUE_SIZE 256 /* must be a power of 2 */
 #define MSG_QUEUE_MASK (MSG_QUEUE_SIZE - 1)
 

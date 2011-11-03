@@ -300,6 +300,9 @@ begin
           case 'C' :
             preg->q330id_baseport = get_word ("Q330 base port: ") ; /* base UDP port number */
             break ;
+          case 'D' :
+            preg->host_mode = get_hostmode () ;
+            break ;
           case 'E' :
             get_string("Host interface: ", 250, addr(preg->host_interface)) ; /* ethernet or serial port path name */
             break ;
@@ -400,6 +403,11 @@ begin
             break ;
           case 'D' :
             dump_messages () ;
+            break ;
+          case 'E' :
+            if (fixed.flags and FF_EP)
+              then
+                ep_status () ;
             break ;
           case 'G' :
             send_tunneled_request () ;

@@ -1,7 +1,7 @@
 /*
   Creates web page for presenting station falcon alarm status
  */
-const char *VersionIdentString = "Release 1.0";
+const char *VersionIdentString = "Release 2.0";
 
 #include <stdio.h>
 #include <string.h>

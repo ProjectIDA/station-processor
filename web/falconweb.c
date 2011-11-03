@@ -18,7 +18,7 @@
 #include <dcc_time.h>
 
 #define PROGRAM_NAME "falconweb"
-#define VERSION "Version 2.0"
+#define VERSION "Version 2.1"
 #define EFF_DATE "June 22, 2010"
 
 #define MAX_FILE_NAME 4096

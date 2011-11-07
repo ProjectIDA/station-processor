@@ -184,15 +184,15 @@ void *ServerReadThread(void *params)
     // Send acknowledgement response back to client
     switch (mapshm->result[iClient][1]) {
       case RESULT_CHAN_CMD_OKAY:
-        sprintf(msgBuf, "CHANNELCONTROL-%d-OKAY", mapshm->result[iClient][0]);
+        sprintf(msgBuf, "CHANNELCONTROL-%d-OKAY.", mapshm->result[iClient][0]);
         send(iSocket, msgBuf, strlen(msgBuf)+1, 0);
         break;
       case RESULT_CHAN_CMD_FAIL:
-        sprintf(msgBuf, "CHANNELCONTROL-%d-FAIL", mapshm->result[iClient][0]);
+        sprintf(msgBuf, "CHANNELCONTROL-%d-FAIL.", mapshm->result[iClient][0]);
         send(iSocket, msgBuf, strlen(msgBuf)+1, 0);
         break;
       case RESULT_CHAN_CMD_INVALID:
-        sprintf(msgBuf, "CHANNELCONTROL-INVALID");
+        sprintf(msgBuf, "CHANNELCONTROL-INVALID.");
         send(iSocket, msgBuf, strlen(msgBuf)+1, 0);
         break;
       default:

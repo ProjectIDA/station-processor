@@ -22,13 +22,15 @@ Edit History:
    -- ---------- --- ---------------------------------------------------
     0 2006-10-02 rdr Created
     1 2006-10-26 rdr Change mseed__.BHZ type file names to DORK_1__.BHZ format.
-    2 2006-12-01 rdr Change method of clearing global variables since they not be in the
-                     order specified on all platforms.
-    3 2007-08-04 rdr Add conditionals to remove network support.
-    4 2008-01-11 rdr Add sen_file_callback.
-    5 2009-02-10 rdr Add ep_status.
-    6 2009-07-31 rdr Always get GPS status for DSS.
+    2 2006-12-01 rdr Change method of clearing global variables since they 
+                     not be in the order specified on all platforms.
+    3 2010-09-14 fcs Add station name remap, add 1 sec callback to get
+                     vacuum readings from channel ??/VY?/
+    4 2010-12-02 fcs Exit program when state goes into LIBSTATE_TERM
+                     otherwise we can get segmentation faults
 */
+#include <syslog.h>
+
 #ifndef globals_h
 #include "globals.h"
 #endif
@@ -60,6 +62,14 @@ Edit History:
 #endif
 #endif
 
+#include "include/diskloop.h"
+#include "include/q330arch.h"
+#include "include/shmstatus.h"
+
+extern int debug_arg;
+extern int iDlg;
+extern struct s_mapstatus *mapstatus;   // Communicates status to dispstatus program
+
 #ifndef OMIT_SEED
 static tctrlstat ctrlstat ; /* just for display purposes */
 static tdetstat detstat ;
@@ -67,20 +77,20 @@ static tlcqstat lcqstat ;
 #endif
 
 #ifndef X86_WIN32
-#include <sys/stat.h>
+#include <sys/stat.h>       
 #endif
 
-static void replace_prompt (string *s)
+static void replace_prompt (const char *s)
 begin
 
   if (screen_busy)
     then
       return ;
   printf ("\b\b\b\b\b\b\b\b\b%s\n", s) ;
-  printf ("Command: ") ;
+  if (!debug_arg)
+    syslog(LOG_INFO, s);
 end
 
-#ifndef OMIT_NETWORK
 void poc_handler (enum tpocstate pocstate, tpoc_recvd *poc_recv)
 begin
   tpocmsg pocmsg ;
@@ -104,12 +114,12 @@ begin
         pocmsg.new_ip_address = poc_recv->ip_address ;
         pocmsg.new_base_port = poc_recv->base_port ;
         i = poc_recv->base_port ;
-        sprintf(s, "%s:%u", showdot(poc_recv->ip_address, addr(s1)), i) ;
-        strcpy(addr(pocmsg.log_info), s) ;
+        sprintf(s, "%s:%u", showdot(poc_recv->ip_address, (string15 *)addr(s1)),
+                i) ;
+        strcpy((char *)addr(pocmsg.log_info), s) ;
         lib_poc_received (context, addr(pocmsg)) ;
       end
 end
-#endif
 
 static void ready_to_run (void)
 begin
@@ -117,12 +127,11 @@ begin
   longint l1, l2 ;
 
   lib_get_dpcfg (context, addr(dpcfg)) ;
-  strcpy(addr(station_name), addr(dpcfg.station_name)) ;
+  strcpy((char *)addr(station_name), (const char *)addr(dpcfg.station_name)) ;
   sprintf(s, "Station Name: %s", addr(station_name)) ;
-  replace_prompt (addr(s)) ;
+  replace_prompt ((const char *)addr(s)) ;
   lib_change_state (context, LIBSTATE_RUN, LIBERR_NOERR) ;
 #ifndef OMIT_SEED
-#ifndef OMIT_NETWORK
   if ((configstruc.run_netserver) land (dpcfg.net_port))
     then
       begin
@@ -130,15 +139,16 @@ begin
         netserve.whitecount = 0 ;
         netserve.ns_port = dpcfg.net_port ;
         netserve.server_number = 1 ;
-        l1 = NETBUFSIZE ;
+        NetBufferSize(&l1);
         l2 = LIB_REC_SIZE ;
 /* CbuilderX returns some weird huge value for "NETBUFSIZE / LIB_REC_SIZE", so get around it */
         netserve.record_count = l1 div l2 ;
-        netserve.nsbuf = malloc (NETBUFSIZE) ;
+        netserve.nsbuf = malloc (l2 * netserve.record_count) ;
+fprintf(stdout, "netserver buffer size set to %d bytes\n",
+l2 * netserve.record_count);
         netserve.stnctx = context ;
         netcontext = lib_ns_start (addr(netserve)) ;
       end
-#endif
 #endif
 end
 
@@ -179,7 +189,7 @@ typedef struct {
       replace_prompt ("Error getting tunneled response") ;
     else
       begin
-        p = addr(tunbuf) ;
+        p = (pbyte)addr(tunbuf) ;
         oplimits.max_main = loadword (addr(p)) ;
         oplimits.min_off = loadword (addr(p)) ;
         oplimits.min_ps = loadword (addr(p)) ;
@@ -237,8 +247,8 @@ begin
         then
           strcat(s, ":") ;
     end
-  strcpy(result, s) ;
-  return result ;
+  strcpy((char *)result, s) ;
+  return (char *)result ;
 end
 
 void arp_status (void)
@@ -256,42 +266,16 @@ begin
         for (i = 0 ; i <= stat_arp.arphdr.arp_count - 1 ; i++)
           begin
             parp = addr(stat_arp.arps[i]) ;
-            printf ("IP=%s MAC=%s Timeout=%d\n", showdot(parp->ip, addr(s1)),
-                    showh6(addr(parp->mac), addr(s2)), parp->timeout) ;
+            printf ("IP=%s MAC=%s Timeout=%d\n",
+                    showdot(parp->ip, (string15 *)addr(s1)),
+                    showh6(addr(parp->mac), (string *)s2), parp->timeout) ;
           end
         printf ("\n") ;
       end
     else
       begin
         replace_prompt ("ARP Status not available, adding to request list") ;
-        lib_request_status (context, sen_make_bitmap(SRB_ARP) or sen_make_bitmap(SRB_GST), 10) ;
-      end
-end
-
-void ep_status (void)
-begin
-  enum tliberr err ;
-  integer i ;
-  tstat_oneep *pep ;
-
-  err = lib_get_status (context, SRB_EP, addr(stat_ep)) ;
-  if (err == LIBERR_NOERR)
-    then
-      begin
-        printf ("\n") ;
-        for (i = PP_SER1 ; i <= PP_SER2 ; i++)
-          begin
-            pep = addr(stat_ep[i]) ;
-            if (pep->version)
-              then
-                printf("Status received for EnvProc on Serial %d, Firmware Version %d.%d\n",
-                       i + 1, (integer)(pep->version shr 8), (integer)(pep->version and 255)) ;
-          end
-      end
-    else
-      begin
-        replace_prompt ("EnvProc Status not available, adding to request list") ;
-        lib_request_status (context, sen_make_bitmap(SRB_EP) or sen_make_bitmap(SRB_GST), 10) ;
+        lib_request_status (context, sen_make_bitmap(SRB_ARP), 10) ;
       end
 end
 
@@ -300,7 +284,7 @@ begin
 
   previous_state = LIBSTATE_IDLE ;
   state_change = FALSE ;
-  cfg_change = FALSE ;
+  cfg_change = FALSE ; 
   is_stalled = FALSE ;
   screen_busy = FALSE ;
   memset (addr(pingresponse), 0, sizeof(tpingresponse)) ;
@@ -308,7 +292,7 @@ begin
 end
 
 void sen_state_callback (pointer p)
-begin
+{
   tstate_call *ps ;
   string s, s1 ;
   enum tliberr err ;
@@ -318,19 +302,12 @@ begin
     case ST_STATE :
       current_state = (enum tlibstate)ps->info ;
       strcpy(s, "New State: ") ;
-      strcat(s, lib_get_statestr(current_state, addr(s1))) ;
-      replace_prompt (addr(s)) ;
+      strcat(s, lib_get_statestr(current_state, (string63 *)s1)) ;
+      replace_prompt (s) ;
       if (current_state != previous_state)
         then
           switch (current_state) begin
             case LIBSTATE_RUN :
-              err = lib_get_config (context, CRB_FIX, addr(fixed)) ;
-              if (err)
-                then
-                  memset (addr(fixed), 0, sizeof(tfixed)) ;
-              lib_request_status (context, sen_make_bitmap(SRB_GST), 10) ;
-              show_run_menu () ;
-              printf ("Command: ") ;
               break ;
             case LIBSTATE_RUNWAIT :
               ready_to_run () ;
@@ -338,7 +315,6 @@ begin
             case LIBSTATE_IDLE :
             case LIBSTATE_WAIT :
 #ifndef OMIT_SEED
-#ifndef OMIT_NETWORK
               if (netcontext)
                 then
                   begin
@@ -347,12 +323,20 @@ begin
                     netcontext = NIL ;
                   end
 #endif
-#endif
               clear_globals () ;
               lib_get_state (context, addr(err), addr(opstat)) ;
               if (err == LIBERR_INVREG)
-                then
+              {
+                  if (debug_arg)
+                  {
+                    fprintf (stderr, "Q330 registration failure!\n");
+                  }
+                  else
+                  {
+                    syslog (LOG_ERR, "Q330 registration failure!\n");
+                  }
                   lib_change_state (context, LIBSTATE_TERM, LIBERR_CLOSED) ; /* terminate thread */
+              }
               break ;
             case LIBSTATE_TERM :
               if (context)
@@ -369,7 +353,7 @@ begin
               mseed_file = INVALID_FILE_HANDLE ;
 #endif
               cfgphase = CFG_IDLE ;
-              show_idle_menu () ;
+              exit(1);
               break ;
           end ;
       previous_state = current_state ;
@@ -378,7 +362,7 @@ begin
       is_stalled = (ps->info != 0) ;
       if (is_stalled)
         then
-          replace_prompt ("Connection stalled, Hit 'C' to cancel command") ;
+          replace_prompt ("Connection stalled") ;
         else
           replace_prompt ("Connection is no longer stalled") ;
       break ;
@@ -392,23 +376,23 @@ begin
         else
           begin
             sprintf(s, "Ping Response in %5.3f Seconds", pingresponse.ping_ms * 0.001) ;
-            replace_prompt (addr(s)) ;
+            replace_prompt (s) ;
           end
       break ;
     case ST_TUNNEL :
       tunnel_response_available () ;
       break ;
   end
-end
+} // sen_state_callback()
 
 void msgs_callback (pointer p)
-begin
+{
   tmsg_call *pm ;
 
   pm = p ;
   memcpy (addr(msgqueue[(pm->msgcount - 1) and MSG_QUEUE_MASK]), pm, sizeof(tmsg_call)) ;
   highest_avail_msgnum = pm->msgcount ;
-end
+}
 
 enum tfilekind {FK_UNKNOWN, FK_CONT, FK_IDXDAT} ;
 
@@ -541,13 +525,13 @@ begin
       midx = 0 ; /* not wrapped */
   repeat
     pmsg = addr(msgqueue[midx]) ;
-    lib_get_msg (pmsg->code, addr(s)) ;
-    strcat(s, addr(pmsg->suffix)) ;
-    sprintf(s1, "%s:{%d}", jul_string (pmsg->timestamp, addr(s2)), pmsg->code) ;
+    lib_get_msg (pmsg->code, (string95 *)s) ;
+    strcat(s, pmsg->suffix) ;
+    sprintf(s1, "%s:{%d}", jul_string (pmsg->timestamp, s2), pmsg->code) ;
     if (pmsg->datatime)
       then
         begin
-          sprintf(s3, "[%s] ", jul_string (pmsg->datatime, addr(s2))) ;
+          sprintf(s3, "[%s] ", jul_string (pmsg->datatime, s2)) ;
           strcat(s1, s3) ;
         end
       else
@@ -563,29 +547,84 @@ begin
 end
 
 void onesec_callback (pointer p)
-begin
+{
   tonesec_call *ps ;
+  int iWriteIndex;
 
   ps = p ;
   if (onesec_file != INVALID_FILE_HANDLE)
-    then
-      lib_file_write (NIL, onesec_file, ps, ps->total_size) ;
-end
+  {
+    lib_file_write (NIL, onesec_file, ps, ps->total_size) ;
+  }
+
+  // Code to get 1 second */VY* vacuum
+  if (ps->channel[0] == 'V' && ps->channel[1] == 'Y')
+  {
+    // Let status program see the latest vacuum readings
+    if (mapstatus != NULL)
+    {
+      // Store the latest vacuum reading
+      if (ps->channel[2] == 'Z')
+      {
+        // Don't worry about locking since a singe long value write
+        for (iWriteIndex=0; iWriteIndex < 3; iWriteIndex++)
+        {
+          mapstatus->dlg[iWriteIndex][iDlg].vacuum[0] = ps->samples[0];
+        }
+      }
+      else if (ps->channel[2] == '1' || ps->channel[2] == 'N')
+      {
+        // Don't worry about locking since a singe long value write
+        for (iWriteIndex=0; iWriteIndex < 3; iWriteIndex++)
+        {
+          mapstatus->dlg[iWriteIndex][iDlg].vacuum[1] = ps->samples[0];
+        }
+      }
+      else if (ps->channel[2] == '2' || ps->channel[2] == 'E')
+      {
+        // Don't worry about locking since a singe long value write
+        for (iWriteIndex=0; iWriteIndex < 3; iWriteIndex++)
+        {
+          mapstatus->dlg[iWriteIndex][iDlg].vacuum[2] = ps->samples[0];
+        }
+      }
+    } // if memory map present
+//  if (debug_arg)
+//  {
+//    fprintf(stderr, "DEBUG 1 sec data %s/%s size %d val = %ld\n", 
+//            ps->location, ps->channel, ps->total_size, ps->samples[0]);
+//  }
+  } // VY* vacuum pressure to store
+
+  // Code to get 1 second */LDO * pressure
+  if (ps->channel[0] == 'L' && ps->channel[1] == 'D' && ps->channel[2] == 'O')
+  {
+    // Let status program see the latest pressure readings
+    if (mapstatus != NULL)
+    {
+      // Store the latest pressure reading
+      for (iWriteIndex=0; iWriteIndex < 3; iWriteIndex++)
+      {
+        mapstatus->dlg[iWriteIndex][iDlg].pressure = ps->samples[0];
+      }
+    } // if memory map present
+  } // LDO data to store
+} // onesec_callback()
 
 #ifndef OMIT_SEED
 char *yesno (boolean b, string7 *result)
-begin
+{
 
   if (b)
     then
-      strcpy(result, "Yes") ;
+      strcpy((char *)result, "Yes") ;
     else
-      strcpy(result, "No") ;
-  return result ;
-end
+      strcpy((char *)result, "No") ;
+  return (char *)result ;
+}
 
 void show_detectors (void)
-begin
+{
   enum tliberr err ;
   integer i ;
   tonedetstat *pd ;
@@ -615,10 +654,10 @@ begin
       printf ("%22s%4s\n", addr(pc->name), yesno(pc->ison, addr(s1))) ;
     end
   printf ("\n") ;
-end
+}
 
 void show_lcqs (void)
-begin
+{
   enum tliberr err ;
   integer i ;
   string15 s ;
@@ -650,41 +689,93 @@ begin
               pl->cal_count, pl->arec_seq, pl->arec_cnt, pl->arec_over, pl->arec_age) ;
     end
   printf ("\n") ;
-end
+}
 
 void mini_callback (pointer p)
-begin
+{
   pminiseed_call pm ;
 
   pm = p ;
   if (pm->miniseed_action == MSA_512)
     then
       begin
-#ifndef OMIT_NETWORK
-        if ((pm->filter_bits and OMF_NETSERV) land (netcontext))
+        if (((pm->filter_bits and OMF_NETSERV) lor
+             (pm->packet_class == PKC_MESSAGE) lor
+             (pm->packet_class == PKC_TIMING))
+            land (netcontext))
           then
             lib_ns_send (netcontext, pm->data_address) ;
-#endif
+
+        // Save 512 records localy, and to IDA disk loop
+        {
+          char  *retstr;
+          char  station[8];
+          char  chan[4];
+          char  loc[4];
+          STDTIME2  recStartTime;
+          STDTIME2  recEndTime;
+          int       iSeqNum;
+          int       iSamples;
+          int       iWriteIndex;
+
+          // Implement MapStation: keyword in diskloop.config
+          RemapStationName((char *)pm->data_address);
+
+          // parse record for time and station name
+          retstr = ParseSeedHeader(pm->data_address,
+                       station, chan, loc, 
+                       &recStartTime, &recEndTime, &iSeqNum, &iSamples);
+
+          // Let status program know we received a record
+          if (mapstatus != NULL)
+          {
+            // Calculate which mapstatus->ixWriteData[iDlg] value to use
+            if (mapstatus->ixWriteData[iDlg] != 0 && mapstatus->ixReadData[iDlg] != 0)
+              iWriteIndex = 0;
+            else if (mapstatus->ixWriteData[iDlg] != 1 && mapstatus->ixReadData[iDlg] != 1)
+              iWriteIndex = 1;
+            else
+              iWriteIndex = 2;
+
+            // Make arrival time be the record end time
+            mapstatus->dlg[iWriteIndex][iDlg].timeLastData = recEndTime;
+            mapstatus->ixWriteData[iDlg] = iWriteIndex;
+          } // If status shared memory segment has been setup
+
+          // Send seed record to q330arch for archival and data transmission
+          // q330arch will merge data from all data loggers into a single stream
+          while ((retstr = q330SeedSend((void *)pm->data_address)) != NULL)
+          {
+            if (debug_arg)
+              fprintf(stderr, "mini_callback q330SeedSend: %s\n", retstr);
+            else
+              syslog(LOG_ERR, "mini_callback q330SeedSend: %s\n", retstr);
+	    sleep(1);
+          }
+        } // End addition to save 512 records to files
+/* Original Seneca save to file
         if (mseed_file != INVALID_FILE_HANDLE)
           then
             lib_file_write (NIL, mseed_file, pm->data_address, LIB_REC_SIZE) ;
+*/
       end
-end
+} // mini_callback()
 
 void amini_callback (pointer p)
-begin
+{
   pminiseed_call pm ;
   string fname ;
   string s, s1 ;
   tfile_handle afile ;
   longint size ;
   pchar minus ;
+  char  *retstr;
 
   if (configstruc.write_archive == 0)
     then
       return ;
   pm = p ;
-  strcpy(s1, addr(pm->station_name)) ;
+  strcpy(s1, pm->station_name) ;
   minus = strpbrk(s1, "-") ;
   if (minus)
     then
@@ -694,50 +785,43 @@ begin
       end
     else
       strcpy(s, s1) ; /* no network */
-  strcpy(s1, addr(pm->location)) ;
+  strcpy(s1, (const char *)addr(pm->location)) ;
   while (strlen(s1) < 2)
     strcat(s1, "_") ;
-  sprintf(addr(fname), "%s_%d%s.%s", s, configstruc.par_create.q330id_dataport + 1, s1, addr(pm->channel)) ;
-  switch (pm->miniseed_action) begin
-    case MSA_ARC :
+  sprintf((char *)addr(fname), "%s_%d%s.%s", s, configstruc.par_create.q330id_dataport + 1, s1, addr(pm->channel)) ;
+  switch (pm->miniseed_action)
+  {
     case MSA_FIRST :
     case MSA_INC :
+    case MSA_ARC :
     case MSA_FINAL : /* write or update data */
-      afile = lib_file_open (NIL, addr(fname), LFO_OPEN or LFO_WRITE) ; /* should work except for first time */
-      if (afile == INVALID_FILE_HANDLE)
-        then
-          afile = lib_file_open (NIL, addr(fname), LFO_CREATE or LFO_WRITE) ; /* might be first time */
-      if (afile == INVALID_FILE_HANDLE)
-        then
-          begin
-            printf ("Could not open or create %s\n", addr(fname)) ;
-            return ;
-          end
-      size = lib_file_size (NIL, afile) ;
-      if (pm->miniseed_action >= MSA_INC)
-        then
-          lib_file_seek (NIL, afile, size - ARC_RECORD_SIZE) ; /* updating last record */
-        else
-          lib_file_seek (NIL, afile, size) ; /* to end */
-      lib_file_write (NIL, afile, pm->data_address, ARC_RECORD_SIZE) ;
-      lib_file_close (NIL, afile) ;
+/* This code was used for the 4096 record archive format which has gone away
+      if ((retstr = WriteChan(pm->station_name, pm->channel, pm->location,
+                              pm->data_address)) != NULL)
+      {
+        fprintf(stderr, "amini_callback WriteChan: %s\n", retstr);
+      }
+      if ((retstr = idaWriteChan(pm->station_name, pm->channel, pm->location,
+                              pm->data_address)) != NULL)
+      {
+        fprintf(stderr, "amini_callback idaWriteChan: %s\n", retstr);
+      }
+*/
       break ;
     case MSA_GETARC : /* return the last record */
-      afile = lib_file_open (NIL, addr(fname), LFO_OPEN or LFO_READ) ;
-      if (afile != INVALID_FILE_HANDLE)
-        then
-          begin
-            size = lib_file_size (NIL, afile) ;
-            if (size >= ARC_RECORD_SIZE)
-              then
-                begin
-                  lib_file_seek (NIL, afile, size - ARC_RECORD_SIZE) ;
-                  lib_file_read (NIL, afile, pm->data_address, ARC_RECORD_SIZE) ;
-                  pm->miniseed_action = MSA_RETARC ; /* returning last written */
-                end
-            lib_file_close (NIL, afile) ;
-          end
+/*
+      if ((retstr = ReadLast(pm->station_name, pm->channel, pm->location,
+                              pm->data_address)) != NULL)
+      {
+        fprintf(stderr, "amini_callback: %s\n", retstr);
+        break;
+      }
+
+      // Only return MSA_RETARC if data is present
+      if (*((char *)pm->data_address) != 0)
+        pm->miniseed_action = MSA_RETARC ; // returning last written
+*/
       break ;
-  end
-end
+  } // switch  (pm->miniseed_action)
+} // amini_callback ()
 #endif

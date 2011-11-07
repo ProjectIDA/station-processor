@@ -79,6 +79,7 @@ int main_pid=0;     // Saves process id of main thread
 int debug_arg=0;    // Shares debug status
 int iDlg=0;         // Which data logger this is in overall system
 struct s_mapstatus *mapstatus=NULL;   // Communicates status to dispstatus program
+unsigned long status_mask = 0;
 
 static void sigterm_nodaemon(int sig)
 {
@@ -156,6 +157,11 @@ int main (int argc, char **argv)
   int             i,j,k;
   enum tlibstate  libstate;
 
+  status_mask = make_bitmap(SRB_GLB)  |
+                make_bitmap(SRB_GST)  |
+                make_bitmap(SRB_PWR)  |
+                make_bitmap(SRB_BOOM) |
+                make_bitmap(SRB_PLL);
 
   if (argc < 2 || argc > 3)
   {
@@ -320,15 +326,15 @@ int main (int argc, char **argv)
       fprintf(stderr, "Infinite loop, ^C to exit\n");
 
   // Tell q330lib how often to get status (10 seconds was default)
-  lib_request_status(context,
-      make_bitmap(SRB_GLB) | make_bitmap(SRB_GST) | make_bitmap(SRB_PWR) | 
-      make_bitmap(SRB_BOOM) | make_bitmap(SRB_PLL), 10);
+  lib_request_status(context, status_mask, 10);
 
   // Loop forever getting status information
   while (1)
   {
     pq330 q330;
     q330 = context;
+    //if (debug_arg)
+    //    fprintf(stderr, "Q330 is set to %s architecture\n", q330->q335 ? "Q335" : "Q330");
 
     // How often we will update status
     sleep(5);
@@ -356,14 +362,13 @@ int main (int argc, char **argv)
 //q330->share.have_status, q330->stat_request);
 
     // Make sure the status values we want are available
-    if ((q330->share.have_status &
-      (make_bitmap(SRB_GLB) | make_bitmap(SRB_GST) | make_bitmap(SRB_PWR) | 
-       make_bitmap(SRB_BOOM) | make_bitmap(SRB_PLL)) ) !=
-      (make_bitmap(SRB_GLB) | make_bitmap(SRB_GST) | make_bitmap(SRB_PWR) | 
-       make_bitmap(SRB_BOOM) | make_bitmap(SRB_PLL)) )
+    if ((q330->share.have_status & status_mask) != status_mask)
     {
+      //if (debug_arg)
+      //  fprintf(stderr, "Wrong status results. Expected %08lx got %08lx\n", status_mask, q330->share.have_status & status_mask);
       continue;
     } // not all status bits are set
+    
 
     // Get latest status
     err = lib_get_status(context, SRB_GLB, &stat_global);

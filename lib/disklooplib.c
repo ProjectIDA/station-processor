@@ -294,13 +294,13 @@ char *ParseDiskLoopConfig(
 
       if (argstr[locStart] != 0)
       {
-        /*
+        //*
         fprintf(stderr, "%s: %5.5s-%2.2s-%3.3s\n", 
                 parseType == PARSE_BUFFER     ? "Buffer" :
                 parseType == PARSE_NO_ARCHIVE ? "NoArchive" :
                 parseType == PARSE_NO_IDA     ? "NoIDA" : "None",
                 station, loc, chan);
-        */
+        // */
         if ((parseType == PARSE_BUFFER) && (count < 4))
         {
           sprintf(looperrstr, "Count %d < minimum of 4, Line %d in %s",

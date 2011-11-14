@@ -14,7 +14,7 @@
 
  */
 
-const char *VersionIdentString = "Release 1.1";
+const char *VersionIdentString = "Release 2.0";
 
 #include <stdio.h>
 #include <string.h>

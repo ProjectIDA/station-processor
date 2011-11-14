@@ -8,10 +8,11 @@ yyyy-mm-dd WHO - Changes
 ==============================================================================
 2009-07-13 FCS - idaapi changed to only log errors or worse Release 1.2
 2010-02-09 FCS - New diskloop.config keywords for falcon
+2011-11-14 JDE - New diskloop.config keywords for telemetry control
 ******************************************************************************/
 
 const char *WHOAMI="ida2arch";
-const char *VersionIdentString = "Release 1.4";
+const char *VersionIdentString = "Release 2.0";
 
 #define INCLUDE_ISI_STATIC_SEQNOS
 #include <stdio.h>

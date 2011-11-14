@@ -8,7 +8,7 @@ yyyy-mm-dd WHO - Changes
 2011-11-14 JDE - New diskloop.config keywords for telemetry control
 ******************************************************************************/
 
-const char *VersionIdentString = "Release 1.2";
+const char *VersionIdentString = "Release 2.0";
 
 #include <stdio.h>
 #include <string.h>

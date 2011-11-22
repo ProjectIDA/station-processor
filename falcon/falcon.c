@@ -13,9 +13,10 @@ yyyy-mm-dd WHO - Changes
 2009-10-28 FCS - Add lock file to allow only one invocation
 2011-01-03 FCS - Improve recovery from falcon connection issues
 2011-04-27 FCS - Tone down syslog verbosity every half hour
+2011-11-14 JDE - New diskloop.config keywords for telemetry control
 ******************************************************************************/
 #define FILENAME "falcon"
-const char *VersionIdentString = "Release 1.2";
+const char *VersionIdentString = "Release 2.0";
 
 #include <stdio.h>
 #include <stdlib.h>

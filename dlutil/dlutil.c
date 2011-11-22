@@ -8,9 +8,10 @@ yyyy-mm-dd WHO - Changes
 ==============================================================================
 2007-02-08 FCS - Creation
 2010-02-09 FCS - New diskloop.config keywords for falcon
+2011-11-14 JDE - New diskloop.config keywords for telemetry control
 ******************************************************************************/
 #define FILENAME "dlutil"
-const char *VersionIdentString = "Release 1.3";
+const char *VersionIdentString = "Release 2.0";
 
 #include <stdio.h>
 #include <stdlib.h>

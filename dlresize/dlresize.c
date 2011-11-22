@@ -28,9 +28,10 @@ yyyy-mm-dd WHO - Changes
 2009-07-31 FCS - Implement case 2 and 3 fixes
 2009-08-06 FCS - Add truncate option to more quickly and gracefuly downsize
 2010-02-09 FCS - New diskloop.config keywords for falcon
+2011-11-14 JDE - New diskloop.config keywords for telemetry control
 ******************************************************************************/
 #define FILENAME "dlresize"
-const char *VersionIdentString = "Release 1.3";
+const char *VersionIdentString = "Release 2.0";
 
 #include <stdio.h>
 #include <stdlib.h>

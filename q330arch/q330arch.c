@@ -29,6 +29,7 @@ yyyy-mm-dd WHO - Changes
 2011-04-28 FCS - Use station name to determine IDA disk loop, not diskloop.config
 2011-08-15 JDE - NoArchive in diskloop.config means don't add record to Archives
 2011-11-01 JDE - new lib330 (2011-08-05)
+2011-11-22 JDE - Report error but keep archiving when IDA diskloop offline
 ******************************************************************************/
 #define WHOAMI "q330arch"
 const char *VersionIdentString = "Release 2.0";
@@ -357,6 +358,7 @@ int main (int argc, char **argv)
 
   pthread_t server_tid;
 
+  char   *initMsg;
   char   queuebuf[4096];
   char   tempbuf[4096];
   char   *queuemsg=NULL; 
@@ -437,7 +439,18 @@ int main (int argc, char **argv)
   }
 
   // IDA initialization
-  idaInit(station, WHOAMI);
+  initMsg = idaInit(station, WHOAMI);
+
+  if (initMsg != NULL) {
+      if (g_bDebug) {
+        fprintf(stderr, "%s:idaInit(): %s\n",
+                WHOAMI, strerror(errno));
+      }
+      else {
+        syslog(LOG_ERR, "%s:idaInit(): %s",
+               WHOAMI, strerror(errno));
+      }
+  }
 
   // Start the server listening for clients in the background
   LogServerPort(&iPort);

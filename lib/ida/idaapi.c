@@ -1,5 +1,4 @@
-/*
-File:       idaapi.c
+/* File:       idaapi.c
 Copyright:  (C) 2007 by Albuquerque Seismological Laboratory
 Author:     Frank Shelly
 Purpose:    Routines for interfacing to IDA disk loop library
@@ -14,6 +13,7 @@ yyyy-mm-dd WHO - Changes
 ==============================================================================
 2007-06-12 FCS - Creation
 2009-07-18 FCS - Make Log threshold LOG_ERR instead of LOG_DEBUG
+2011-11-22 JDE - Report error rather than forcing exit on init or write fail
 ******************************************************************************/
 
 #include <stdio.h>
@@ -33,6 +33,8 @@ typedef struct {
 static UINT32 flags = QDP_DEFAULT_HLP_RULE_FLAG;
 static LOCALPKT local;
 static QDPLUS_PAR par = QDPLUS_DEFAULT_PAR;
+
+static int idaOffline = 0;
 
 LOGIO logio, *lp = NULL;
 
@@ -63,7 +65,8 @@ char *idaInit(const char *dlname
                   mseed, (void *)&local, flags))
   {
     perror("qdpInitHLPRules");
-    exit(1);
+    idaOffline = 1;
+    return "qdpInitHLPRules() failed";
   }
 
 
@@ -71,7 +74,8 @@ char *idaInit(const char *dlname
   {
     fprintf(stderr, "%s: isidlSetGlobalParameters failed: %s\n",
           fid, strerror(errno));
-    exit(1);
+    idaOffline = 1;
+    return "isidlSetGlobalParameters() failed";
   }
 
   // Initialize logging
@@ -85,13 +89,15 @@ char *idaInit(const char *dlname
   {
     fprintf(stderr, "%s: isidlOpenDiskLoop failed: %s\n",
           fid, strerror(errno));
-    exit(1);
+    idaOffline = 1;
+    return "isidlOpenDiskLoop() failed";
   }
 
   if (!isiInitRawPacket(&local.raw, NULL, local.dl->sys->maxlen))
   {
     fprintf(stderr, "isiInitRawPacket: %s", strerror(errno));
-    exit(1);
+    idaOffline = 1;
+    return "isiInitRawPacket() failed";
   }
   strcpy(local.raw.hdr.site, local.dl->sys->site);
   local.raw.hdr.len.used = local.dl->sys->maxlen;
@@ -120,6 +126,13 @@ char *idaWriteChan(
   char *msg;
   BOOL      retflag;
 
+  // If the IDA diskloop initialization failed
+  // the first time, we do not perform writes
+  // to the ISID process.
+  if (idaOffline) {
+      return NULL;
+  }
+
   // one time initialization
   if (firstcall || (strcmp(lastname, dlname) != 0))
   {
@@ -135,8 +148,9 @@ char *idaWriteChan(
 
   if (!isidlWriteToDiskLoop(local.dl, &local.raw, ISI_OPTION_GENERATE_SEQNO))
   {
-        fprintf(stderr, "isidlWriteToDiskLoop failed: %s\n", strerror(errno));
-        exit(1);
+    fprintf(stderr, "isidlWriteToDiskLoop failed: %s\n", strerror(errno));
+    idaOffline = 1;
+    return "isidlWriteToDiskLoop() failed";
   }
 
   return NULL;

@@ -44,7 +44,7 @@ public class ASPpreferences
 			finishDate = node.get("finishDate", "2050/01/01");
 			finishTime = node.get("finishTime", "00:00:00");
 			port = node.getInt("port", 4004);
-			maxRecords = node.getInt("maxRecords", 20000);
+			maxRecords = node.getInt("maxRecords", 4000000);
 			extendFilename = node.getInt("extendFilename", 0);
 			initialized = true;
 		}

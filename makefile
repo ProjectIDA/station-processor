@@ -1,6 +1,8 @@
 INSTALLDIR=$(HOME)/bin/
 all:
 	cd lib; $(MAKE)
+	cd libtree; $(MAKE)
+	cd libpcomm; $(MAKE)
 	cd dispstatus; $(MAKE)
 	cd q330serv; $(MAKE)
 	cd ida2arch; $(MAKE)
@@ -21,6 +23,8 @@ all:
 
 clean:
 	cd lib; $(MAKE) clean
+	cd libtree; $(MAKE) clean
+	cd libpcomm; $(MAKE) clean
 	cd q330serv; $(MAKE) clean
 	cd ida2arch; $(MAKE) clean
 	cd ida2chan; $(MAKE) clean

@@ -48,7 +48,7 @@ void    map_delete(Map *map);
 int     map_put(Map *map, const char *key, void *value);
 void   *map_get(const Map *map, const char *key);
 int     map_contains(const Map *map, const char *key);
-int     map_remove(const Map *map, const char *key);
+int     map_remove(Map *map, const char *key);
 int     map_get_count(const Map *map);
 int     map_enum(const Map *map, map_enum_func enum_func, const void *obj);
 

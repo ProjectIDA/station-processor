@@ -47,7 +47,7 @@ struct Map {
     Bucket *buckets;
 };
 
-static Pair *get_pair(Map *map, Bucket *bucket, const char *key);
+static Pair *get_pair(const Map *map, Bucket *bucket, const char *key);
 static int   remove_pair(Map *map, Bucket *bucket, const char *key);
 static unsigned long hash(const char *str);
 
@@ -129,7 +129,7 @@ int map_contains(const Map *map, const char *key)
     return (map_get(map, key) != NULL);
 }
 
-int map_remove(const Map *map, const char *key)
+int map_remove(Map *map, const char *key)
 {
     unsigned int index;
     Bucket *bucket;
@@ -307,7 +307,7 @@ int map_enum(const Map *map, map_enum_func enum_func, const void *obj)
  * Returns a pair from the bucket that matches the provided key,
  * or null if no such pair exist.
  */
-static Pair * get_pair(Map *map, Bucket *bucket, const char *key)
+static Pair * get_pair(const Map *map, Bucket *bucket, const char *key)
 {
     unsigned int i, n;
     Pair *pair;

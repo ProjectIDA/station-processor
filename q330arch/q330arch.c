@@ -359,8 +359,8 @@ int main (int argc, char **argv)
   pthread_t server_tid;
 
   char   *initMsg;
-  char   queuebuf[4096];
-  char   tempbuf[4096];
+  char   queuebuf[8192];
+  char   tempbuf[8192];
   char   *queuemsg=NULL; 
   char   tempMsg[64];
   char   *bufPtr, *msgPtr, c;

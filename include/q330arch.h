@@ -41,7 +41,7 @@ struct s_mapshm
   int     read_index[MAX_CLIENTS];
   int     write_index[MAX_CLIENTS];
   int     result[MAX_CLIENTS][2];
-  char    buffer[MAX_CLIENTS][2][4096];
+  char    buffer[MAX_CLIENTS][2][8192];
 };
 
 // Routine call prototype definitions

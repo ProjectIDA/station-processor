@@ -130,7 +130,7 @@ void *ListenThread(void *params)
   char    station[8];
   char    chan[8];
   char    loc[8];
-  char    aliverec[4096];
+  char    aliverec[8192];
   struct s_mapshm *mapshm;
   STDTIME2 lastsend;
   STDTIME2 now;

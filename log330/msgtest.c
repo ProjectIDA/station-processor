@@ -7,7 +7,7 @@
 int main(int argc, char *argv[])
 {
   int i;
-  char msg[4096];
+  char msg[8192];
   char *errmsg;
   char  station[8];
   char  network[4];

@@ -332,8 +332,9 @@ pcomm_result _pcomm_clean_read_buffer( pcomm_fd* fd_context )
     if ( !fd_context ) {
         result = PCOMM_NULL_CONTEXT;
     } else {
-        if ( fd_context->buffer )
+        if ( fd_context->buffer ) {
             free( fd_context->buffer );
+        }
         fd_context->buffer = NULL;
         fd_context->length = 0;
         fd_context->used   = 0;
@@ -414,6 +415,13 @@ void _process_selected_fds( pcomm_context *context,
 
     int i = 0;
 
+    if (!context) {
+        return;
+    }
+    if (context->exit_now) {
+        return;
+    }
+
     switch (stream) {
         case PCOMM_STREAM_WRITE:
             stream_fds = &context->write_fds;
@@ -427,7 +435,7 @@ void _process_selected_fds( pcomm_context *context,
     }
 
     if ( !_pcomm_make_fd_list(stream_fds, &fds, &fds_len) ) {
-        for ( i=0; i<fds_len; i++ ) {
+        for ( i=0; (i<fds_len) && (!context->exit_now); i++ ) {
             if ( FD_ISSET(fds[i], set_ptr) ) {
                 if ( (fd_context = (pcomm_fd*)list_seek(stream_fds, &fds[i])) ) {
                     // Check if we are only notifying that fd is ready
@@ -509,24 +517,33 @@ pcomm_result _pcomm_loop( pcomm_context* context ) {
         return PCOMM_NULL_CONTEXT;
     }
 
-    while ( !context->exit_now ) {
-        if ( context->exit_request && !_pcomm_writes_buffered( context ) ) {
-            break;
+    while (!context->exit_now) {
+        if (context->exit_request  && !_pcomm_writes_buffered(context)) {
+            context->exit_now = 1;
+            continue;
         }
 
         max_fd = -1;
         write_max = _pcomm_populate_set( &context->write_fds, &write_set );
         max_fd = (write_max > max_fd) ? write_max : max_fd;
 
-        read_max = _pcomm_populate_set( &context->read_fds, &read_set );
-        max_fd = (read_max > max_fd) ? read_max : max_fd;
+        // Stop processing reads if we are trying to exit cleanly!
+        if (!context->exit_request) {
+            read_max = _pcomm_populate_set( &context->read_fds, &read_set );
+            max_fd = (read_max > max_fd) ? read_max : max_fd;
 
-        error_max = _pcomm_populate_set( &context->error_fds, &error_set );
-        max_fd = (error_max > max_fd) ? error_max : max_fd;
+            error_max = _pcomm_populate_set( &context->error_fds, &error_set );
+            max_fd = (error_max > max_fd) ? error_max : max_fd;
+        }
+        else {
+            read_max = -1;
+            error_max = -1;
+        }
 
         if ( max_fd < 0 ) {
             result = PCOMM_FD_NOT_FOUND;
-            break;
+            context->exit_now = 1;
+            continue;
         }
 
         write_set_ptr = (write_max >= 0) ? &write_set : NULL;
@@ -554,10 +571,14 @@ pcomm_result _pcomm_loop( pcomm_context* context ) {
                     context->exit_now = 0;
             }
         } else if ( num_fds == 0 ) {
-            if (context->timeout_callback) {
+            if (context->exit_now) {
+                continue;
+            }
+            else if (context->timeout_callback) {
                 context->timeout_callback(context);
             }
         } else {
+            // This order is intential.
             _process_selected_fds(context, PCOMM_STREAM_ERROR, error_set_ptr);
             _process_selected_fds(context, PCOMM_STREAM_WRITE, write_set_ptr);
             _process_selected_fds(context, PCOMM_STREAM_READ,  read_set_ptr);
@@ -626,6 +647,8 @@ pcomm_result pcomm_main( pcomm_context* context )
         result = PCOMM_NULL_CONTEXT;
     } else if (!context->initialized) {
         result = PCOMM_UNINITIALIZED_CONTEXT;
+    } else if (context->exit_request) {
+        result = PCOMM_EXITING;
     } else {
         result = _pcomm_loop( context );
     }
@@ -640,10 +663,9 @@ pcomm_result pcomm_stop( pcomm_context* context, int immediately )
     if (!context) {
         result = PCOMM_NULL_CONTEXT;
     } else {
+        context->exit_request = 1;
         if ( immediately ) {
             context->exit_now = 1;
-        } else {
-            context->exit_request = 1;
         }
     }
 
@@ -728,6 +750,8 @@ pcomm_result pcomm_add_write_fd( pcomm_context* context, int fd,
         result = PCOMM_NULL_CONTEXT;
     } else if (!context->initialized) {
         result = PCOMM_UNINITIALIZED_CONTEXT;
+    } else if (context->exit_request) {
+        result = PCOMM_EXITING;
     } else if (!data || !length) {
         result = PCOMM_NO_DATA_FOR_WRITE;
     } else {
@@ -752,6 +776,8 @@ pcomm_result pcomm_monitor_write_fd( pcomm_context* context, int fd,
         result = PCOMM_NULL_CONTEXT;
     } else if (!context->initialized) {
         result = PCOMM_UNINITIALIZED_CONTEXT;
+    } else if (context->exit_request) {
+        result = PCOMM_EXITING;
     } else {
         result = _pcomm_add_output_fd( &context->write_fds, fd,
                                        1    /*check_only*/,
@@ -776,6 +802,8 @@ pcomm_result pcomm_add_read_fd( pcomm_context* context, int fd,
         result = PCOMM_NULL_CONTEXT;
     } else if (!context->initialized) {
         result = PCOMM_UNINITIALIZED_CONTEXT;
+    } else if (context->exit_request) {
+        result = PCOMM_EXITING;
     } else if ( !io_callback ) {
         result = PCOMM_NULL_CALLBACK;
     } else {
@@ -798,6 +826,8 @@ pcomm_result pcomm_monitor_read_fd( pcomm_context* context, int fd,
         result = PCOMM_NULL_CONTEXT;
     } else if (!context->initialized) {
         result = PCOMM_UNINITIALIZED_CONTEXT;
+    } else if (context->exit_request) {
+        result = PCOMM_EXITING;
     } else if (!ready_callback) {
         result = PCOMM_NULL_CALLBACK;
     } else {
@@ -822,6 +852,8 @@ pcomm_result pcomm_add_error_fd( pcomm_context* context, int fd,
         result = PCOMM_NULL_CONTEXT;
     } else if (!context->initialized) {
         result = PCOMM_UNINITIALIZED_CONTEXT;
+    } else if (context->exit_request) {
+        result = PCOMM_EXITING;
     } else if ( !io_callback ) {
         result = PCOMM_NULL_CALLBACK;
     } else {
@@ -844,6 +876,8 @@ pcomm_result pcomm_monitor_error_fd( pcomm_context* context, int fd,
         result = PCOMM_NULL_CONTEXT;
     } else if (!context->initialized) {
         result = PCOMM_UNINITIALIZED_CONTEXT;
+    } else if (context->exit_request) {
+        result = PCOMM_EXITING;
     } else if (!ready_callback) {
         result = PCOMM_NULL_CALLBACK;
     } else {

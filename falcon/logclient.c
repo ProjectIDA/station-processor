@@ -104,7 +104,7 @@ char *q330LogMsg(const char *msg,
                 const char *channel, const char *location)
 {
   char  *errmsg;
-  char  seedRecord[4096];    // Buffer to store seed record
+  char  seedRecord[8192];    // Buffer to store seed record
 
   // One time initialization
   if (bFirst)

@@ -1723,7 +1723,7 @@ char *WriteChan(
   // Get the header for the last record written
   if (iRecord >= 0)
   {
-    char      tempbuf[4096];
+    char      tempbuf[8192];
     char      rec_station[6];
     char      rec_chan[4];
     char      rec_loc[4];

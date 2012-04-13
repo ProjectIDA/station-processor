@@ -238,7 +238,7 @@ void collectData(
   static struct timeval last={0};
   struct timeval timetag = {0};
 
-  char cmdstr[4096];
+  char cmdstr[8192];
   char buffer[5*DATAHZ*100+4];
 
   char *save_errstr;

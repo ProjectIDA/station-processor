@@ -70,6 +70,9 @@ char *MakeSeedMsg(const char *msg, int seqno,
 
   switch(iSeedRecordSize)
   {
+    case 256:
+      iRecordLengthCode = 8;
+      break;
     case 512:
       iRecordLengthCode = 9;
       break;
@@ -82,8 +85,11 @@ char *MakeSeedMsg(const char *msg, int seqno,
     case 4096:
       iRecordLengthCode = 12;
       break;
+    case 8192:
+      iRecordLengthCode = 13;
+      break;
     default:
-      return "MakeSeedMsg: Invalid seed record length (not 512,1024,2048,4096)";
+      return "MakeSeedMsg: Invalid seed record length (not 256,512,1024,2048,4096,8192)";
   }
 
   // We have one blockette 1000 record

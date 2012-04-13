@@ -1,6 +1,6 @@
 /*
  *  PComm
- *  Copyright (C) 2010
+ *  Copyright (C) 2010, 2012
  *
  *  Contributor(s):
  *      Joel Edwards <joel.edwards@gmail.com>
@@ -78,7 +78,8 @@ pcomm_result _pcomm_make_fd_list( list_t* list, int** fd_list, size_t* length ) 
     return result;
 }
 
-pcomm_result _pcomm_add_input_fd( list_t* list, int fd, 
+pcomm_result _pcomm_add_input_fd( list_t* list, int fd, int check_only,
+                                  pcomm_callback_ready ready_callback,
                                   pcomm_callback_io io_callback,
                                   pcomm_callback_close close_callback ) 
 {
@@ -93,6 +94,7 @@ pcomm_result _pcomm_add_input_fd( list_t* list, int fd,
         result = PCOMM_OUT_OF_MEMORY;
     } else {
         fd_context->file_descriptor = fd;
+        fd_context->ready_callback = ready_callback;
         fd_context->io_callback = io_callback;
         fd_context->close_callback = close_callback;
         fd_context->buffer   = NULL;
@@ -100,6 +102,7 @@ pcomm_result _pcomm_add_input_fd( list_t* list, int fd,
         fd_context->used     = 0;
         fd_context->offset   = 0;
         fd_context->last_read_empty = 0;
+        fd_context->check_only = check_only;
 
         list_append( list, fd_context );
     }
@@ -107,8 +110,9 @@ pcomm_result _pcomm_add_input_fd( list_t* list, int fd,
     return result;
 }
 
-pcomm_result _pcomm_add_output_fd( list_t* list, int fd, uint8_t* data, 
-                                   size_t length, 
+pcomm_result _pcomm_add_output_fd( list_t* list, int fd, int check_only,
+                                   uint8_t* data, size_t length, 
+                                   pcomm_callback_ready ready_callback,
                                    pcomm_callback_io io_callback,
                                    pcomm_callback_close close_callback ) 
 {
@@ -121,44 +125,58 @@ pcomm_result _pcomm_add_output_fd( list_t* list, int fd, uint8_t* data,
     } else if ( !list ) {
         result = PCOMM_NULL_LIST;
     } else {
+        // Try to locate an existing context for this descriptor
         if ( (fd_context = (pcomm_fd*)list_seek( list, &fd )) ) {
             if ( !fd_context ) {
                 result = PCOMM_NULL_FD;
-            } else if ( !fd_context->buffer ) {
-                result = PCOMM_NULL_BUFFER;
-            } else {
-                if ( !data || !length ) {
-                    result = PCOMM_NO_DATA_FOR_WRITE;
-                } else if ( !(new_buffer = (uint8_t*)realloc(fd_context->buffer, fd_context->used + length)) ) {
-                    result = PCOMM_OUT_OF_MEMORY;
+            } 
+            // Check if we are managing I/O
+            else if ( !fd_context->check_only ) {
+                if ( !fd_context->buffer ) {
+                    result = PCOMM_NULL_BUFFER;
                 } else {
-                    fd_context->buffer = new_buffer;
-                    memcpy( fd_context->buffer + fd_context->used, data, length );
-                    fd_context->length = fd_context->used + length;
-                    fd_context->used = fd_context->used + length;
+                    if ( !data || !length ) {
+                        result = PCOMM_NO_DATA_FOR_WRITE;
+                    } else if ( !(new_buffer = (uint8_t*)realloc(fd_context->buffer, fd_context->used + length)) ) {
+                        result = PCOMM_OUT_OF_MEMORY;
+                    } else {
+                        fd_context->buffer = new_buffer;
+                        memcpy( fd_context->buffer + fd_context->used, data, length );
+                        fd_context->length = fd_context->used + length;
+                        fd_context->used = fd_context->used + length;
+                    }
                 }
             }
+        // If an existing context could not be located, try to create a new one
         } else if ( !(fd_context = calloc( sizeof(pcomm_fd), 1 )) ) {
             result = PCOMM_OUT_OF_MEMORY;
+        // Initialize the new context if it was successfully created
         } else {
             fd_context->file_descriptor = fd;
+            fd_context->ready_callback = ready_callback;
             fd_context->io_callback = io_callback;
             fd_context->close_callback = close_callback;
             fd_context->buffer   = NULL;
             fd_context->length   = 0;
             fd_context->used     = 0;
             fd_context->offset   = 0;
+            fd_context->check_only = check_only;
 
-            if ( !data || !length ) {
-                result = PCOMM_NO_DATA_FOR_WRITE;
-            } else if ( !(fd_context->buffer = (uint8_t*)malloc(length)) ) {
-                result = PCOMM_OUT_OF_MEMORY;
-                free(fd_context);
-                fd_context = NULL;
-            } else {
-                memcpy( fd_context->buffer, data, length );
-                fd_context->length = length;
-                fd_context->used = length;
+            // Check if we are handling I/O
+            if (!fd_context->check_only) {
+                if ( !data || !length ) {
+                    result = PCOMM_NO_DATA_FOR_WRITE;
+                } else if ( !(fd_context->buffer = (uint8_t*)malloc(length)) ) {
+                    result = PCOMM_OUT_OF_MEMORY;
+                    free(fd_context);
+                    fd_context = NULL;
+                } else {
+                    memcpy( fd_context->buffer, data, length );
+                    fd_context->length = length;
+                    fd_context->used = length;
+                }
+            }
+            if (result == PCOMM_SUCCESS) {
                 if ( list_append( list, fd_context ) < 0 ) {
                     fprintf(stderr, "Failed to add output descriptor to list.\n");
                 }
@@ -235,8 +253,9 @@ pcomm_result _pcomm_empty_list( list_t* list ) {
         while ( list_iterator_hasnext(list) ) {
             fd_context = list_iterator_next(list);
             if ( fd_context ) {
-                if ( fd_context->buffer )
+                if ( fd_context->buffer ) {
                     free( fd_context->buffer );
+                }
                 free( fd_context );
             }
         }
@@ -323,16 +342,18 @@ pcomm_result _pcomm_clean_read_buffer( pcomm_fd* fd_context )
     return result;
 }
 
-pcomm_result _read_fd( pcomm_fd* fd_context )
+pcomm_result _read_fd( pcomm_fd* fd_context, size_t page_size )
 {
     pcomm_result result = PCOMM_SUCCESS;
     uint8_t* new_buffer = NULL;
-    uint8_t buffer[PCOMM_PAGE_SIZE];
+    uint8_t* buffer = NULL;
     size_t read_count = 0;
 
     if ( !fd_context) {
         result = PCOMM_NULL_CONTEXT;
-    } else if ( (read_count = read(fd_context->file_descriptor, buffer, PCOMM_PAGE_SIZE)) <= 0 ) {
+    } else if ( !(buffer = (uint8_t *)malloc(page_size)) ) {
+        result = PCOMM_OUT_OF_MEMORY;
+    } else if ( (read_count = read(fd_context->file_descriptor, buffer, page_size)) <= 0 ) {
         result = PCOMM_NO_DATA_FROM_READ;
     } else if ( !(new_buffer = realloc( fd_context->buffer, fd_context->used + read_count )) ) {
         result = PCOMM_OUT_OF_MEMORY;
@@ -380,18 +401,100 @@ pcomm_result _write_fd( pcomm_fd* fd_context )
     return result;
 }
 
+/* Manage I/O and callbacks for all selected file descriptors */
+void _process_selected_fds( pcomm_context *context,
+                            pcomm_stream   stream,
+                            fd_set        *set_ptr) {
+    pcomm_fd* fd_context;
+    list_t *stream_fds;
+
+    int io_result;
+    int* fds = NULL;
+    size_t fds_len = 0;
+
+    int i = 0;
+
+    switch (stream) {
+        case PCOMM_STREAM_WRITE:
+            stream_fds = &context->write_fds;
+            break;
+        case PCOMM_STREAM_READ:
+            stream_fds = &context->read_fds;
+            break;
+        case PCOMM_STREAM_ERROR:
+            stream_fds = &context->error_fds;
+            break;
+    }
+
+    if ( !_pcomm_make_fd_list(stream_fds, &fds, &fds_len) ) {
+        for ( i=0; i<fds_len; i++ ) {
+            if ( FD_ISSET(fds[i], set_ptr) ) {
+                if ( (fd_context = (pcomm_fd*)list_seek(stream_fds, &fds[i])) ) {
+                    // Check if we are only notifying that fd is ready
+                    if (fd_context->check_only) {
+                        if (fd_context->ready_callback) {
+                            fd_context->ready_callback( context,
+                                                        fd_context->file_descriptor );
+                        }
+                    }
+                    // Otherwise we try to perform I/O on this fd
+                    else {
+                        if (stream == PCOMM_STREAM_WRITE) {
+                            io_result = _write_fd( fd_context );
+                            if ( fd_context->io_callback ) {
+                                fd_context->io_callback( context, 
+                                                      fd_context->file_descriptor,
+                                                      NULL, 0);
+                            }
+                            if ( !fd_context->buffer || !fd_context->used ) {
+                                _pcomm_remove_fd( &context->write_fds, 
+                                                  fd_context->file_descriptor );
+                                if (fd_context->close_callback) {
+                                    fd_context->close_callback(context,
+                                                               fd_context->file_descriptor);
+                                }
+                                free(fd_context);
+                            }
+                        }
+                        else {
+                            io_result = _read_fd( fd_context, context->page_size );
+                            if (!io_result) {
+                                fd_context->last_read_empty = 0;
+                                if (fd_context->io_callback ) {
+                                    fd_context->io_callback( context, 
+                                                          fd_context->file_descriptor, 
+                                                          fd_context->buffer, 
+                                                          fd_context->used );
+                                    _pcomm_clean_read_buffer( fd_context );
+                                }
+                            } else if (io_result == PCOMM_NO_DATA_FROM_READ) {
+                                if (fd_context->last_read_empty) {
+                                    pcomm_remove_read_fd(context, fd_context->file_descriptor);
+                                    if (fd_context->close_callback) {
+                                        fd_context->close_callback(context,
+                                                                   fd_context->file_descriptor);
+                                    }
+                                } else {
+                                    fd_context->last_read_empty = 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        free(fds);
+        fds = NULL;
+        fds_len = 0;
+    }
+}
+
 /* The real magic happens here */
 pcomm_result _pcomm_loop( pcomm_context* context ) {
     pcomm_result result = PCOMM_SUCCESS;
-    pcomm_result io_result;
     int read_max, write_max, error_max;
     int max_fd;
     int num_fds;
-    pcomm_fd* fd_context;
-
-    int i = 0;
-    int* fds = NULL;
-    size_t fds_len = 0;
 
     fd_set read_set;
     fd_set write_set;
@@ -413,11 +516,13 @@ pcomm_result _pcomm_loop( pcomm_context* context ) {
 
         max_fd = -1;
         write_max = _pcomm_populate_set( &context->write_fds, &write_set );
-        if ( write_max > max_fd ) max_fd = write_max;
+        max_fd = (write_max > max_fd) ? write_max : max_fd;
+
         read_max = _pcomm_populate_set( &context->read_fds, &read_set );
-        if ( read_max > max_fd ) max_fd = read_max;
+        max_fd = (read_max > max_fd) ? read_max : max_fd;
+
         error_max = _pcomm_populate_set( &context->error_fds, &error_set );
-        if ( error_max > max_fd ) max_fd = error_max;
+        max_fd = (error_max > max_fd) ? error_max : max_fd;
 
         if ( max_fd < 0 ) {
             result = PCOMM_FD_NOT_FOUND;
@@ -453,101 +558,9 @@ pcomm_result _pcomm_loop( pcomm_context* context ) {
                 context->timeout_callback(context);
             }
         } else {
-            /* ERROR */
-            fd_context = NULL;
-            if ( !_pcomm_make_fd_list(&context->error_fds, &fds, &fds_len) ) {
-                for ( i=0; i<fds_len; i++ ) {
-                    if ( FD_ISSET(fds[i], error_set_ptr) ) {
-                        if ( (fd_context = (pcomm_fd*)list_seek(&context->error_fds, &fds[i])) ) {
-                            io_result = _read_fd( fd_context );
-                            if ( !io_result ) {
-                                fd_context->last_read_empty = 0;
-                                if ( fd_context->io_callback ) {
-                                    fd_context->io_callback( context, 
-                                                             fd_context->file_descriptor, 
-                                                             fd_context->buffer, 
-                                                             fd_context->used );
-                                    _pcomm_clean_read_buffer( fd_context );
-                                }
-                            } else if (io_result == PCOMM_NO_DATA_FROM_READ) {
-                                if (fd_context->last_read_empty) {
-                                    pcomm_remove_read_fd(context, fd_context->file_descriptor);
-                                    if (fd_context->close_callback) {
-                                        fd_context->close_callback(context, fd_context->file_descriptor);
-                                    }
-                                } else {
-                                    fd_context->last_read_empty = 1;
-                                }
-                            }
-                        }
-                    }
-                }
-                free(fds);
-                fds = NULL;
-                fds_len = 0;
-            }
-
-            /* WRITE */
-            fd_context = NULL;
-            if ( !_pcomm_make_fd_list(&context->write_fds, &fds, &fds_len) ) {
-                for ( i=0; i<fds_len; i++ ) {
-                    if ( FD_ISSET(fds[i], write_set_ptr) ) {
-                        if ( (fd_context = (pcomm_fd*)list_seek(&context->write_fds, &fds[i])) ) {
-                            io_result = _write_fd( fd_context );
-                            if ( fd_context->io_callback ) {
-                                fd_context->io_callback( context, 
-                                                      fd_context->file_descriptor,
-                                                      NULL, 0);
-                            }
-                            if ( !fd_context->buffer || !fd_context->used ) {
-                                _pcomm_remove_fd( &context->write_fds, 
-                                                  fd_context->file_descriptor );
-                                if (fd_context->close_callback) {
-                                    fd_context->close_callback(context, fd_context->file_descriptor);
-                                }
-                                free(fd_context);
-                            }
-                        }
-                    }
-                }
-                free(fds);
-                fds = NULL;
-                fds_len = 0;
-            }
-
-            /* READ */
-            fd_context = NULL;
-            if ( !_pcomm_make_fd_list(&context->read_fds, &fds, &fds_len) ) {
-                for ( i=0; i<fds_len; i++ ) {
-                    if ( FD_ISSET(fds[i], read_set_ptr) ) {
-                        if ( (fd_context = (pcomm_fd*)list_seek(&context->read_fds, &fds[i])) ) {
-                            io_result = _read_fd( fd_context );
-                            if (!io_result) {
-                                fd_context->last_read_empty = 0;
-                                if (fd_context->io_callback ) {
-                                    fd_context->io_callback( context, 
-                                                          fd_context->file_descriptor, 
-                                                          fd_context->buffer, 
-                                                          fd_context->used );
-                                    _pcomm_clean_read_buffer( fd_context );
-                                }
-                            } else if (io_result == PCOMM_NO_DATA_FROM_READ) {
-                                if (fd_context->last_read_empty) {
-                                    pcomm_remove_read_fd(context, fd_context->file_descriptor);
-                                    if (fd_context->close_callback) {
-                                        fd_context->close_callback(context, fd_context->file_descriptor);
-                                    }
-                                } else {
-                                    fd_context->last_read_empty = 1;
-                                }
-                            }
-                        }
-                    }
-                }
-                free(fds);
-                fds = NULL;
-                fds_len = 0;
-            }
+            _process_selected_fds(context, PCOMM_STREAM_ERROR, error_set_ptr);
+            _process_selected_fds(context, PCOMM_STREAM_WRITE, write_set_ptr);
+            _process_selected_fds(context, PCOMM_STREAM_READ,  read_set_ptr);
         }
     }
 
@@ -718,11 +731,40 @@ pcomm_result pcomm_add_write_fd( pcomm_context* context, int fd,
     } else if (!data || !length) {
         result = PCOMM_NO_DATA_FOR_WRITE;
     } else {
-        result = _pcomm_add_output_fd( &context->write_fds, fd, data, length, io_callback, close_callback ); 
+        result = _pcomm_add_output_fd( &context->write_fds, fd,
+                                       0    /*check_only*/,
+                                       data,
+                                       length, 
+                                       NULL /*ready_callback*/, 
+                                       io_callback,
+                                       close_callback ); 
     }
 
     return result;
 }
+pcomm_result pcomm_monitor_write_fd( pcomm_context* context, int fd,
+                                     pcomm_callback_ready ready_callback,
+                                     pcomm_callback_close close_callback )
+{
+    pcomm_result result = PCOMM_SUCCESS;
+
+    if ( !context ) { 
+        result = PCOMM_NULL_CONTEXT;
+    } else if (!context->initialized) {
+        result = PCOMM_UNINITIALIZED_CONTEXT;
+    } else {
+        result = _pcomm_add_output_fd( &context->write_fds, fd,
+                                       1    /*check_only*/,
+                                       NULL /*data*/,
+                                       0    /*length*/,
+                                       ready_callback,
+                                       NULL /*io_callback*/,
+                                       close_callback ); 
+    }
+
+    return result;
+}
+
 
 pcomm_result pcomm_add_read_fd( pcomm_context* context, int fd, 
                                 pcomm_callback_io io_callback, 
@@ -737,11 +779,38 @@ pcomm_result pcomm_add_read_fd( pcomm_context* context, int fd,
     } else if ( !io_callback ) {
         result = PCOMM_NULL_CALLBACK;
     } else {
-        result = _pcomm_add_input_fd( &context->read_fds, fd, io_callback, close_callback ); 
+        result = _pcomm_add_input_fd( &context->write_fds, fd,
+                                      0    /*check_only*/,
+                                      NULL /*ready_callback*/,
+                                      io_callback,
+                                      close_callback ); 
     }
 
     return result;
 }
+pcomm_result pcomm_monitor_read_fd( pcomm_context* context, int fd,
+                                    pcomm_callback_ready ready_callback,
+                                    pcomm_callback_close close_callback )
+{
+    pcomm_result result = PCOMM_SUCCESS;
+
+    if ( !context ) { 
+        result = PCOMM_NULL_CONTEXT;
+    } else if (!context->initialized) {
+        result = PCOMM_UNINITIALIZED_CONTEXT;
+    } else if (!ready_callback) {
+        result = PCOMM_NULL_CALLBACK;
+    } else {
+        result = _pcomm_add_input_fd( &context->write_fds, fd,
+                                      1    /*check_only*/,
+                                      ready_callback,
+                                      NULL /*io_callback*/,
+                                      close_callback ); 
+    }
+
+    return result;
+}
+
 
 pcomm_result pcomm_add_error_fd( pcomm_context* context, int fd, 
                                  pcomm_callback_io io_callback, 
@@ -756,7 +825,33 @@ pcomm_result pcomm_add_error_fd( pcomm_context* context, int fd,
     } else if ( !io_callback ) {
         result = PCOMM_NULL_CALLBACK;
     } else {
-        result = _pcomm_add_input_fd( &context->error_fds, fd, io_callback, close_callback ); 
+        result = _pcomm_add_input_fd( &context->write_fds, fd,
+                                      0    /*check_only*/,
+                                      NULL /*ready_callback*/,
+                                      io_callback,
+                                      close_callback ); 
+    }
+
+    return result;
+}
+pcomm_result pcomm_monitor_error_fd( pcomm_context* context, int fd,
+                                    pcomm_callback_ready ready_callback,
+                                    pcomm_callback_close close_callback )
+{
+    pcomm_result result = PCOMM_SUCCESS;
+
+    if ( !context ) { 
+        result = PCOMM_NULL_CONTEXT;
+    } else if (!context->initialized) {
+        result = PCOMM_UNINITIALIZED_CONTEXT;
+    } else if (!ready_callback) {
+        result = PCOMM_NULL_CALLBACK;
+    } else {
+        result = _pcomm_add_input_fd( &context->write_fds, fd,
+                                      1    /*check_only*/,
+                                      ready_callback,
+                                      NULL /*io_callback*/,
+                                      close_callback ); 
     }
 
     return result;

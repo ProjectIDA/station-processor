@@ -1615,7 +1615,7 @@ char *ParseIndexInfo(
   *iMaxRecord = max1;
   if ((iArg = sscanf(&indexbuf[31], "%d %d", &flip2, &max2)) != 2)
   {
-    sprintf(looperrstr, "ParseIndexInfo: format error in index file line 3");
+    sprintf(looperrstr, "ParseIndexInfo: format error in index file line 2");
     return looperrstr;
   }
 

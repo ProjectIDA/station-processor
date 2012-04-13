@@ -1,6 +1,6 @@
 /*
  *  PComm
- *  Copyright (C) 2010
+ *  Copyright (C) 2010, 2012
  *
  *  Contributor(s):
  *      Joel Edwards <joel.edwards@gmail.com>
@@ -84,6 +84,9 @@ typedef enum PCOMM_STREAM pcomm_stream;
 
 struct pcomm_context_t;
 
+/* pcomm_callback_ready is called when a descriptor is ready for I/O */
+typedef void (* pcomm_callback_ready)(struct pcomm_context_t* context, int fd);
+
 /* pcomm_callback_io is called for every I/O event on associated descriptor */
 typedef void (* pcomm_callback_io)(struct pcomm_context_t* context, int fd, uint8_t* data, size_t length);
 
@@ -120,6 +123,7 @@ typedef struct pcomm_context_t {
  */
 typedef struct {
     int file_descriptor;
+    pcomm_callback_ready ready_callback;
     pcomm_callback_io io_callback;
     pcomm_callback_close close_callback;
 
@@ -128,6 +132,7 @@ typedef struct {
     size_t used;
     size_t offset;
     int last_read_empty;
+    int check_only;
 } pcomm_fd;
 
 
@@ -159,21 +164,33 @@ pcomm_result pcomm_set_timeout( pcomm_context* context, struct timeval *timeout_
  */
 pcomm_result pcomm_set_page_size( pcomm_context* context, size_t page_size );
 
-/* add a file descriptor to the WRITE list */
+/* add a file descriptor to the WRITE list for automatic I/O */
 pcomm_result pcomm_add_write_fd( pcomm_context* context, int fd, 
                                  uint8_t* data, size_t length, 
                                  pcomm_callback_io io_callback, 
                                  pcomm_callback_close close_callback );
+/* add a file descriptor to the WRITE list for alert */
+pcomm_result pcomm_monitor_write_fd( pcomm_context* context, int fd,
+                                     pcomm_callback_ready ready_callback,
+                                     pcomm_callback_close close_callback );
 
-/* add a file descriptor to the READ list */
+/* add a file descriptor to the READ list for automatic I/O */
 pcomm_result pcomm_add_read_fd(  pcomm_context* context, int fd, 
                                  pcomm_callback_io io_callback, 
                                  pcomm_callback_close close_callback );
+/* add a file descriptor to the READ list for alert */
+pcomm_result pcomm_monitor_read_fd( pcomm_context* context, int fd,
+                                    pcomm_callback_ready ready_callback,
+                                    pcomm_callback_close close_callback );
 
-/* add a file descriptor to the ERROR list*/
+/* add a file descriptor to the ERROR list for automatic I/O */
 pcomm_result pcomm_add_error_fd( pcomm_context* context, int fd, 
                                  pcomm_callback_io io_callback, 
                                  pcomm_callback_close close_callback );
+/* add a file descriptor to the ERROR list for alert */
+pcomm_result pcomm_monitor_error_fd( pcomm_context* context, int fd,
+                                    pcomm_callback_ready ready_callback,
+                                    pcomm_callback_close close_callback );
 
 pcomm_result pcomm_remove_read_fd(  pcomm_context* context, int fd );
 pcomm_result pcomm_remove_write_fd( pcomm_context* context, int fd );

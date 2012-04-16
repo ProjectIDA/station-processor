@@ -87,19 +87,19 @@ typedef enum PCOMM_STREAM pcomm_stream;
 struct pcomm_context_t;
 
 /* pcomm_callback_ready is called when a descriptor is ready for I/O */
-typedef void (* pcomm_callback_ready)(struct pcomm_context_t* context, int fd);
+typedef void (* pcomm_callback_ready)(struct pcomm_context_t *context, int fd);
 
 /* pcomm_callback_io is called for every I/O event on associated descriptor */
-typedef void (* pcomm_callback_io)(struct pcomm_context_t* context, int fd, uint8_t* data, size_t length);
+typedef void (* pcomm_callback_io)(struct pcomm_context_t *context, int fd, uint8_t *data, size_t length);
 
 /* pcomm_callback_close is called when the associated descriptor is closed */
-typedef void (* pcomm_callback_close)(struct pcomm_context_t* context, int fd);
+typedef void (* pcomm_callback_close)(struct pcomm_context_t *context, int fd);
 
 /* pcomm_callback_timeout is whenever the select operation times out.
  * This allows certain operations to be performed at regular intervals while
  * pcomm retains controll of the overall program flow.
  */
-typedef void (* pcomm_callback_timeout)(struct pcomm_context_t* context);
+typedef void (* pcomm_callback_timeout)(struct pcomm_context_t *context);
 
 /* The pcomm context object used for managing all file descriptors and program
  * state information.
@@ -111,7 +111,7 @@ typedef struct pcomm_context_t {
 
     int initialized;
     size_t page_size;
-    void* user_context;
+    void* external_context;
 
     pcomm_callback_timeout timeout_callback;
     struct timeval *timeout_ptr;
@@ -129,7 +129,9 @@ typedef struct {
     pcomm_callback_io io_callback;
     pcomm_callback_close close_callback;
 
-    uint8_t* buffer;
+    void* external_context;
+
+    uint8_t *buffer;
     size_t length;
     size_t used;
     size_t offset;
@@ -141,61 +143,70 @@ typedef struct {
 /* Public function definitions  */
 
 /* context creation and destruction */
-pcomm_result pcomm_init( pcomm_context* context );
-pcomm_result pcomm_destroy( pcomm_context* context );
+pcomm_result pcomm_init( pcomm_context *context );
+pcomm_result pcomm_destroy( pcomm_context *context );
 
 /* main loop control */
-pcomm_result pcomm_main( pcomm_context* context );
-pcomm_result pcomm_stop( pcomm_context* context, int immediately );
+pcomm_result pcomm_main( pcomm_context *context );
+pcomm_result pcomm_stop( pcomm_context *context, int immediately );
 
-/* used to maintain the user's context if any */
-pcomm_result pcomm_set_user_context( pcomm_context* context, void* user_context );
-void* pcomm_get_user_context( pcomm_context* context );
+/* used to maintain an external context relevant to the parent program */
+pcomm_result pcomm_set_external_context( pcomm_context *context, void *external_context );
+void *pcomm_get_external_context( pcomm_context *context );
+
+/* used to maintain an external file-descriptor-specific context relevant to
+ * the parent program */
+pcomm_result pcomm_set_external_fd_context( pcomm_context *context, pcomm_stream type,
+                                            int fd, void *external_fd_context );
+void *pcomm_get_external_fd_context( pcomm_context *context, pcomm_stream type, int fd );
 
 /* sets the function to be called every time the select operation
  * times out
  */
-pcomm_result pcomm_set_timeout_callback( pcomm_context* context, 
+pcomm_result pcomm_set_timeout_callback( pcomm_context *context, 
                                          pcomm_callback_timeout timeout_callback );
 
 /* changes the timeout for the select operation */
-pcomm_result pcomm_set_timeout( pcomm_context* context, struct timeval *timeout_ptr );
+pcomm_result pcomm_set_timeout( pcomm_context *context, struct timeval *timeout_ptr );
 
 /* sets the maximum number of bytes to read before returning control to 
  * the select
  */
-pcomm_result pcomm_set_page_size( pcomm_context* context, size_t page_size );
+pcomm_result pcomm_set_page_size( pcomm_context *context, size_t page_size );
 
 /* add a file descriptor to the WRITE list for automatic I/O */
-pcomm_result pcomm_add_write_fd( pcomm_context* context, int fd, 
-                                 uint8_t* data, size_t length, 
+pcomm_result pcomm_add_write_fd( pcomm_context *context, int fd, 
+                                 uint8_t *data, size_t length, 
                                  pcomm_callback_io io_callback, 
                                  pcomm_callback_close close_callback );
+
+/* add a file descriptor to the READ list for automatic I/O */
+pcomm_result pcomm_add_read_fd(  pcomm_context *context, int fd, 
+                                 pcomm_callback_io io_callback, 
+                                 pcomm_callback_close close_callback );
+
+/* add a file descriptor to the ERROR list for automatic I/O */
+pcomm_result pcomm_add_error_fd( pcomm_context *context, int fd, 
+                                 pcomm_callback_io io_callback, 
+                                 pcomm_callback_close close_callback );
+
 /* add a file descriptor to the WRITE list for alert */
-pcomm_result pcomm_monitor_write_fd( pcomm_context* context, int fd,
+pcomm_result pcomm_monitor_write_fd( pcomm_context *context, int fd,
                                      pcomm_callback_ready ready_callback,
                                      pcomm_callback_close close_callback );
 
-/* add a file descriptor to the READ list for automatic I/O */
-pcomm_result pcomm_add_read_fd(  pcomm_context* context, int fd, 
-                                 pcomm_callback_io io_callback, 
-                                 pcomm_callback_close close_callback );
 /* add a file descriptor to the READ list for alert */
-pcomm_result pcomm_monitor_read_fd( pcomm_context* context, int fd,
+pcomm_result pcomm_monitor_read_fd( pcomm_context *context, int fd,
                                     pcomm_callback_ready ready_callback,
                                     pcomm_callback_close close_callback );
 
-/* add a file descriptor to the ERROR list for automatic I/O */
-pcomm_result pcomm_add_error_fd( pcomm_context* context, int fd, 
-                                 pcomm_callback_io io_callback, 
-                                 pcomm_callback_close close_callback );
 /* add a file descriptor to the ERROR list for alert */
-pcomm_result pcomm_monitor_error_fd( pcomm_context* context, int fd,
-                                    pcomm_callback_ready ready_callback,
-                                    pcomm_callback_close close_callback );
+pcomm_result pcomm_monitor_error_fd( pcomm_context *context, int fd,
+                                     pcomm_callback_ready ready_callback,
+                                     pcomm_callback_close close_callback );
 
-pcomm_result pcomm_remove_read_fd(  pcomm_context* context, int fd );
-pcomm_result pcomm_remove_write_fd( pcomm_context* context, int fd );
-pcomm_result pcomm_remove_error_fd( pcomm_context* context, int fd );
+pcomm_result pcomm_remove_read_fd(  pcomm_context *context, int fd );
+pcomm_result pcomm_remove_write_fd( pcomm_context *context, int fd );
+pcomm_result pcomm_remove_error_fd( pcomm_context *context, int fd );
 
 #endif

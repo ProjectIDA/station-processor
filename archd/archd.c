@@ -480,7 +480,7 @@ int main (int argc, char **argv)
     archd->server_port = iPort;
     archd->debug = g_bDebug;
     pcomm_init(archd->pcomm);
-    pcomm_set_user_context(archd->pcomm, archd);
+    pcomm_set_external_context(archd->pcomm, archd);
 
     //pcomm_set_timeout(archd->pcomm, );
     //pcomm_set_timeout_callback(archd->pcomm, );
@@ -496,14 +496,23 @@ int main (int argc, char **argv)
     pcomm_destroy(archd->pcomm);
 
     // free up archd resources
+    free(archd->pcomm);
     free(archd);
 } // main()
+
+/* TODO: populate this function with tasks that should be performed after 
+ *       a comm timeout.
+ */
+void async_timeout (pcomm_context *pcomm) {
+    ;
+}
 
 /* Creates the server socket, binds, and starts listening for new clients.
  * XXX: We need to allocate a buffer for each new connection associated with
  *      its file descriptor
  */
 void init_server (archd_context *archd) {
+    //archd->server_socket = bind(archd->server_port);
 }
 
 /* Handles new connection requests, adding new file descriptors to pcomm
@@ -514,9 +523,10 @@ void init_server (archd_context *archd) {
 void connect_request (pcomm_context *pcomm, int fd) {
 }
 
-/* Handles new data from the, adding it to the queue, and adding to the archive
+/* Handles new data from the client, adding it to the queue, and adding to the archive
  * queue once a complete record has been assembled.
- * XXX: We need a way to buffer data for each connection to perform the above
+ * TODO: We need a way to buffer data for each connection to perform the above
+ * TODO: Create an AVL tree based priority queue
  */
 void client_data (pcomm_context *pcomm, int fd, uint8_t *data, size_t length) {
 }

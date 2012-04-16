@@ -40,11 +40,14 @@ const char *VersionIdentString = "Release 2.0";
 #include <stdlib.h>
 #include <ctype.h>
 #include <arpa/inet.h>
-#include <signal.h>
-#include <unistd.h>
-#include <syslog.h>
+#include <netinet/in.h>
+#include <netdb.h>
 #include <pthread.h>
+#include <signal.h>
+#include <syslog.h>
+#include <unistd.h>
 #include <sys/shm.h>
+#include <sys/time.h>
 #include "libtree/libtree.h"
 #include "libpcomm/pcomm.h"
 #include "include/map.h"
@@ -55,11 +58,20 @@ const char *VersionIdentString = "Release 2.0";
 #include "include/netreq.h"
 #include "include/dcc_time_proto2.h"
 
+#define ASYNC_TIMEOUT_SECONDS       1 
+#define ASYNC_TIMEOUT_MICROSECONDS  0
+#define BIND_RETRY_INTERVAL         15
+
 void daemonize();
 
 //////////////////////////////////////////////////////////////////////////////
 
-void *StartServer(void *params);
+int init_server (archd_context_t *archd);
+void callback_async_timeout (pcomm_context_t *pcomm);
+void callback_connect_request (pcomm_context_t *pcomm, int fd);
+void callback_server_closed (pcomm_context_t *pcomm, int fd);
+void callback_client_data (pcomm_context_t *pcomm, int fd, uint8_t *data, size_t length);
+void callback_client_closed (pcomm_context_t *pcomm, int fd);
 
 // Make the server_pid global so it can be killed when program is shut down
 int   server_pid=0;
@@ -67,7 +79,8 @@ int   g_bDebug=0;
 char  g_sIDAname[6];
 static struct s_mapshm *mapshm=NULL;
 static struct s_mapstatus *mapstatus=NULL;
-static archd_context *archd=NULL;
+static archd_context_t *archd=NULL;
+static int iSeedRecordSize;
 
 //////////////////////////////////////////////////////////////////////////////
 void ShowUsage()
@@ -373,16 +386,21 @@ int main (int argc, char **argv)
     char   *bufPtr, *msgPtr, c;
     time_t  queuetimetag=0;
 
-    if ((archd = malloc(sizeof(archd_context))) == NULL) {
+    pcomm_result_t pcomm_result;
+
+    if ((archd = malloc(sizeof(archd_context_t))) == NULL) {
         fprintf(stderr, "Could not allocate memory for archive daemon (%s) context\n", WHOAMI, retmsg);
     }
 
-    if ((archd->pcomm = malloc(sizeof(pcomm_context))) == NULL) {
+    if ((archd->pcomm = malloc(sizeof(pcomm_context_t))) == NULL) {
         fprintf(stderr, "Could not allocate memory for pcomm context\n", WHOAMI, retmsg);
     }
 
+    archd->timeout.tv_sec = (long)ASYNC_TIMEOUT_SECONDS;
+    archd->timeout.tv_sec = (long)ASYNC_TIMEOUT_MICROSECONDS;
     archd->server_port = -1;
     archd->server_socket = -1;
+    archd->client_count = 0;
     archd->debug = 0;
 
     // Check for right number of arguments
@@ -433,34 +451,6 @@ int main (int argc, char **argv)
     // Ignore SIGPIPE when a connection is closed
     signal (SIGPIPE, SIG_IGN);
 
-    // Set up the shared memory segment
-    /*
-       if ((retmsg = MapSharedMem((void **)&mapshm)) != NULL)
-       {
-       if (g_bDebug)
-       fprintf(stderr, "%s:main %s\n", WHOAMI, retmsg);
-       else
-       syslog(LOG_ERR, "%s:main %s", WHOAMI, retmsg);
-       exit(1);
-       }
-       memset(mapshm, 0, sizeof(struct s_mapshm));
-     */
-
-    // Open the dispstatus shared memory region
-    /*
-       retmsg = MapStatusMem((void **)&mapstatus);
-       if (retmsg != NULL)
-       {
-       if (g_bDebug)
-       fprintf (stderr, "Error loading dispstatus shared memory: %s\n",
-       retmsg);
-       else
-       syslog (LOG_ERR, "Error loading dispstatus shared memory: %s",
-       retmsg);
-       exit(1);
-       }
-     */
-
     // IDA initialization
     initMsg = idaInit(station, WHOAMI);
 
@@ -479,40 +469,156 @@ int main (int argc, char **argv)
     LogServerPort(&archd->server_port);
     archd->server_port = iPort;
     archd->debug = g_bDebug;
-    pcomm_init(archd->pcomm);
-    pcomm_set_external_context(archd->pcomm, archd);
-
-    //pcomm_set_timeout(archd->pcomm, );
-    //pcomm_set_timeout_callback(archd->pcomm, );
-
-    // FOR EACH FD ADDITION
-    //pcomm_add_write_fd(archd->pcomm, <fd>, <data>, <length>, <io_callback>, <close_callback>);
-    //pcomm_add_(read|error)_fd(archd->pcomm, <fd>, <io_callback>, <close_callback>);
-
-    // RUN pcomm main loop
-    pcomm_main(archd->pcomm);
+    if (pcomm_result = pcomm_init(archd->pcomm))
+    {
+        if (g_bDebug) {
+            fprintf(stderr, "%s:pcomm_init(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        } else {
+            syslog(LOG_ERR, "%s:pcomm_init(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        }
+    }
+    else if (pcomm_result = pcomm_set_external_context(archd->pcomm, archd))
+    {
+        if (g_bDebug) {
+            fprintf(stderr, "%s:pcomm_set_external_context(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        } else {
+            syslog(LOG_ERR, "%s:pcomm_set_external_context(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        }
+    }
+    else if (!init_server(archd)) {
+        if (g_bDebug) {
+            fprintf(stderr, "%s:init_server(): failed to start server", WHOAMI);
+        } else {
+            syslog(LOG_ERR, "%s:init_server(): failed to start server", WHOAMI);
+        }
+    }
+    else if (pcomm_result =  pcomm_monitor_read_fd(archd->pcomm,
+                                                   archd->server_socket,
+                                                   callback_connect_request,
+                                                   callback_server_closed))
+    {
+        if (g_bDebug) {
+            fprintf(stderr, "%s:pcomm_monitor_read_fd(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        } else {
+            syslog(LOG_ERR, "%s:pcomm_monitor_read_fd(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        }
+    }
+    else if (pcomm_result = pcomm_set_timeout(archd->pcomm, &archd->timeout)) {
+        if (g_bDebug) {
+            fprintf(stderr, "%s:pcomm_set_timeout(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        } else {
+            syslog(LOG_ERR, "%s:pcomm_set_timeout(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        }
+    } 
+    else if (pcomm_result = pcomm_set_timeout_callback(archd->pcomm, callback_async_timeout)) {
+        if (g_bDebug) {
+            fprintf(stderr, "%s:pcomm_set_timeout_callback(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        } else {
+            syslog(LOG_ERR, "%s:pcomm_set_timeout_callback(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        }
+    } 
+    else {
+        // RUN pcomm main loop
+        pcomm_main(archd->pcomm);
+    }
 
     // CLEAN up upon completion
-    pcomm_destroy(archd->pcomm);
+    if (archd) {
+        if (archd->pcomm) {
+            pcomm_destroy(archd->pcomm);
+            free(archd->pcomm);
+        }
+        free(archd);
+    }
 
-    // free up archd resources
-    free(archd->pcomm);
-    free(archd);
 } // main()
-
-/* TODO: populate this function with tasks that should be performed after 
- *       a comm timeout.
- */
-void async_timeout (pcomm_context *pcomm) {
-    ;
-}
 
 /* Creates the server socket, binds, and starts listening for new clients.
  * XXX: We need to allocate a buffer for each new connection associated with
  *      its file descriptor
  */
-void init_server (archd_context *archd) {
+int init_server(archd_context_t *archd) {
     //archd->server_socket = bind(archd->server_port);
+    int   i;
+    char  *errstr;
+    struct sockaddr_in listen_addr; /* Listen address setup */
+
+    if ((errstr=LoopRecordSize(&iSeedRecordSize)) != NULL)
+    {
+        fprintf(stderr, "%s\n", errstr);
+        return 0;
+    }
+
+    if (archd->debug) {
+        printf("init_server(): port=%d recLen=%d\n",
+                archd->server_port, iSeedRecordSize);
+    }
+
+    /* Create the socket we will listen on error */
+    archd->server_socket = socket(AF_INET, SOCK_STREAM, 0); /* TCP */
+    if (archd->server_socket<0)
+    {
+        fprintf(stderr,"init_server: Cannot open socket (err %d,%d)\n",
+                errno,archd->server_socket);
+        return 0;
+    }
+
+    /* Set up structure and bind to port number */
+    // Only local programs can connect via loopback address
+    listen_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    listen_addr.sin_family = AF_INET;
+    listen_addr.sin_port = htons(archd->server_port);
+
+    // Loop forever waiting for bind to succeed
+    while (1)
+    {
+
+        if (bind( archd->server_socket,
+                  (struct sockaddr *) &listen_addr, 
+                  sizeof(listen_addr) ) < 0)
+        {
+            if (errno==EADDRINUSE)
+            {
+                if (archd->debug)
+                    fprintf(stderr,"Port %d in use? Trying again in %d sec\n",
+                            archd->server_port, (int)BIND_RETRY_INTERVAL);
+                else
+                    syslog(LOG_INFO,"Port %d in use? Trying again in %d sec",
+                            archd->server_port, (int)BIND_RETRY_INTERVAL);
+                sleep(BIND_RETRY_INTERVAL);
+                continue;
+            }
+            fprintf(stderr,"Cannot bind (err %d - %s)\n",errno,strerror(errno));
+            return 0;
+        }
+        break;
+    } // infinite loop
+
+    // Set up listener
+    if (listen(archd->server_socket, MAX_CLIENTS) < 0) {
+        fprintf(stderr,"dnetport: cannot set listen depth to %d (%d)\n",
+                MAX_CLIENTS, errno);
+        return 0;
+    }
+    return 1;
+}
+
+/* TODO: populate this function with tasks that should be performed after 
+ *       a comm timeout.
+ */
+void callback_async_timeout(pcomm_context_t *pcomm) {
+    archd_context_t *archd;
+    archd = (archd_context_t *)pcomm_get_external_context(pcomm);
 }
 
 /* Handles new connection requests, adding new file descriptors to pcomm
@@ -520,7 +626,72 @@ void init_server (archd_context *archd) {
  * XXX: We need to allocate a buffer for each new connection associated with
  *      its file descriptor
  */
-void connect_request (pcomm_context *pcomm, int fd) {
+void callback_connect_request(pcomm_context_t *pcomm, int fd) {
+    struct sockaddr_in address;
+    archd_context_t *archd;
+    pcomm_result_t pcomm_result;
+    int client_sock;
+    unsigned int addr_len = sizeof(struct sockaddr_in);
+    int client;
+
+    archd = (archd_context_t *)pcomm_get_external_context(pcomm);
+
+    if (archd->client_count >= MAX_CLIENTS) {
+        fprintf(stderr, "Maximum number of client reached, rejecting\n");
+        return;
+    }
+
+    // Accept a new connection request
+    if (archd->debug)
+    {
+        printf("Accepting connect request (port %d)\n", archd->server_port);
+    }
+
+    client_sock = accept(archd->server_socket, (struct sockaddr *)(&address), &addr_len);
+    if (client_sock<0)
+    {
+        fprintf(stderr,"accept failed (%d,%d)\n", errno, client_sock);
+        return;
+    }
+
+    if (getpeername(client_sock, (struct sockaddr *)(&address), &addr_len) < 0)
+    {
+        fprintf(stderr,"BAD ERROR encountered - error %d - %s\n", errno, strerror(errno));
+        close(client_sock);
+        return;
+    }
+
+    // FOR EACH FD ADDITION
+    //pcomm_add_write_fd(archd->pcomm, <fd>, <data>, <length>, <io_callback>, <close_callback>);
+    //pcomm_add_(read|error)_fd(archd->pcomm, <fd>, <io_callback>, <close_callback>);
+
+    if (pcomm_result = pcomm_add_read_fd(archd->pcomm,
+                                         client_sock,
+                                         callback_client_data,
+                                         callback_client_closed))
+    {
+        if (archd->debug) {
+            fprintf(stderr, "%s:pcomm_add_read_fd(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        } else {
+            syslog(LOG_ERR, "%s:pcomm_add_read_fd(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        }
+        return;
+    }
+    archd->client_count++;
+
+    if (archd->debug) {
+        printf("New client at socket %d (%d of %d available)\n",
+               client_sock, archd->client_count, MAX_CLIENTS);
+    }
+}
+
+/* Stubb for handling server disconnects.
+ */
+void callback_server_closed (pcomm_context_t *pcomm, int fd) {
+    // TODO: attempt to re-connect
+    pcomm_stop(pcomm, 1/*immediately*/);
 }
 
 /* Handles new data from the client, adding it to the queue, and adding to the archive
@@ -528,7 +699,11 @@ void connect_request (pcomm_context *pcomm, int fd) {
  * TODO: We need a way to buffer data for each connection to perform the above
  * TODO: Create an AVL tree based priority queue
  */
-void client_data (pcomm_context *pcomm, int fd, uint8_t *data, size_t length) {
+void callback_client_data (pcomm_context_t *pcomm, int fd, uint8_t *data, size_t length) {
+    archd_context_t *archd;
+    archd = (archd_context_t *)pcomm_get_external_context(pcomm);
+    // TODO: add to the priority queue
+    ;
 }
 
 /* Handles the closing of a client connection, and perform the necessary 
@@ -536,7 +711,9 @@ void client_data (pcomm_context *pcomm, int fd, uint8_t *data, size_t length) {
  * XXX: We need to flush, and remove the buffers for a connection when it is
  *      removed
  */
-void client_closed (pcomm_context *pcomm, int fd) {
+void callback_client_closed (pcomm_context_t *pcomm, int fd) {
+    archd = (archd_context_t *)pcomm_get_external_context(pcomm);
+    ;
 }
 
 

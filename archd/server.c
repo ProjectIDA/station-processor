@@ -206,7 +206,7 @@ void *ServerReadThread(void *params)
 
 //////////////////////////////////////////////////////////////////////////////
 // Entry point for main program to start server listening for log messages
-void *StartServer(void *params)
+void *StartServer()
 {
   int   listen_socket;
   int   i;

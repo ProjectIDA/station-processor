@@ -46,14 +46,22 @@ struct s_mapshm
     char    buffer[MAX_CLIENTS][2][8192];
 };
 
-typedef struct archd_context_t {
-    pcomm_context *pcomm;
+typedef struct ARCHD_CONTEXT {
+    pcomm_context_t *pcomm;
+    struct timeval timeout;
 
     int server_port;
     int server_socket;
 
+    size_t client_count;
+
     int debug;
-} archd_context;
+} archd_context_t;
+
+typedef struct CLIENT_CONTEXT {
+    uint8_t buffer[8192];
+    size_t  length;
+} client_context_t;
 
 // Routine call prototype definitions
 // Calls return NULL on no errors, or pointer to error message string

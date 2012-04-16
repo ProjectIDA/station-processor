@@ -20,7 +20,7 @@
 int _list_aid_seeker( const void *element, const void *indicator )
 {
     if ( element && indicator && 
-         (((pcomm_fd *)element)->file_descriptor == *((int *)indicator)) ) {
+         (((pcomm_fd_t *)element)->file_descriptor == *((int *)indicator)) ) {
         return 1;
     }
     return 0;
@@ -29,7 +29,7 @@ int _list_aid_seeker( const void *element, const void *indicator )
 int _list_aid_comparator( const void *a, const void *b )
 {
     if ( a && b ) {
-        return ((pcomm_fd *)b)->file_descriptor - ((pcomm_fd *)a)->file_descriptor;
+        return ((pcomm_fd_t *)b)->file_descriptor - ((pcomm_fd_t *)a)->file_descriptor;
     }
     else if ( a && !b ) 
         return -1;
@@ -38,9 +38,9 @@ int _list_aid_comparator( const void *a, const void *b )
     return 0;
 }
 
-pcomm_result _pcomm_make_fd_list( list_t *list, int **fd_list, size_t *length ) {
-    pcomm_result result = PCOMM_SUCCESS;
-    pcomm_fd *fd_context = NULL;
+pcomm_result_t _pcomm_make_fd_list( list_t *list, int **fd_list, size_t *length ) {
+    pcomm_result_t result = PCOMM_SUCCESS;
+    pcomm_fd_t *fd_context = NULL;
     size_t list_len = 0;
     int *fds = NULL;
 
@@ -78,19 +78,19 @@ pcomm_result _pcomm_make_fd_list( list_t *list, int **fd_list, size_t *length ) 
     return result;
 }
 
-pcomm_result _pcomm_add_input_fd( list_t *list, int fd, int check_only,
+pcomm_result_t _pcomm_add_input_fd( list_t *list, int fd, int check_only,
                                   pcomm_callback_ready ready_callback,
                                   pcomm_callback_io io_callback,
                                   pcomm_callback_close close_callback ) 
 {
-    pcomm_fd *fd_context = NULL;
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_fd_t *fd_context = NULL;
+    pcomm_result_t result = PCOMM_SUCCESS;
     
     if ( fd < 0 ) {
         result = PCOMM_FD_NEGATIVE;
     } else if ( !list ) {
         result = PCOMM_NULL_LIST;
-    } else if ( !(fd_context = calloc( sizeof(pcomm_fd), 1 )) ) {
+    } else if ( !(fd_context = calloc( sizeof(pcomm_fd_t), 1 )) ) {
         result = PCOMM_OUT_OF_MEMORY;
     } else {
         fd_context->file_descriptor = fd;
@@ -110,14 +110,14 @@ pcomm_result _pcomm_add_input_fd( list_t *list, int fd, int check_only,
     return result;
 }
 
-pcomm_result _pcomm_add_output_fd( list_t *list, int fd, int check_only,
+pcomm_result_t _pcomm_add_output_fd( list_t *list, int fd, int check_only,
                                    uint8_t *data, size_t length, 
                                    pcomm_callback_ready ready_callback,
                                    pcomm_callback_io io_callback,
                                    pcomm_callback_close close_callback ) 
 {
-    pcomm_fd *fd_context = NULL;
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_fd_t *fd_context = NULL;
+    pcomm_result_t result = PCOMM_SUCCESS;
     uint8_t *new_buffer = NULL;
 
     if ( fd < 0 ) {
@@ -126,7 +126,7 @@ pcomm_result _pcomm_add_output_fd( list_t *list, int fd, int check_only,
         result = PCOMM_NULL_LIST;
     } else {
         // Try to locate an existing context for this descriptor
-        if ( (fd_context = (pcomm_fd *)list_seek( list, &fd )) ) {
+        if ( (fd_context = (pcomm_fd_t *)list_seek( list, &fd )) ) {
             if ( !fd_context ) {
                 result = PCOMM_NULL_FD;
             } 
@@ -148,7 +148,7 @@ pcomm_result _pcomm_add_output_fd( list_t *list, int fd, int check_only,
                 }
             }
         // If an existing context could not be located, try to create a new one
-        } else if ( !(fd_context = calloc( sizeof(pcomm_fd), 1 )) ) {
+        } else if ( !(fd_context = calloc( sizeof(pcomm_fd_t), 1 )) ) {
             result = PCOMM_OUT_OF_MEMORY;
         // Initialize the new context if it was successfully created
         } else {
@@ -187,23 +187,23 @@ pcomm_result _pcomm_add_output_fd( list_t *list, int fd, int check_only,
     return result;
 }
 
-pcomm_fd *_pcomm_get_fd( list_t *list, int fd ) 
+pcomm_fd_t *_pcomm_get_fd( list_t *list, int fd ) 
 {
-    pcomm_fd *fd_context = NULL;
+    pcomm_fd_t *fd_context = NULL;
 
     if ( (fd >= 0) && (list) ) {
-        fd_context = (pcomm_fd *)list_seek( list, &fd );
+        fd_context = (pcomm_fd_t *)list_seek( list, &fd );
     } 
 
     return fd_context;
 }
 
-pcomm_result _pcomm_remove_fd( list_t *list, int fd ) 
+pcomm_result_t _pcomm_remove_fd( list_t *list, int fd ) 
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
     int index = -1;
     int delete_result = -1;
-    pcomm_fd *fd_context;
+    pcomm_fd_t *fd_context;
 
     if ( !list ) {
         result = PCOMM_NULL_LIST;
@@ -220,9 +220,9 @@ pcomm_result _pcomm_remove_fd( list_t *list, int fd )
     return result;
 }
 
-pcomm_result _pcomm_remove_fd_type( pcomm_context *context, int fd, pcomm_stream type )
+pcomm_result_t _pcomm_remove_fd_type( pcomm_context_t *context, int fd, pcomm_stream_t type )
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
     if (!context) {
         result = PCOMM_NULL_CONTEXT;
     } else if (!context->initialized) {
@@ -241,9 +241,9 @@ pcomm_result _pcomm_remove_fd_type( pcomm_context *context, int fd, pcomm_stream
     return result;
 }
 
-pcomm_result _pcomm_empty_list( list_t *list ) {
-    pcomm_result result = PCOMM_SUCCESS;
-    pcomm_fd *fd_context = NULL;
+pcomm_result_t _pcomm_empty_list( list_t *list ) {
+    pcomm_result_t result = PCOMM_SUCCESS;
+    pcomm_fd_t *fd_context = NULL;
 
     if ( !list ) {
         result = PCOMM_NULL_LIST;
@@ -266,10 +266,10 @@ pcomm_result _pcomm_empty_list( list_t *list ) {
     return result;
 }
 
-int _pcomm_writes_buffered( pcomm_context *context ) { 
+int _pcomm_writes_buffered( pcomm_context_t *context ) { 
     int result = 0;
     /*
-    pcomm_fd *fd_context = NULL;
+    pcomm_fd_t *fd_context = NULL;
     */
 
     if ( context ) {
@@ -302,7 +302,7 @@ int _pcomm_populate_set( list_t *list, fd_set *set )
 {
     int max_fd = -1;
     int tmp_fd = -1;
-    pcomm_fd *fd_context = NULL; 
+    pcomm_fd_t *fd_context = NULL; 
 
     FD_ZERO( set );
     if ( list && set ) {
@@ -325,9 +325,9 @@ int _pcomm_populate_set( list_t *list, fd_set *set )
     return max_fd;
 }
 
-pcomm_result _pcomm_clean_read_buffer( pcomm_fd *fd_context )
+pcomm_result_t _pcomm_clean_read_buffer( pcomm_fd_t *fd_context )
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if ( !fd_context ) {
         result = PCOMM_NULL_CONTEXT;
@@ -343,9 +343,9 @@ pcomm_result _pcomm_clean_read_buffer( pcomm_fd *fd_context )
     return result;
 }
 
-pcomm_result _read_fd( pcomm_fd *fd_context, size_t page_size )
+pcomm_result_t _read_fd( pcomm_fd_t *fd_context, size_t page_size )
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
     uint8_t *new_buffer = NULL;
     uint8_t *buffer = NULL;
     size_t read_count = 0;
@@ -368,9 +368,9 @@ pcomm_result _read_fd( pcomm_fd *fd_context, size_t page_size )
     return result;
 }
 
-pcomm_result _write_fd( pcomm_fd *fd_context )
+pcomm_result_t _write_fd( pcomm_fd_t *fd_context )
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
     uint8_t *new_buffer = NULL;
     size_t write_count = 0;
 
@@ -403,10 +403,10 @@ pcomm_result _write_fd( pcomm_fd *fd_context )
 }
 
 /* Manage I/O and callbacks for all selected file descriptors */
-void _process_selected_fds( pcomm_context *context,
-                            pcomm_stream   stream,
+void _process_selected_fds( pcomm_context_t *context,
+                            pcomm_stream_t stream,
                             fd_set        *set_ptr) {
-    pcomm_fd *fd_context;
+    pcomm_fd_t *fd_context;
     list_t *stream_fds;
 
     int io_result;
@@ -437,7 +437,7 @@ void _process_selected_fds( pcomm_context *context,
     if ( !_pcomm_make_fd_list(stream_fds, &fds, &fds_len) ) {
         for ( i=0; (i<fds_len) && (!context->exit_now); i++ ) {
             if ( FD_ISSET(fds[i], set_ptr) ) {
-                if ( (fd_context = (pcomm_fd *)list_seek(stream_fds, &fds[i])) ) {
+                if ( (fd_context = (pcomm_fd_t *)list_seek(stream_fds, &fds[i])) ) {
                     // Check if we are only notifying that fd is ready
                     if (fd_context->check_only) {
                         if (fd_context->ready_callback) {
@@ -498,8 +498,8 @@ void _process_selected_fds( pcomm_context *context,
 }
 
 /* The real magic happens here */
-pcomm_result _pcomm_loop( pcomm_context *context ) {
-    pcomm_result result = PCOMM_SUCCESS;
+pcomm_result_t _pcomm_loop( pcomm_context_t *context ) {
+    pcomm_result_t result = PCOMM_SUCCESS;
     int read_max, write_max, error_max;
     int max_fd;
     int num_fds;
@@ -588,9 +588,9 @@ pcomm_result _pcomm_loop( pcomm_context *context ) {
     return result;
 }
 
-pcomm_result pcomm_init( pcomm_context *context )
+pcomm_result_t pcomm_init( pcomm_context_t *context )
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if ( !context ) {
         result = PCOMM_NULL_CONTEXT;
@@ -618,9 +618,9 @@ pcomm_result pcomm_init( pcomm_context *context )
     return result;
 }
 
-pcomm_result pcomm_destroy( pcomm_context *context )
+pcomm_result_t pcomm_destroy( pcomm_context_t *context )
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if (!context) {
         result = PCOMM_NULL_CONTEXT;
@@ -639,15 +639,15 @@ pcomm_result pcomm_destroy( pcomm_context *context )
     return result;
 }
 
-pcomm_result pcomm_main( pcomm_context *context ) 
+pcomm_result_t pcomm_main( pcomm_context_t *context ) 
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if (!context) {
         result = PCOMM_NULL_CONTEXT;
     } else if (!context->initialized) {
         result = PCOMM_UNINITIALIZED_CONTEXT;
-    } else if (context->exit_request) {
+    } else if (context->exit_request || context->exit_now) {
         result = PCOMM_EXITING;
     } else {
         result = _pcomm_loop( context );
@@ -656,9 +656,9 @@ pcomm_result pcomm_main( pcomm_context *context )
     return result;
 }
 
-pcomm_result pcomm_stop( pcomm_context *context, int immediately ) 
+pcomm_result_t pcomm_stop( pcomm_context_t *context, int immediately ) 
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if (!context) {
         result = PCOMM_NULL_CONTEXT;
@@ -672,8 +672,8 @@ pcomm_result pcomm_stop( pcomm_context *context, int immediately )
     return result;
 }
 
-pcomm_result pcomm_set_external_context( pcomm_context *context, void *external_context ) {
-    pcomm_result result = PCOMM_SUCCESS;
+pcomm_result_t pcomm_set_external_context( pcomm_context_t *context, void *external_context ) {
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if (!context) {
         result = PCOMM_NULL_CONTEXT;
@@ -686,7 +686,7 @@ pcomm_result pcomm_set_external_context( pcomm_context *context, void *external_
     return result;
 }
 
-void *pcomm_get_external_context( pcomm_context *context ) {
+void *pcomm_get_external_context( pcomm_context_t *context ) {
     void *external_context = NULL;
     if (context && context->initialized) {
         external_context = context->external_context;
@@ -694,10 +694,10 @@ void *pcomm_get_external_context( pcomm_context *context ) {
     return external_context;
 }
 
-pcomm_result pcomm_set_external_fd_context( pcomm_context *context, pcomm_stream type,
+pcomm_result_t pcomm_set_external_fd_context( pcomm_context_t *context, pcomm_stream_t type,
                                    int fd, void *external_fd_context ) {
-    pcomm_result result = PCOMM_SUCCESS;
-    pcomm_fd *fd_context = NULL;
+    pcomm_result_t result = PCOMM_SUCCESS;
+    pcomm_fd_t *fd_context = NULL;
     list_t *list = NULL;
 
     if (!context) {
@@ -734,10 +734,10 @@ pcomm_result pcomm_set_external_fd_context( pcomm_context *context, pcomm_stream
     return result;
 }
 
-void *pcomm_get_external_fd_context( pcomm_context *context, pcomm_stream type, int fd ) {
+void *pcomm_get_external_fd_context( pcomm_context_t *context, pcomm_stream_t type, int fd ) {
     void *external_fd_context = NULL;
     list_t *list = NULL;
-    pcomm_fd *fd_context = NULL;
+    pcomm_fd_t *fd_context = NULL;
 
     if (context && context->initialized) {
         switch(type) {
@@ -759,9 +759,9 @@ void *pcomm_get_external_fd_context( pcomm_context *context, pcomm_stream type, 
     return external_fd_context;
 }
 
-pcomm_result pcomm_set_page_size( pcomm_context *context, size_t page_size )
+pcomm_result_t pcomm_set_page_size( pcomm_context_t *context, size_t page_size )
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if (!context) {
         result = PCOMM_NULL_CONTEXT;
@@ -774,9 +774,9 @@ pcomm_result pcomm_set_page_size( pcomm_context *context, size_t page_size )
     return result;
 }
 
-pcomm_result pcomm_set_timeout( pcomm_context *context, struct timeval *timeout_ptr )
+pcomm_result_t pcomm_set_timeout( pcomm_context_t *context, struct timeval *timeout_ptr )
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if (!context) {
         result = PCOMM_NULL_CONTEXT;
@@ -789,10 +789,10 @@ pcomm_result pcomm_set_timeout( pcomm_context *context, struct timeval *timeout_
     return result;
 }
 
-pcomm_result pcomm_set_timeout_callback( pcomm_context *context, 
+pcomm_result_t pcomm_set_timeout_callback( pcomm_context_t *context, 
                                          pcomm_callback_timeout timeout_callback )
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if (!context) {
         result = PCOMM_NULL_CONTEXT;
@@ -805,12 +805,12 @@ pcomm_result pcomm_set_timeout_callback( pcomm_context *context,
     return result;
 }
 
-pcomm_result pcomm_add_write_fd( pcomm_context *context, int fd, 
+pcomm_result_t pcomm_add_write_fd( pcomm_context_t *context, int fd, 
                                  uint8_t *data, size_t length, 
                                  pcomm_callback_io io_callback, 
                                  pcomm_callback_close close_callback )
 { 
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if ( !context ) { 
         result = PCOMM_NULL_CONTEXT;
@@ -832,11 +832,11 @@ pcomm_result pcomm_add_write_fd( pcomm_context *context, int fd,
 
     return result;
 }
-pcomm_result pcomm_monitor_write_fd( pcomm_context *context, int fd,
+pcomm_result_t pcomm_monitor_write_fd( pcomm_context_t *context, int fd,
                                      pcomm_callback_ready ready_callback,
                                      pcomm_callback_close close_callback )
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if ( !context ) { 
         result = PCOMM_NULL_CONTEXT;
@@ -858,11 +858,11 @@ pcomm_result pcomm_monitor_write_fd( pcomm_context *context, int fd,
 }
 
 
-pcomm_result pcomm_add_read_fd( pcomm_context *context, int fd, 
+pcomm_result_t pcomm_add_read_fd( pcomm_context_t *context, int fd, 
                                 pcomm_callback_io io_callback, 
                                 pcomm_callback_close close_callback ) 
 { 
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if ( !context ) { 
         result = PCOMM_NULL_CONTEXT;
@@ -882,11 +882,11 @@ pcomm_result pcomm_add_read_fd( pcomm_context *context, int fd,
 
     return result;
 }
-pcomm_result pcomm_monitor_read_fd( pcomm_context *context, int fd,
+pcomm_result_t pcomm_monitor_read_fd( pcomm_context_t *context, int fd,
                                     pcomm_callback_ready ready_callback,
                                     pcomm_callback_close close_callback )
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if ( !context ) { 
         result = PCOMM_NULL_CONTEXT;
@@ -908,11 +908,11 @@ pcomm_result pcomm_monitor_read_fd( pcomm_context *context, int fd,
 }
 
 
-pcomm_result pcomm_add_error_fd( pcomm_context *context, int fd, 
+pcomm_result_t pcomm_add_error_fd( pcomm_context_t *context, int fd, 
                                  pcomm_callback_io io_callback, 
                                  pcomm_callback_close close_callback )
 { 
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if ( !context ) { 
         result = PCOMM_NULL_CONTEXT;
@@ -932,11 +932,11 @@ pcomm_result pcomm_add_error_fd( pcomm_context *context, int fd,
 
     return result;
 }
-pcomm_result pcomm_monitor_error_fd( pcomm_context *context, int fd,
+pcomm_result_t pcomm_monitor_error_fd( pcomm_context_t *context, int fd,
                                     pcomm_callback_ready ready_callback,
                                     pcomm_callback_close close_callback )
 {
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
 
     if ( !context ) { 
         result = PCOMM_NULL_CONTEXT;
@@ -957,24 +957,83 @@ pcomm_result pcomm_monitor_error_fd( pcomm_context *context, int fd,
     return result;
 }
 
-pcomm_result pcomm_remove_write_fd( pcomm_context *context, int fd )
+pcomm_result_t pcomm_remove_write_fd( pcomm_context_t *context, int fd )
 { 
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
     result = _pcomm_remove_fd_type(context, fd, PCOMM_STREAM_WRITE);
     return result;
 }
 
-pcomm_result pcomm_remove_read_fd( pcomm_context *context, int fd )
+pcomm_result_t pcomm_remove_read_fd( pcomm_context_t *context, int fd )
 { 
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
     result = _pcomm_remove_fd_type(context, fd, PCOMM_STREAM_READ);
     return result;
 }
 
-pcomm_result pcomm_remove_error_fd( pcomm_context *context, int fd )
+pcomm_result_t pcomm_remove_error_fd( pcomm_context_t *context, int fd )
 { 
-    pcomm_result result = PCOMM_SUCCESS;
+    pcomm_result_t result = PCOMM_SUCCESS;
     result = _pcomm_remove_fd_type(context, fd, PCOMM_STREAM_ERROR);
     return result;
+}
+
+const char* pcomm_strresult(pcomm_result_t result)
+{
+    switch (result) {
+        case PCOMM_SUCCESS:
+            return "pcomm: operation succeeded";
+        case PCOMM_INIT_FAILED:
+            return "pcomm: init failed";
+        case PCOMM_DESTROY_FAILED:
+            return "pcomm: destroy failed";
+        case PCOMM_FD_OPEN_FAILED:
+            return "pcomm: fd open failed";
+        case PCOMM_FD_READ_FAILED:
+            return "pcomm: fd read failed";
+        case PCOMM_FD_WRITE_FAILED:
+            return "pcomm: fd write failed";
+        case PCOMM_FD_CLOSE_FAILED:
+            return "pcomm: fd close failed";
+        case PCOMM_FD_NOT_FOUND:
+            return "pcomm: fd not found";
+        case PCOMM_FD_NEGATIVE:
+            return "pcomm: fd is negative";
+        case PCOMM_FD_EOF_REACHED:
+            return "pcomm: fd reached EOF";
+        case PCOMM_INDEX_NOT_FOUND:
+            return "pcomm: list index not found";
+        case PCOMM_LIST_REMOVE_FAILED:
+            return "pcomm: list removal failed";
+        case PCOMM_LIST_BAD_SIZE:
+            return "pcomm: bad list size";
+        case PCOMM_NO_DATA_FROM_READ:
+            return "pcomm: no data read";
+        case PCOMM_NO_DATA_FOR_WRITE:
+            return "pcomm: no data written";
+        case PCOMM_OUT_OF_MEMORY:
+            return "pcomm: out of memory";
+        case PCOMM_TERMINATED_BY_ERROR:
+            return "pcomm: terminated by error";
+        case PCOMM_UNINITIALIZED_CONTEXT:
+            return "pcomm: not initialized";
+        case PCOMM_NULL_CONTEXT:
+            return "pcomm: null context";
+        case PCOMM_NULL_CALLBACK:
+            return "pcomm: null callback";
+        case PCOMM_NULL_LIST:
+            return "pcomm: null I/O list";
+        case PCOMM_NULL_FD:
+            return "pcomm: null fd context";
+        case PCOMM_NULL_BUFFER:
+            return "pcomm: null buffer";
+        case PCOMM_DUPLICATE_FD:
+            return "pcomm: duplicate fd";
+        case PCOMM_INVALID_STREAM_TYPE:
+            return "pcomm: invalid stream type";
+        case PCOMM_EXITING:
+            return "pcomm: exiting";
+    }
+    return "Unrecognized";
 }
 

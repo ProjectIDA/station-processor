@@ -8,7 +8,8 @@ endif
 LIB330_DIR=../../../lib330
 OBJ=\
   disklooplib.o\
-  map.o
+  map.o\
+  prioqueue.o
 
 CFLAGS = -Wall -I..
 
@@ -20,6 +21,8 @@ ltime:
 disklooplib.o:  disklooplib.c ../include/diskloop.h ../include/netreq.h
 
 map.o: map.c ../include/map.h
+
+prioqueue: prioqueue.c ../include/prioqueue.h
 
 dalib.a:  $(OBJ)
 	ar -r $@ $(OBJ)

@@ -27,6 +27,7 @@ endif
 
 LIB330_DIR=../lib330
 LIBPCOMM=../libpcomm
+LIBTREE=../libtree
 LIBIDA=../lib/$(PLATFORM)
 COPT = 
 LIBS = -L$(LIBIDA)
@@ -46,7 +47,7 @@ archd : ../lib/dalib.a ../lib/dcctime2lib.a \
 	$(LIBIDA)/libida.a $(LIBIDA)/libisi.a $(LIBIDA)/libiacp.a \
 	$(LIBIDA)/libisidb.a $(LIBIDA)/libdbio.a \
 	$(LIBIDA)/libutil.a $(LIBIDA)/liblogio.a $(LIBIDA)/libliss.a \
-    $(LIBPCOMM)/libpcomm.a \
+    $(LIBPCOMM)/libpcomm.a $(LIBTREE)/libtree.a \
 	$(OBJS) 
 	$(CC) -o archd $(OBJS) ../lib/dalib.a ../lib/dcctime2lib.a $(LIBS) \
 	$(LIBIDA)/libqdp.a $(LIBIDA)/libqdplus.a \
@@ -54,7 +55,7 @@ archd : ../lib/dalib.a ../lib/dcctime2lib.a \
 	$(LIBIDA)/libida.a $(LIBIDA)/libisi.a $(LIBIDA)/libiacp.a \
 	$(LIBIDA)/libisidb.a $(LIBIDA)/libdbio.a \
 	$(LIBIDA)/libutil.a $(LIBIDA)/liblogio.a $(LIBIDA)/libliss.a \
-    $(LIBPCOMM)/libpcomm.a \
+    $(LIBPCOMM)/libpcomm.a $(LIBTREE)/libtree.a \
 	-lz -lm -lpthread
 		
 

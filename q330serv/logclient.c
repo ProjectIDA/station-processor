@@ -7,7 +7,7 @@
 #include <netdb.h>
 
 #include "include/diskloop.h"
-#include "include/q330arch.h"
+#include "include/archd.h"
 
 static int    iSeqNum=0;
 static int    bFirst=1;
@@ -17,7 +17,7 @@ static int    iSocket=-1;
 static char   errmsgbuf[512];
 
 //////////////////////////////////////////////////////////////////////////////
-// Sends a Seed message record to the q330arch server
+// Sends a Seed message record to the archd server
 // Waits for response acknowledgement
 char *q330SeedSend(void *seed_record)
 {
@@ -70,14 +70,14 @@ char *q330SeedSend(void *seed_record)
     {
       close(iSocket);
       iSocket = -1;
-      return "Unable to connect to q330arch";
+      return "Unable to connect to archd";
     }
   } // socket needs to be opened
 
   // Send record
   if (send(iSocket, seed_record, iSeedRecordSize, 0) != iSeedRecordSize)
   {
-    sprintf(errmsgbuf, "send q330arch failed, errno %d %s",
+    sprintf(errmsgbuf, "send archd failed, errno %d %s",
       errno, strerror(errno));
     close(iSocket);
     iSocket = -1;
@@ -87,7 +87,7 @@ char *q330SeedSend(void *seed_record)
   // Now wait for an acknowlegement response, returns first 48 bytes of data
   if (recv(iSocket, inbuffer, 1, MSG_WAITALL) != 1)
   {
-    sprintf(errmsgbuf, "recv q330arch failed, errno %d %s",
+    sprintf(errmsgbuf, "recv archd failed, errno %d %s",
       errno, strerror(errno));
     close(iSocket);
     iSocket = -1;
@@ -98,7 +98,7 @@ char *q330SeedSend(void *seed_record)
 
 //////////////////////////////////////////////////////////////////////////////
 // Formats a null terminated string into a SEED message record
-// Message is then sent to the q330arch server
+// Message is then sent to the archd server
 char *q330LogMsg(const char *msg,
                 const char *station, const char *network,
                 const char *channel, const char *location)
@@ -124,7 +124,7 @@ char *q330LogMsg(const char *msg,
 } // q330LogMsg()
 
 //////////////////////////////////////////////////////////////////////////////
-// Close socket port to q330arch server
+// Close socket port to archd server
 char *q330Close()
 {
   if (iSocket >= 0)
@@ -132,5 +132,5 @@ char *q330Close()
   iSocket = -1;
 
   return NULL;
-} // closes the q330arch socket connection
+} // closes the archd socket connection
 

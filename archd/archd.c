@@ -48,7 +48,6 @@ const char *VersionIdentString = "Release 2.0";
 #include <unistd.h>
 #include <sys/shm.h>
 #include <sys/time.h>
-#include "libtree/libtree.h"
 #include "libpcomm/pcomm.h"
 #include "include/map.h"
 #include "include/idaapi.h"
@@ -70,16 +69,19 @@ int init_server (archd_context_t *archd);
 void callback_async_timeout (pcomm_context_t *pcomm);
 void callback_connect_request (pcomm_context_t *pcomm, int fd);
 void callback_server_closed (pcomm_context_t *pcomm, int fd);
-void callback_client_data (pcomm_context_t *pcomm, int fd, uint8_t *data, size_t length);
+void callback_client_can_recv (pcomm_context_t *pcomm, int fd);
+void callback_client_can_send (pcomm_context_t *pcomm, int fd);
 void callback_client_closed (pcomm_context_t *pcomm, int fd);
 
 // Make the server_pid global so it can be killed when program is shut down
+// This is required by daemonize()
 int   server_pid=0;
+
 int   g_bDebug=0;
-char  g_sIDAname[6];
-static struct s_mapshm *mapshm=NULL;
-static struct s_mapstatus *mapstatus=NULL;
-static archd_context_t *archd=NULL;
+//char  g_sIDAname[6];
+//static struct s_mapshm *mapshm=NULL;
+//static struct s_mapstatus *mapstatus=NULL;
+static archd_context_t *g_archd=NULL;
 static int iSeedRecordSize;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -108,11 +110,12 @@ void ShowUsage()
 static void sigterm_archd()
 {
     // Set flat requesting a graceful program exit
-    if ((archd != NULL) && (archd->pcomm != NULL)) {
+    if ((g_archd != NULL) && (g_archd->pcomm != NULL)) {
         // Tell pcomm to finish processing all data
-        pcomm_stop(archd->pcomm, 0/*not immediately*/);
+        pcomm_stop(g_archd->pcomm, 0/*not immediately*/);
     }
     else {
+        // If our context is not complete, force a program exit
         exit(0);
     }
 } // sigterm_archd()
@@ -360,6 +363,8 @@ char *ArchiveSeed(char *record)
 //////////////////////////////////////////////////////////////////////////////
 int main (int argc, char **argv)
 {
+    archd_context_t *archd;
+
     char  station[8];
     char  loc[4];
     char  chan[4];
@@ -367,8 +372,7 @@ int main (int argc, char **argv)
     char  *retmsg;
     int   msgId;
     int   result;
-    int   iSeedRecordSize;
-    int   iPort;
+    int   iSeedRecordSize; // TODO: switch to archd->record_size
     int   iClient;
     int   iBuf;
     int   i,j,k;
@@ -396,12 +400,16 @@ int main (int argc, char **argv)
         fprintf(stderr, "Could not allocate memory for pcomm context\n", WHOAMI, retmsg);
     }
 
+    g_archd = archd;
     archd->timeout.tv_sec = (long)ASYNC_TIMEOUT_SECONDS;
     archd->timeout.tv_sec = (long)ASYNC_TIMEOUT_MICROSECONDS;
     archd->server_port = -1;
     archd->server_socket = -1;
     archd->client_count = 0;
     archd->debug = 0;
+    archd->record_size = 512;
+
+    prioqueue_init(&archd->record_queue);
 
     // Check for right number of arguments
     if (argc != 2 && argc != 3)
@@ -418,9 +426,10 @@ int main (int argc, char **argv)
         exit(1);
     }
     LoopRecordSize(&iSeedRecordSize);
+    archd->record_size = iSeedRecordSize;
     LogSNCL(station, network, chan, loc);
-    strncpy(g_sIDAname, station, 5);
-    g_sIDAname[5] = 0;
+    strncpy(archd->ida_name, station, 5);
+    archd->ida_name[5] = 0;
 
     // Handle command line debug request 
     g_bDebug = 0;
@@ -434,19 +443,20 @@ int main (int argc, char **argv)
         }
         g_bDebug = 1;
     } // command line arguments request running server in debug mode
+    archd->debug = g_bDebug;
 
     // Run this program as a daemon unless requested otherwise by user
-    if (!g_bDebug)
+    if (!archd->debug)
     {
         daemonize();
     }
     signal(SIGTERM, sigterm_archd); // Gracefuly shutdown
 
     // Let user know what station we are archiving for
-    if (g_bDebug)
-        fprintf (stderr, "%s archive name %s\n", WHOAMI, g_sIDAname);
+    if (archd->debug)
+        fprintf (stderr, "%s archive name %s\n", WHOAMI, archd->ida_name);
     else
-        syslog (LOG_INFO, "%s archive name %s", WHOAMI, g_sIDAname);
+        syslog (LOG_INFO, "%s archive name %s", WHOAMI, archd->ida_name);
 
     // Ignore SIGPIPE when a connection is closed
     signal (SIGPIPE, SIG_IGN);
@@ -455,7 +465,7 @@ int main (int argc, char **argv)
     initMsg = idaInit(station, WHOAMI);
 
     if (initMsg != NULL) {
-        if (g_bDebug) {
+        if (archd->debug) {
             fprintf(stderr, "%s:idaInit(): %s\n",
                     WHOAMI, strerror(errno));
         }
@@ -467,11 +477,9 @@ int main (int argc, char **argv)
 
     // Start the server listening for clients in the background
     LogServerPort(&archd->server_port);
-    archd->server_port = iPort;
-    archd->debug = g_bDebug;
     if (pcomm_result = pcomm_init(archd->pcomm))
     {
-        if (g_bDebug) {
+        if (archd->debug) {
             fprintf(stderr, "%s:pcomm_init(): %s",
                     WHOAMI, pcomm_strresult(pcomm_result));
         } else {
@@ -481,7 +489,7 @@ int main (int argc, char **argv)
     }
     else if (pcomm_result = pcomm_set_external_context(archd->pcomm, archd))
     {
-        if (g_bDebug) {
+        if (archd->debug) {
             fprintf(stderr, "%s:pcomm_set_external_context(): %s",
                     WHOAMI, pcomm_strresult(pcomm_result));
         } else {
@@ -489,8 +497,8 @@ int main (int argc, char **argv)
                     WHOAMI, pcomm_strresult(pcomm_result));
         }
     }
-    else if (!init_server(archd)) {
-        if (g_bDebug) {
+    else if (!init_server(archd)) { // if successful, sets archd->server_socket
+        if (archd->debug) {
             fprintf(stderr, "%s:init_server(): failed to start server", WHOAMI);
         } else {
             syslog(LOG_ERR, "%s:init_server(): failed to start server", WHOAMI);
@@ -501,7 +509,7 @@ int main (int argc, char **argv)
                                                    callback_connect_request,
                                                    callback_server_closed))
     {
-        if (g_bDebug) {
+        if (archd->debug) {
             fprintf(stderr, "%s:pcomm_monitor_read_fd(): %s",
                     WHOAMI, pcomm_strresult(pcomm_result));
         } else {
@@ -510,7 +518,7 @@ int main (int argc, char **argv)
         }
     }
     else if (pcomm_result = pcomm_set_timeout(archd->pcomm, &archd->timeout)) {
-        if (g_bDebug) {
+        if (archd->debug) {
             fprintf(stderr, "%s:pcomm_set_timeout(): %s",
                     WHOAMI, pcomm_strresult(pcomm_result));
         } else {
@@ -519,7 +527,7 @@ int main (int argc, char **argv)
         }
     } 
     else if (pcomm_result = pcomm_set_timeout_callback(archd->pcomm, callback_async_timeout)) {
-        if (g_bDebug) {
+        if (archd->debug) {
             fprintf(stderr, "%s:pcomm_set_timeout_callback(): %s",
                     WHOAMI, pcomm_strresult(pcomm_result));
         } else {
@@ -539,6 +547,7 @@ int main (int argc, char **argv)
             free(archd->pcomm);
         }
         free(archd);
+        g_archd = archd = NULL;
     }
 
 } // main()
@@ -547,7 +556,8 @@ int main (int argc, char **argv)
  * XXX: We need to allocate a buffer for each new connection associated with
  *      its file descriptor
  */
-int init_server(archd_context_t *archd) {
+int init_server (archd_context_t *archd)
+{
     //archd->server_socket = bind(archd->server_port);
     int   i;
     char  *errstr;
@@ -616,7 +626,8 @@ int init_server(archd_context_t *archd) {
 /* TODO: populate this function with tasks that should be performed after 
  *       a comm timeout.
  */
-void callback_async_timeout(pcomm_context_t *pcomm) {
+void callback_async_timeout (pcomm_context_t *pcomm)
+{
     archd_context_t *archd;
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
 }
@@ -626,7 +637,8 @@ void callback_async_timeout(pcomm_context_t *pcomm) {
  * XXX: We need to allocate a buffer for each new connection associated with
  *      its file descriptor
  */
-void callback_connect_request(pcomm_context_t *pcomm, int fd) {
+void callback_connect_request (pcomm_context_t *pcomm, int fd)
+{
     struct sockaddr_in address;
     archd_context_t *archd;
     pcomm_result_t pcomm_result;
@@ -665,16 +677,16 @@ void callback_connect_request(pcomm_context_t *pcomm, int fd) {
     //pcomm_add_write_fd(archd->pcomm, <fd>, <data>, <length>, <io_callback>, <close_callback>);
     //pcomm_add_(read|error)_fd(archd->pcomm, <fd>, <io_callback>, <close_callback>);
 
-    if (pcomm_result = pcomm_add_read_fd(archd->pcomm,
-                                         client_sock,
-                                         callback_client_data,
-                                         callback_client_closed))
+    if (pcomm_result = pcomm_monitor_read_fd(archd->pcomm,
+                                             client_sock,
+                                             callback_client_can_recv,
+                                             callback_client_closed))
     {
         if (archd->debug) {
-            fprintf(stderr, "%s:pcomm_add_read_fd(): %s",
+            fprintf(stderr, "%s:pcomm_monitor_read_fd(): %s",
                     WHOAMI, pcomm_strresult(pcomm_result));
         } else {
-            syslog(LOG_ERR, "%s:pcomm_add_read_fd(): %s",
+            syslog(LOG_ERR, "%s:pcomm_monitor_read_fd(): %s",
                     WHOAMI, pcomm_strresult(pcomm_result));
         }
         return;
@@ -689,21 +701,116 @@ void callback_connect_request(pcomm_context_t *pcomm, int fd) {
 
 /* Stubb for handling server disconnects.
  */
-void callback_server_closed (pcomm_context_t *pcomm, int fd) {
-    // TODO: attempt to re-connect
-    pcomm_stop(pcomm, 1/*immediately*/);
+void callback_server_closed (pcomm_context_t *pcomm, int fd)
+{
+    archd_context_t *archd = NULL;
+    client_context_t *client = NULL;
+    pcomm_result_t pcomm_result = 0;
+
+    archd = (archd_context_t *)pcomm_get_external_context(pcomm);
+    client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_READ, fd);
+    if (archd->debug) {
+        fprintf(stderr, "%s:callback_server_closed(): server socket closed", WHOAMI); 
+    }
+    else {
+        syslog(LOG_ERR, "%s:callback_server_closed(): server socket closed", WHOAMI); 
+    }
+
+    pcomm_result = pcomm_stop(pcomm, 1/*immediately*/);
+
+    // TODO: attempt to re-connect instead of just halting
 }
 
 /* Handles new data from the client, adding it to the queue, and adding to the archive
  * queue once a complete record has been assembled.
- * TODO: We need a way to buffer data for each connection to perform the above
- * TODO: Create an AVL tree based priority queue
  */
-void callback_client_data (pcomm_context_t *pcomm, int fd, uint8_t *data, size_t length) {
-    archd_context_t *archd;
+void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
+{
+    archd_context_t *archd = NULL;
+    client_context_t *client = NULL;
+    pcomm_result_t pcomm_result = 0;
+    ssize_t bytes_received = 0;
+    size_t bytes_archived = 0;
+    uint8_t *tmpBuffer = NULL;
+
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
-    // TODO: add to the priority queue
-    ;
+    client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_READ, fd);
+
+    bytes_received = recv(fd, client->recv_buffer + client->recv_length, 
+                          CLIENT_BUFFER_SIZE - client->recv_length, MSG_DONTWAIT);
+
+    if ((bytes_received) > 0) {
+        client->recv_length += bytes_received;
+    }
+
+    while ((client->recv_length - bytes_archived) >= archd->record_size)
+    {
+        if ((tmpBuffer = (uint8_t *)malloc(archd->record_size)) == NULL)
+        {
+            if (archd->debug) {
+                fprintf(stderr, "%s:malloc(): could not allocate memory for record", WHOAMI);
+            } else {
+                syslog(LOG_ERR, "%s:malloc(): could not allocate memory for record", WHOAMI);
+            }
+            pcomm_stop(pcomm, 1/*immediately*/);
+            return;
+        }
+        memcpy(tmpBuffer, client->send_buffer + bytes_archived, archd->record_size);
+        prioqueue_add(&archd->record_queue, client->send_buffer, bytes_archived);
+
+        memcpy(client->send_buffer + client->send_length,
+               client->recv_buffer + bytes_archived + 5, 1);
+        client->send_length += 1;
+
+        bytes_archived += archd->record_size;
+    }
+
+    if (bytes_archived > 0) {
+        client->recv_length -= bytes_archived;
+        memmove(client->recv_buffer, client->recv_buffer + bytes_archived, client->recv_length);
+    }
+
+    if (client->send_length > 0) {
+        if (pcomm_result = pcomm_monitor_write_fd(pcomm, fd,
+                                                  callback_client_can_send,
+                                                  callback_client_closed))
+        {
+            if (archd->debug) {
+                fprintf(stderr, "%s:pcomm_monitor_write_fd(): %s",
+                        WHOAMI, pcomm_strresult(pcomm_result));
+            } else {
+                syslog(LOG_ERR, "%s:pcomm_monitor_write_fd(): %s",
+                        WHOAMI, pcomm_strresult(pcomm_result));
+            }
+            return;
+        }
+    }
+}
+
+/* Handles sending of confirmations to the client. */
+void callback_client_can_send (pcomm_context_t *pcomm, int fd)
+{
+    archd_context_t *archd = NULL;
+    client_context_t *client = NULL;
+    ssize_t bytes_sent = 0;
+
+    archd = (archd_context_t *)pcomm_get_external_context(pcomm);
+    client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_WRITE, fd);
+
+    if (client->send_length > 0) {
+        bytes_sent = send(fd, client->send_buffer, client->send_length, MSG_DONTWAIT);
+        if (bytes_sent > 0 ) {
+            client->send_length -= bytes_sent;
+            if (client->send_length > 0) {
+                // Update the contents clients send buffer
+                memmove(client->send_buffer, client->send_buffer + bytes_sent, client->send_length);
+            }
+            else if (client->send_length < 1) {
+                // Don't monitor this descriptor if there are not writes waiting
+                pcomm_remove_write_fd(pcomm, fd);
+            }
+        }
+    }
 }
 
 /* Handles the closing of a client connection, and perform the necessary 
@@ -711,212 +818,14 @@ void callback_client_data (pcomm_context_t *pcomm, int fd, uint8_t *data, size_t
  * XXX: We need to flush, and remove the buffers for a connection when it is
  *      removed
  */
-void callback_client_closed (pcomm_context_t *pcomm, int fd) {
+void callback_client_closed (pcomm_context_t *pcomm, int fd)
+{
+    archd_context_t *archd = NULL;
+    client_context_t *client = NULL;
+
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
-    ;
+    client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_WRITE, fd);
+
+    // TODO: remove this client from the list
 }
-
-
-/*
-void old_logic () {
-
-    // ========================================
-    //            OLD LOGIC BELOW
-    // ========================================
-
-    mapshm->iPort = iPort;
-    mapshm->bDebug = g_bDebug;
-    if (pthread_create(&server_tid, NULL, StartServer, (void *)mapshm))
-    {
-        if (g_bDebug)
-            fprintf(stderr, "%s:main pthread_create StartServer: %s\n",
-                    WHOAMI, strerror(errno));
-        else
-            syslog(LOG_ERR, "%s:main pthread_create StartServer: %s",
-                    WHOAMI, strerror(errno));
-        exit(1);
-    }
-    pthread_detach(server_tid);
-    mapshm->listen_tid = server_tid;
-
-    // Infinite loop waiting for buffers to get filled up
-    iClient = 0;
-    touched = 0;
-    while (1)
-    {
-        // Handle case where quit flag has been set
-        if (mapshm->bQuit)
-        {
-            if (mapshm->listen_tid)
-            {
-                if (mapshm->bDebug)
-                    fprintf(stderr, "Quit flag detected, init shutdown %s\n", WHOAMI);
-
-                pthread_kill(mapshm->listen_tid, 15);
-                touched = 1;
-                mapshm->listen_tid = 0;
-            }
-            for (i=0; i<MAX_CLIENTS; i++)
-            {
-                if (mapshm->client_tid[i] > 0)
-                {
-                    touched = 1;
-                    pthread_kill(mapshm->client_tid[i], 15);
-                    mapshm->client_tid[i] = 0;
-                }
-            }
-        } // quit flag was set
-
-        // Notice if we don't get any data this loop
-        if (!touched)
-        {
-            if (mapshm->bQuit)
-            {
-                if (g_bDebug)
-                    fprintf(stderr, "Exiting %s via quit flag\n", WHOAMI);
-                else
-                    syslog(LOG_INFO, "Exiting %s", WHOAMI);
-                exit(EXIT_SUCCESS);
-            }
-            usleep(10000);
-        }
-        touched = 0;
-
-        // Update watchdog timer so dispstatus knows we are alive
-        // First determine which ixWriteArch index to use
-        if (mapstatus->ixWriteArch != 0 && mapstatus->ixReadArch != 0)
-            iWriteIndexArch = 0;
-        if (mapstatus->ixWriteArch != 1 && mapstatus->ixReadArch != 1)
-            iWriteIndexArch = 1;
-        else
-            iWriteIndexArch = 2;
-        // Save the current time, let others know where updated time is stored
-        mapstatus->archWatchdog[iWriteIndexArch] = ST_GetCurrentTime2();
-        mapstatus->ixWriteArch = iWriteIndexArch;
-
-        // Check for new messages
-        for (i=0; i < MAX_CLIENTS; i++)
-        {
-            iClient = (iClient+1) % MAX_CLIENTS;
-            iBuf = mapshm->read_index[iClient];
-            if (mapshm->read_index[iClient] != mapshm->write_index[iClient])
-            {
-                touched = 1;
-
-                // Handle channel control commands
-                if (strncmp("CHANNELCONTROL-", &mapshm->buffer[iClient][iBuf][0], 15) == 0)
-                {
-                    bufPtr = &mapshm->buffer[iClient][iBuf][0];
-                    msgPtr = tempMsg;
-                    for (k=0; k < 63; k++, bufPtr++, msgPtr++) {
-                        c = *bufPtr;
-                        if (c == 0) {
-                            break;
-                        }
-                        else if (k > 60) {
-                            c = '.';
-                        }
-                        else if (!isprint(c)) {
-                            c = '*';
-                        }
-                        *msgPtr = c;
-                    }
-                    *msgPtr = 0;
-
-                    result = ChannelControl((char *)&mapshm->buffer[iClient][iBuf], &msgId);
-                    if (result < 1) {
-                        if (result == 0) {
-                            if (g_bDebug)
-                                fprintf(stderr, "%s: Failed to apply channel control: '%s'\n", WHOAMI, tempMsg);
-                            else
-                                syslog(LOG_ERR, "%s: Failed to apply channel control: '%s'", WHOAMI, tempMsg);
-                            mapshm->result[iClient][0] = msgId;
-                            mapshm->result[iClient][1] = RESULT_CHAN_CMD_FAIL; 
-                        } else {
-                            if (g_bDebug)
-                                fprintf(stderr, "%s: Invalid channel control message: '%s'\n", WHOAMI, tempMsg);
-                            else
-                                syslog(LOG_ERR, "%s: Invalid channel control message: '%s'", WHOAMI, tempMsg);
-                            mapshm->result[iClient][0] = -1;
-                            mapshm->result[iClient][1] = RESULT_CHAN_CMD_INVALID; 
-                        }
-                    }
-                    else {
-                        if (g_bDebug)
-                            fprintf(stderr, "%s: Channel control applied: '%s'\n", WHOAMI, tempMsg);
-                        else
-                            syslog(LOG_ERR, "%s: Channel control applied: '%s'", WHOAMI, tempMsg);
-                        mapshm->result[iClient][0] = msgId;
-                        mapshm->result[iClient][1] = RESULT_CHAN_CMD_OKAY; 
-                    }
-                    mapshm->write_index[iClient] = iBuf;
-                    continue;
-                } // Channel control command
-
-                // Immediately archive non LOG seed record
-                if (strncmp("LOG", &mapshm->buffer[iClient][iBuf][15], 3) != 0)
-                {
-                    if ((retmsg=ArchiveSeed((char *)&mapshm->buffer[iClient][iBuf]) )
-                            != NULL)
-                    {
-                        fprintf(stderr, "%s: %s\n", WHOAMI, retmsg);
-                    }
-                    // Indicate that we have processed message
-                    mapshm->write_index[iClient] = iBuf;
-                    continue;
-                } // Not a LOG record
-
-                // See if there is a message waiting to be sent out
-                if (queuemsg != NULL)
-                {
-                    // Try to combine the two records to save space
-                    if (CombineSeed(queuemsg, mapshm->buffer[iClient][iBuf],
-                                iSeedRecordSize))
-                    {
-                        // Indicate that we have processed message and that's all
-                        mapshm->write_index[iClient] = iBuf;
-                        continue;
-                    }
-                    else
-                    {
-                        // Send queued message since we can't combine the two
-                        SeedRecordMsg(tempbuf, queuebuf, station, network, chan, loc,
-                                &year, &doy, &hour, &min, &sec);
-                        if ((retmsg=ArchiveSeed(queuemsg)) != NULL)
-                        {
-                            fprintf(stderr, "archd: %s\n", retmsg);
-                        }
-                        queuemsg = NULL;
-                    } // combine failed
-                } // we have a waiting message to possibly combine with
-
-                // Copy new message to free up shared memory buffer
-                memcpy(queuebuf, mapshm->buffer[iClient][iBuf], iSeedRecordSize);
-                queuemsg = queuebuf;
-                queuetimetag = mapshm->timetag[iClient];
-
-                // Indicate that we have processed message
-                mapshm->write_index[iClient] = iBuf;
-            } // new message from this client
-        } // check each possible client
-
-        // See if oldest message is more than BUFFER_TIME_SEC old
-        // Or if this is not a log message
-        iDeltaTime = time(NULL) - queuetimetag;
-        if (queuemsg != NULL &&
-                (iDeltaTime < 0 || iDeltaTime >= BUFFER_TIME_SEC))
-        {
-            SeedRecordMsg(tempbuf, queuebuf, station, network, chan, loc,
-                    &year, &doy, &hour, &min, &sec);
-            if ((retmsg=ArchiveSeed(queuemsg)) != NULL)
-            {
-                fprintf(stderr, "archd: %s\n", retmsg);
-            }
-            queuemsg = NULL;
-        } // timeout elapsed
-
-    } // loop forever
-
-}
-*/
 

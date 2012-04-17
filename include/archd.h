@@ -16,6 +16,7 @@ yyyy-mm-dd WHO - Changes
 #include <time.h>
 #include <pthread.h>
 #include "include/idaapi.h"
+#include "include/prioqueue.h"
 #include "libpcomm/pcomm.h"
 
 // server will hold onto message for up to this amount of time in an
@@ -24,6 +25,7 @@ yyyy-mm-dd WHO - Changes
 
 // Each client will have 8200 bytes reserved for buffering
 #define MAX_CLIENTS 128
+#define CLIENT_BUFFER_SIZE 16 * 1024 // 16 KiB
 
 // Message result
 #define RESULT_RECORD_SENT      0
@@ -46,7 +48,9 @@ struct s_mapshm
     char    buffer[MAX_CLIENTS][2][8192];
 };
 
-typedef struct ARCHD_CONTEXT {
+// structure for tracking archd daemon state
+typedef struct ARCHD_CONTEXT
+{
     pcomm_context_t *pcomm;
     struct timeval timeout;
 
@@ -55,13 +59,24 @@ typedef struct ARCHD_CONTEXT {
 
     size_t client_count;
 
-    int debug;
-} archd_context_t;
+    queue_t record_queue;
 
-typedef struct CLIENT_CONTEXT {
-    uint8_t buffer[8192];
-    size_t  length;
-} client_context_t;
+    int debug;
+    int record_size;
+    char ida_name[6];
+}
+archd_context_t;
+
+// structure for tracking the context of each client connected to archd
+typedef struct CLIENT_CONTEXT
+{
+    uint8_t recv_buffer[CLIENT_BUFFER_SIZE];
+    size_t  recv_length;
+
+    uint8_t send_buffer[CLIENT_BUFFER_SIZE];
+    size_t  send_length;
+}
+client_context_t;
 
 // Routine call prototype definitions
 // Calls return NULL on no errors, or pointer to error message string

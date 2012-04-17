@@ -103,7 +103,7 @@ typedef struct PCOMM_FD pcomm_fd_t;
 /* pcomm_callback_ready is called when a descriptor is ready for I/O */
 typedef void (* pcomm_callback_ready)(pcomm_context_t *context, int fd);
 
-/* pcomm_callback_io is called for every I/O event on associated descriptor */
+/* pcomm_callback_io is called after handling I/O events on a descriptor */
 typedef void (* pcomm_callback_io)(pcomm_context_t *context, int fd, uint8_t *data, size_t length);
 
 /* pcomm_callback_close is called when the associated descriptor is closed */

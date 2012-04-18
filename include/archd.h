@@ -15,6 +15,7 @@ yyyy-mm-dd WHO - Changes
 
 #include <time.h>
 #include <pthread.h>
+#include <sys/ioctl.h>
 #include "include/idaapi.h"
 #include "include/prioqueue.h"
 #include "libpcomm/pcomm.h"
@@ -25,7 +26,8 @@ yyyy-mm-dd WHO - Changes
 
 // Each client will have 8200 bytes reserved for buffering
 #define MAX_CLIENTS 128
-#define CLIENT_BUFFER_SIZE 16 * 1024 // 16 KiB
+#define REPLY_MESSAGE_SIZE 1
+#define REPLY_BUFFER_SIZE (512 * REPLY_MESSAGE_SIZE)
 
 // Message result
 #define RESULT_RECORD_SENT      0
@@ -70,11 +72,11 @@ archd_context_t;
 // structure for tracking the context of each client connected to archd
 typedef struct CLIENT_CONTEXT
 {
-    uint8_t recv_buffer[CLIENT_BUFFER_SIZE];
-    size_t  recv_length;
+    size_t received;
+    size_t confirmed;
 
-    uint8_t send_buffer[CLIENT_BUFFER_SIZE];
-    size_t  send_length;
+    uint8_t reply_buffer[REPLY_BUFFER_SIZE];
+    size_t  reply_length;
 }
 client_context_t;
 

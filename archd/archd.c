@@ -66,6 +66,7 @@ void daemonize();
 //////////////////////////////////////////////////////////////////////////////
 
 int init_server (archd_context_t *archd);
+void callback_archive (pcomm_context_t *pcomm);
 void callback_async_timeout (pcomm_context_t *pcomm);
 void callback_connect_request (pcomm_context_t *pcomm, int fd);
 void callback_server_closed (pcomm_context_t *pcomm, int fd);
@@ -425,8 +426,10 @@ int main (int argc, char **argv)
         //syslog(LOG_ERR, "%s: %s", WHOAMI, retmsg);
         exit(1);
     }
+    // Retrieve the record size from the config file
     LoopRecordSize(&iSeedRecordSize);
     archd->record_size = iSeedRecordSize;
+    // Retrieve the initial station name for the IDA diskloop
     LogSNCL(station, network, chan, loc);
     strncpy(archd->ida_name, station, 5);
     archd->ida_name[5] = 0;
@@ -535,6 +538,16 @@ int main (int argc, char **argv)
                     WHOAMI, pcomm_strresult(pcomm_result));
         }
     } 
+    // archive all available records before receiving more
+    else if (pcomm_result = pcomm_set_prepare_callback(archd->pcomm, callback_archive)) {
+        if (archd->debug) {
+            fprintf(stderr, "%s:pcomm_set_select_callback(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        } else {
+            syslog(LOG_ERR, "%s:pcomm_set_select_callback(): %s",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        }
+    } 
     else {
         // RUN pcomm main loop
         pcomm_main(archd->pcomm);
@@ -552,10 +565,7 @@ int main (int argc, char **argv)
 
 } // main()
 
-/* Creates the server socket, binds, and starts listening for new clients.
- * XXX: We need to allocate a buffer for each new connection associated with
- *      its file descriptor
- */
+/* Creates the server socket, binds, and starts listening for new clients. */
 int init_server (archd_context_t *archd)
 {
     //archd->server_socket = bind(archd->server_port);
@@ -623,19 +633,23 @@ int init_server (archd_context_t *archd)
     return 1;
 }
 
-/* TODO: populate this function with tasks that should be performed after 
- *       a comm timeout.
- */
-void callback_async_timeout (pcomm_context_t *pcomm)
+/* performs archive operations for all buffered records */
+void callback_archive (pcomm_context_t *pcomm)
 {
     archd_context_t *archd;
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
 }
 
+/* May eventually do something special for timeouts.
+ * For now, just call the archive function.
+ */
+void callback_async_timeout (pcomm_context_t *pcomm)
+{
+    callback_archive(pcomm);
+}
+
 /* Handles new connection requests, adding new file descriptors to pcomm
  * for new clients.
- * XXX: We need to allocate a buffer for each new connection associated with
- *      its file descriptor
  */
 void callback_connect_request (pcomm_context_t *pcomm, int fd)
 {
@@ -644,7 +658,7 @@ void callback_connect_request (pcomm_context_t *pcomm, int fd)
     pcomm_result_t pcomm_result;
     int client_sock;
     unsigned int addr_len = sizeof(struct sockaddr_in);
-    int client;
+    client_context_t *client = NULL;
 
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
 
@@ -653,6 +667,18 @@ void callback_connect_request (pcomm_context_t *pcomm, int fd)
         return;
     }
 
+    if ((client = (client_context_t *)malloc(sizeof(client_context_t))) == NULL) {
+        if (archd->debug) {
+            fprintf(stderr, "%s: failed to allocate memory for client context", WHOAMI);
+        } else {
+            syslog(LOG_ERR, "%s: failed to allocate memory for client context", WHOAMI);
+        }
+        return;
+    }
+    client->received = 0;
+    client->confirmed = 0;
+    client->reply_length = 0;
+
     // Accept a new connection request
     if (archd->debug)
     {
@@ -660,22 +686,26 @@ void callback_connect_request (pcomm_context_t *pcomm, int fd)
     }
 
     client_sock = accept(archd->server_socket, (struct sockaddr *)(&address), &addr_len);
-    if (client_sock<0)
+    if (client_sock < 0)
     {
-        fprintf(stderr,"accept failed (%d,%d)\n", errno, client_sock);
+        if (archd->debug) {
+            fprintf(stderr,"accept failed (%d,%d)\n", errno, client_sock);
+        } else {
+            syslog(LOG_ERR,"accept failed (%d,%d)\n", errno, client_sock);
+        }
         return;
     }
 
     if (getpeername(client_sock, (struct sockaddr *)(&address), &addr_len) < 0)
     {
-        fprintf(stderr,"BAD ERROR encountered - error %d - %s\n", errno, strerror(errno));
+        if (archd->debug) {
+            fprintf(stderr,"BAD ERROR encountered - error %d - %s\n", errno, strerror(errno));
+        } else {
+            syslog(LOG_ERR,"BAD ERROR encountered - error %d - %s\n", errno, strerror(errno));
+        }
         close(client_sock);
         return;
     }
-
-    // FOR EACH FD ADDITION
-    //pcomm_add_write_fd(archd->pcomm, <fd>, <data>, <length>, <io_callback>, <close_callback>);
-    //pcomm_add_(read|error)_fd(archd->pcomm, <fd>, <io_callback>, <close_callback>);
 
     if (pcomm_result = pcomm_monitor_read_fd(archd->pcomm,
                                              client_sock,
@@ -683,10 +713,24 @@ void callback_connect_request (pcomm_context_t *pcomm, int fd)
                                              callback_client_closed))
     {
         if (archd->debug) {
-            fprintf(stderr, "%s:pcomm_monitor_read_fd(): %s",
+            fprintf(stderr, "%s:pcomm_monitor_read_fd(): %s\n",
                     WHOAMI, pcomm_strresult(pcomm_result));
         } else {
-            syslog(LOG_ERR, "%s:pcomm_monitor_read_fd(): %s",
+            syslog(LOG_ERR, "%s:pcomm_monitor_read_fd(): %s\n",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        }
+        return;
+    }
+    if (pcomm_result = pcomm_set_external_fd_context(archd->pcomm,
+                                                     client_sock,
+                                                     PCOMM_STREAM_READ,
+                                                     client))
+    {
+        if (archd->debug) {
+            fprintf(stderr, "%s:pcomm_monitor_read_fd(): %s\n",
+                    WHOAMI, pcomm_strresult(pcomm_result));
+        } else {
+            syslog(LOG_ERR, "%s:pcomm_monitor_read_fd(): %s\n",
                     WHOAMI, pcomm_strresult(pcomm_result));
         }
         return;
@@ -695,6 +739,9 @@ void callback_connect_request (pcomm_context_t *pcomm, int fd)
 
     if (archd->debug) {
         printf("New client at socket %d (%d of %d available)\n",
+               client_sock, archd->client_count, MAX_CLIENTS);
+    } else {
+        syslog(LOG_INFO, "New client at socket %d (%d of %d available)\n",
                client_sock, archd->client_count, MAX_CLIENTS);
     }
 }
@@ -721,6 +768,15 @@ void callback_server_closed (pcomm_context_t *pcomm, int fd)
     // TODO: attempt to re-connect instead of just halting
 }
 
+/* check how many bytes are buffered on a socket */
+long bytes_on_socket(int socket) {
+    size_t bytes_available = 0;
+    if ( ioctl(socket, FIONREAD, (char *)&bytes_available) < 0 ) {
+        return -1;
+    }
+    return((long)bytes_available);
+}
+
 /* Handles new data from the client, adding it to the queue, and adding to the archive
  * queue once a complete record has been assembled.
  */
@@ -730,47 +786,48 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
     client_context_t *client = NULL;
     pcomm_result_t pcomm_result = 0;
     ssize_t bytes_received = 0;
-    size_t bytes_archived = 0;
-    uint8_t *tmpBuffer = NULL;
+    size_t bytes_waiting = 0;
+    uint8_t *tempBuffer = NULL;
 
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
     client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_READ, fd);
+    bytes_waiting = bytes_on_socket(fd);
 
-    bytes_received = recv(fd, client->recv_buffer + client->recv_length, 
-                          CLIENT_BUFFER_SIZE - client->recv_length, MSG_DONTWAIT);
-
-    if ((bytes_received) > 0) {
-        client->recv_length += bytes_received;
-    }
-
-    while ((client->recv_length - bytes_archived) >= archd->record_size)
+    while ((bytes_waiting >= archd->record_size) &&
+           ((REPLY_BUFFER_SIZE - client->reply_length) >= REPLY_MESSAGE_SIZE)) 
     {
-        if ((tmpBuffer = (uint8_t *)malloc(archd->record_size)) == NULL)
-        {
+        if ((tempBuffer = (uint8_t *)malloc(archd->record_size)) == NULL) {
             if (archd->debug) {
                 fprintf(stderr, "%s:malloc(): could not allocate memory for record", WHOAMI);
             } else {
                 syslog(LOG_ERR, "%s:malloc(): could not allocate memory for record", WHOAMI);
             }
+            // Wait for the memory to be freed by the process
+            break;
+        }
+        bytes_received = recv(fd, tempBuffer, archd->record_size, MSG_DONTWAIT);
+        if (bytes_received < archd->record_size) {
+            if (archd->debug) {
+                fprintf(stderr, "%s: ioctl() reported more than available. Exiting now!", WHOAMI);
+            } else {
+                syslog(LOG_ERR, "%s: ioctl() reported more than available. Exiting now!", WHOAMI);
+            }
             pcomm_stop(pcomm, 1/*immediately*/);
             return;
         }
-        memcpy(tmpBuffer, client->send_buffer + bytes_archived, archd->record_size);
-        prioqueue_add(&archd->record_queue, client->send_buffer, bytes_archived);
 
-        memcpy(client->send_buffer + client->send_length,
-               client->recv_buffer + bytes_archived + 5, 1);
-        client->send_length += 1;
+        prioqueue_add(&archd->record_queue, tempBuffer, archd->record_size);
 
-        bytes_archived += archd->record_size;
+        memcpy(client->reply_buffer + client->reply_length,
+               tempBuffer + 5, REPLY_MESSAGE_SIZE);
+        client->received++;
+        client->reply_length += REPLY_MESSAGE_SIZE;
+
+        tempBuffer = NULL;
+        bytes_waiting -= bytes_received;
     }
 
-    if (bytes_archived > 0) {
-        client->recv_length -= bytes_archived;
-        memmove(client->recv_buffer, client->recv_buffer + bytes_archived, client->recv_length);
-    }
-
-    if (client->send_length > 0) {
+    if (client->reply_length > 0) {
         if (pcomm_result = pcomm_monitor_write_fd(pcomm, fd,
                                                   callback_client_can_send,
                                                   callback_client_closed))
@@ -793,39 +850,55 @@ void callback_client_can_send (pcomm_context_t *pcomm, int fd)
     archd_context_t *archd = NULL;
     client_context_t *client = NULL;
     ssize_t bytes_sent = 0;
+    size_t total_sent = 0;
 
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
-    client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_WRITE, fd);
+    client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_READ, fd);
 
-    if (client->send_length > 0) {
-        bytes_sent = send(fd, client->send_buffer, client->send_length, MSG_DONTWAIT);
-        if (bytes_sent > 0 ) {
-            client->send_length -= bytes_sent;
-            if (client->send_length > 0) {
-                // Update the contents clients send buffer
-                memmove(client->send_buffer, client->send_buffer + bytes_sent, client->send_length);
-            }
-            else if (client->send_length < 1) {
-                // Don't monitor this descriptor if there are not writes waiting
-                pcomm_remove_write_fd(pcomm, fd);
-            }
+    while (client->reply_length > REPLY_MESSAGE_SIZE) {
+        bytes_sent = send(fd, client->reply_buffer, REPLY_MESSAGE_SIZE, MSG_DONTWAIT);
+        if (bytes_sent < REPLY_MESSAGE_SIZE ) {
+            break;
+        } else {
+            client->confirmed++;
+            total_sent += bytes_sent;
         }
+    }
+
+    client->reply_length -= total_sent;
+    if (client->reply_length > 0) {
+        // Update the contents of the clients reply buffer, but only if
+        // there is still data in the buffer, otherwise we let it be
+        // automatically recycled.
+        memmove(client->reply_buffer, client->reply_buffer + bytes_sent, client->reply_length);
+    }
+    else {
+        // Don't monitor this descriptor if there are not writes waiting
+        pcomm_remove_write_fd(pcomm, fd);
     }
 }
 
-/* Handles the closing of a client connection, and perform the necessary 
- * clean up.
- * XXX: We need to flush, and remove the buffers for a connection when it is
- *      removed
- */
+/* Frees up the client context resource. */
 void callback_client_closed (pcomm_context_t *pcomm, int fd)
 {
     archd_context_t *archd = NULL;
     client_context_t *client = NULL;
 
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
-    client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_WRITE, fd);
 
-    // TODO: remove this client from the list
+    if (archd->debug) {
+        fprintf(stderr, "%s: client closed socket %d\n", WHOAMI, fd);
+    } else {
+        syslog(LOG_ERR, "%s: client closed socket %d\n", WHOAMI, fd);
+    }
+
+    client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_READ, fd);
+
+    if (client) {
+        free(client);
+    }
+
+    pcomm_remove_read_fd(pcomm, fd);
+    pcomm_remove_write_fd(pcomm, fd);
 }
 

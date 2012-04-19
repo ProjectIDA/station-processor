@@ -129,8 +129,15 @@ int CombineSeed(char *msg1, const char *msg2, int iSeedRecordSize)
 
   seedrec1 = (seed_header *)msg1;
   seedrec2 = (seed_header *)msg2; 
-  // make sure location codes match before combining
+
+  // make sure this is the exact same channel since we can handle multiple stations
   if (strncmp(seedrec1->location_id, seedrec2->location_id, 2) != 0)
+    return 0;
+  if (strncmp(seedrec1->channel_id, seedrec2->channel_id, 2) != 0)
+    return 0;
+  if (strncmp(seedrec1->station_id_call_letters, seedrec2->station_id_call_letters, 2) != 0)
+    return 0;
+  if (strncmp(seedrec1->seednet, seedrec2->seednet, 2) != 0)
     return 0;
 
   // See if send message added to first will be too large
@@ -141,12 +148,11 @@ int CombineSeed(char *msg1, const char *msg2, int iSeedRecordSize)
   } // not enough room
 
   // Append second message to the first
-  memcpy(&msg1[ntohs(seedrec1->first_data_byte) 
-            + ntohs(seedrec1->samples_in_record)],
-          &msg2[ntohs(seedrec2->first_data_byte)], 
-          ntohs(seedrec2->samples_in_record));
-  seedrec1->samples_in_record = htons(ntohs(seedrec1->samples_in_record)
-                              + ntohs(seedrec2->samples_in_record));
+  memcpy(&msg1[ntohs(seedrec1->first_data_byte) + ntohs(seedrec1->samples_in_record)],
+         &msg2[ntohs(seedrec2->first_data_byte)],
+         ntohs(seedrec2->samples_in_record));
+  seedrec1->samples_in_record = htons(ntohs(seedrec1->samples_in_record) +
+                                ntohs(seedrec2->samples_in_record));
 
   // Success, so return 1
   return 1;
@@ -168,7 +174,7 @@ void SeedRecordMsg(char *msg, const char *seedrecord,
 
   // copy and null terminate message text only
   iStart = min(ntohs(seedrec->first_data_byte), 128);
-  iCount = min(ntohs(seedrec->samples_in_record), 4095-iStart);
+  iCount = min(ntohs(seedrec->samples_in_record), 8191-iStart);
   strncpy(msg, &seedrecord[iStart], iCount);
   msg[iCount] = 0;
 

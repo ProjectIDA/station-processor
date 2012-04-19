@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "include/diskloop.h"
-#include "include/q330arch.h"
+#include "include/archd.h"
 
 int main(int argc, char *argv[])
 {

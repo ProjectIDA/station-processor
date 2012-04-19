@@ -63,8 +63,7 @@ Edit History:
 #endif
 
 #include "include/diskloop.h"
-//#include "include/archd.h"
-#include "include/q330arch.h"
+#include "include/archd.h"
 #include "include/shmstatus.h"
 
 extern int debug_arg;
@@ -743,8 +742,8 @@ void mini_callback (pointer p)
             mapstatus->ixWriteData[iDlg] = iWriteIndex;
           } // If status shared memory segment has been setup
 
-          // Send seed record to q330arch for archival and data transmission
-          // q330arch will merge data from all data loggers into a single stream
+          // Send seed record to archd for archival and data transmission
+          // archd will merge data from all data loggers into a single stream
           while ((retstr = q330SeedSend((void *)pm->data_address)) != NULL)
           {
             if (debug_arg)

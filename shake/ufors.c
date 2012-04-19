@@ -40,7 +40,7 @@ int openraw(const char *name);
 #include "gps.h"
 #include "libmseed.h"
 #include "diskloop.h"
-#include "q330arch.h"
+#include "archd.h"
 #include "netreq.h"
 #include "dcc_time_proto2.h"
 
@@ -198,8 +198,8 @@ record_handler (char *record, int reclen, void *ptr)
   iTimeBufSize = 1;
   utcWhen[0] = measureTime;
 
-  // Send seed record to q330arch for archival and data transmission
-  // q330arch will merge data from all data loggers into a single stream
+  // Send seed record to archd for archival and data transmission
+  // archd will merge data from all data loggers into a single stream
   char *retstr;
   while ((retstr = q330SeedSend((void *)record)) != NULL)
   {

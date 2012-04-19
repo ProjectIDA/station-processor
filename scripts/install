@@ -138,7 +138,7 @@ netreq)
 netseed)
    do_install
    ;;
-q330arch)
+archd)
    do_install
    ;;
 q330serv)

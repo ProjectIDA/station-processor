@@ -19,7 +19,7 @@ Update History:
 yyyy-mm-dd WHO - Changes
 ==============================================================================
 2007-03-26 FCS - Creation
-2008-05-30 FCS - Remove daemon run options, q330arch serves this funcition now
+2008-05-30 FCS - Remove daemon run options, archd serves this funcition now
 2009-05-08 FCS - Add release number to Usage help
 2010-02-09 FCS - New diskloop.config keywords for falcon
 2011-11-14 JDE - New diskloop.config keywords for telemetry control
@@ -34,7 +34,7 @@ const char *VersionIdentString = "Release 2.0";
 #include <sys/shm.h>
 #include "include/diskloop.h"
 #include "include/dcc_time_proto2.h"
-#include "include/q330arch.h"
+#include "include/archd.h"
 
 //////////////////////////////////////////////////////////////////////////////
 void ShowUsage()

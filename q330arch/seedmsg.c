@@ -168,7 +168,7 @@ void SeedRecordMsg(char *msg, const char *seedrecord,
 
   // copy and null terminate message text only
   iStart = min(ntohs(seedrec->first_data_byte), 128);
-  iCount = min(ntohs(seedrec->samples_in_record), 4095-iStart);
+  iCount = min(ntohs(seedrec->samples_in_record), 8191-iStart);
   strncpy(msg, &seedrecord[iStart], iCount);
   msg[iCount] = 0;
 

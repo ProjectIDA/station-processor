@@ -345,7 +345,7 @@ void PrimaryScreen(
   int fdTerm,                           // file descriptor for status display
   struct s_dlgstatus dlg[MAX_DLG],      // status for each data logger
   STDTIME2    watchdogServ[MAX_DLG],    // watchdog timer for q330serv
-  STDTIME2           watchdogArch,      // watchdog timer for q330arch program
+  STDTIME2           watchdogArch,      // watchdog timer for archd program
   enum tlibstate     libstate[MAX_DLG], // the run state that lib330 is in
   int iDlg,                             // Even index 0,2,4,...
   int iNumDig)                          // How many digitizers we have
@@ -430,17 +430,17 @@ void PrimaryScreen(
     acsPrint(fdTerm, msg, 2+(iDig%2));
   } // for each digitizer
 
-  // Display q330arch status
+  // Display archd status
   diffTime = ST_DiffTimes2(now, watchdogArch);
   tmsDiff = ST_DeltaToMS2(diffTime);
   if (tmsDiff > 60*10000)
   {
-    sprintf(msg, "q330arch down");
-  } // q330arch is not running
+    sprintf(msg, "archd down");
+  } // archd is not running
   else
   {
-    sprintf(msg, "q330arch up");
-  } // q330arch running
+    sprintf(msg, "archd up");
+  } // archd running
   acsPrint(fdTerm, msg, 4);
 
   // If the first q330 is down we have no GPS status

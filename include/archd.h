@@ -26,8 +26,7 @@ yyyy-mm-dd WHO - Changes
 
 // Each client will have 8200 bytes reserved for buffering
 #define MAX_CLIENTS 128
-#define REPLY_MESSAGE_SIZE 1
-#define REPLY_BUFFER_SIZE (512 * REPLY_MESSAGE_SIZE)
+#define MAX_RECORD_SIZE 8192
 
 // Message result
 #define RESULT_RECORD_SENT      0
@@ -47,20 +46,61 @@ struct s_mapshm
     int     read_index[MAX_CLIENTS];
     int     write_index[MAX_CLIENTS];
     int     result[MAX_CLIENTS][2];
-    char    buffer[MAX_CLIENTS][2][8192];
+    char    buffer[MAX_CLIENTS][2][MAX_RECORD_SIZE];
 };
+
+// structure for tracking the context of each client connected to archd
+typedef struct CLIENT_CONTEXT
+{
+    struct timeval connect_time;
+
+    size_t received;
+    size_t confirmed;
+
+    queue_t reply_queue;
+}
+client_context_t;
+
+// data record wrapper
+typedef struct DATA_RECORD
+{
+    struct timeval receive_time;
+    uint8_t *data;
+}
+data_record_t;
+
+// structure containing reply messages for clients
+typedef struct REPLY_MESSAGE
+{
+    uint8_t *message;
+    size_t   length;
+
+    int reply_sent;
+}
+reply_message_t;
 
 // structure for tracking archd daemon state
 typedef struct ARCHD_CONTEXT
 {
     pcomm_context_t *pcomm;
+    struct timezone tz_info;
     struct timeval timeout;
 
+    // shared memory region for updating dispstatus
+    struct s_mapstatus *status_map;
+    int write_index;
+
+    // keep the queued log message here
+    data_record_t *log_message;
+
+    // connection server
     int server_port;
     int server_socket;
 
+    // number of connected clients
     size_t client_count;
 
+    // priority queue of records to be archived
     queue_t record_queue;
 
     int debug;
@@ -68,17 +108,6 @@ typedef struct ARCHD_CONTEXT
     char ida_name[6];
 }
 archd_context_t;
-
-// structure for tracking the context of each client connected to archd
-typedef struct CLIENT_CONTEXT
-{
-    size_t received;
-    size_t confirmed;
-
-    uint8_t reply_buffer[REPLY_BUFFER_SIZE];
-    size_t  reply_length;
-}
-client_context_t;
 
 // Routine call prototype definitions
 // Calls return NULL on no errors, or pointer to error message string

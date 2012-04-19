@@ -7,7 +7,7 @@
 #include <netdb.h>
 
 #include "include/diskloop.h"
-#include "include/q330arch.h"
+#include "include/archd.h"
 
 static int    iSeqNum=0;
 static int    bFirst=1;
@@ -17,7 +17,7 @@ static int    iSocket=-1;
 static char   errmsgbuf[512];
 
 //////////////////////////////////////////////////////////////////////////////
-// Sends a Seed message record to the q330arch server
+// Sends a Seed message record to the archd server
 // Waits for response acknowledgement
 char *q330SeedSend(void *seed_record)
 {

@@ -20,7 +20,6 @@
 
 #include <time.h>
 #include <ctype.h>
-#include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>

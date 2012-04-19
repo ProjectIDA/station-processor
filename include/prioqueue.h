@@ -47,12 +47,12 @@ int prioqueue_init(queue_t *queue);
 int prioqueue_add(queue_t *queue, void *data, int priority);
 
 // highest priority items
-void *prioqueue_peek_head(queue_t *queue);
-void *prioqueue_pop_head(queue_t *queue);
+void *prioqueue_peek_high(queue_t *queue);
+void *prioqueue_pop_high(queue_t *queue);
 
 // highest priority items
-void *prioqueue_peek_tail(queue_t *queue);
-void *prioqueue_pop_tail(queue_t *queue);
+void *prioqueue_peek_low(queue_t *queue);
+void *prioqueue_pop_low(queue_t *queue);
 
 #endif // _PRIOQUEUE_H_ defined
 

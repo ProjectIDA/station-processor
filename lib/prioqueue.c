@@ -24,9 +24,9 @@ int _queue_element_compare(const struct avltree_node *nodeA, const struct avltre
         return a->priority - b->priority;
     }
     if (a->time_received.tv_sec != b->time_received.tv_sec) {
-        return a->time_received.tv_sec - b->time_received.tv_sec;
+        return b->time_received.tv_sec - a->time_received.tv_sec;
     }
-    return a->time_received.tv_usec - b->time_received.tv_usec;
+    return b->time_received.tv_usec - a->time_received.tv_usec;
 }
 
 int prioqueue_init(queue_t *queue) {
@@ -82,25 +82,25 @@ void *_fetch_queue_item(queue_t *queue, int head, int remove)
 }
 
 // return highest priority item
-void *prioqueue_peek_head(queue_t *queue)
+void *prioqueue_peek_high(queue_t *queue)
 {
     return _fetch_queue_item(queue, 1, 0);
 }
 
 // remove and return highest priority item
-void *prioqueue_pop_head(queue_t *queue)
+void *prioqueue_pop_high(queue_t *queue)
 {
     return _fetch_queue_item(queue, 1, 1);
 }
 
 // return lowest priority item
-void *prioqueue_peek_tail(queue_t *queue)
+void *prioqueue_peek_low(queue_t *queue)
 {
     return _fetch_queue_item(queue, 0, 0);
 }
 
 // remove and return lowest priority item
-void *prioqueue_pop_tail(queue_t *queue)
+void *prioqueue_pop_low(queue_t *queue)
 {
     return _fetch_queue_item(queue, 0, 1);
 }

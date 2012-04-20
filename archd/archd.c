@@ -57,7 +57,7 @@ const char *VersionIdentString = "Release 2.0";
 #include "include/netreq.h"
 #include "include/dcc_time_proto2.h"
 
-#define ASYNC_TIMEOUT_SECONDS       1 
+#define ASYNC_TIMEOUT_SECONDS       2 
 #define ASYNC_TIMEOUT_MICROSECONDS  0
 #define BIND_RETRY_INTERVAL         15
 
@@ -385,17 +385,19 @@ int main (int argc, char **argv)
 
     if ((archd = malloc(sizeof(archd_context_t))) == NULL) {
         fprintf(stderr, "%s: could not allocate memory for archd context\n", WHOAMI);
+        exit(1);
     }
 
-    if ((archd->pcomm = malloc(sizeof(pcomm_context_t))) == NULL) {
+    if ((archd->pcomm = calloc(sizeof(pcomm_context_t), 1)) == NULL) {
         fprintf(stderr, "%s: could not allocate memory for pcomm context\n", WHOAMI);
+        exit(1);
     }
 
     g_archd = archd;
     archd->tz_info.tz_minuteswest = 0;
     archd->tz_info.tz_dsttime = 0;
-    archd->timeout.tv_sec = (long)ASYNC_TIMEOUT_SECONDS;
-    archd->timeout.tv_sec = (long)ASYNC_TIMEOUT_MICROSECONDS;
+    archd->timeout.tv_sec = ASYNC_TIMEOUT_SECONDS;
+    archd->timeout.tv_usec = ASYNC_TIMEOUT_MICROSECONDS;
     archd->status_map = NULL;
     archd->write_index = 0;
     archd->log_message = NULL;
@@ -480,6 +482,7 @@ int main (int argc, char **argv)
         } else {
             syslog(LOG_ERR, "%s:idaInit(): %s", WHOAMI, strerror(errno));
         }
+        exit(1);
     }
 
     // Start the server listening for clients in the background
@@ -553,6 +556,23 @@ int main (int argc, char **argv)
         }
     } 
     else {
+        if (archd->debug) {
+            fprintf(stdout, "archd -> pcomm = 0x%0lx\n", archd->pcomm);
+            fprintf(stdout, "archd -> timeout\n");
+            fprintf(stdout, "           -> tv_sec = %0d\n", archd->timeout.tv_sec);
+            fprintf(stdout, "           -> tv_usec = %0d\n", archd->timeout.tv_usec);
+            fprintf(stdout, "archd -> status_map = 0x%0lx\n", archd->status_map);
+            fprintf(stdout, "archd -> write_index = %0d\n", archd->write_index);
+            fprintf(stdout, "archd -> log_message = 0x%0lx\n", archd->log_message);
+            fprintf(stdout, "archd -> server_port = %0d\n", archd->server_port);
+            fprintf(stdout, "archd -> server_socket = %0d\n", archd->server_socket);
+            fprintf(stdout, "archd -> client_count = %0lu\n", archd->client_count);
+            fprintf(stdout, "archd -> record_queue = 0x%0lx\n", archd->record_queue);
+            fprintf(stdout, "archd -> debug = %0d\n", archd->debug);
+            fprintf(stdout, "archd -> record_size = %0d\n", archd->record_size);
+            fprintf(stdout, "archd -> ida_name = '%s'\n", archd->ida_name);
+        }
+
         // RUN pcomm main loop
         pcomm_main(archd->pcomm);
     }
@@ -726,23 +746,18 @@ void callback_archive (pcomm_context_t *pcomm)
     }
 }
 
-int64_t time_diff_sec(struct timeval *a, struct timeval *b)
-{
-}
-
-int64_t time_diff_ms(struct timeval *a, struct timeval *b)
-{
-}
-
-int64_t time_diff_us(struct timeval *a, struct timeval *b)
-{
-}
-
 /* May eventually do something special for timeouts.
  * For now, just call the archive function.
  */
 void callback_async_timeout (pcomm_context_t *pcomm)
 {
+    struct timeval now;
+    struct timezone tz;
+    tz.tz_minuteswest = 0;
+    tz.tz_dsttime = 0;
+    gettimeofday(&now, &tz);
+
+    //fprintf(stderr, "%s: pcomm timed out (%d.%d)", WHOAMI, now.tv_sec, now.tv_usec);
     callback_archive(pcomm);
 }
 

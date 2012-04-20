@@ -134,7 +134,7 @@ struct PCOMM_CONTEXT {
     pcomm_callback_routine prepare_callback;
     pcomm_callback_routine select_callback;
     pcomm_callback_routine timeout_callback;
-    struct timeval *timeout_ptr;
+    struct timeval timeout;
 
     int exit_now;
     int exit_request;
@@ -200,7 +200,7 @@ pcomm_result_t pcomm_set_timeout_callback( pcomm_context_t *context,
                                            pcomm_callback_routine timeout_callback );
 
 /* changes the timeout for the select operation */
-pcomm_result_t pcomm_set_timeout( pcomm_context_t *context, struct timeval *timeout_ptr );
+pcomm_result_t pcomm_set_timeout( pcomm_context_t *context, struct timeval *timeout );
 
 /* sets the maximum number of bytes to read before returning control to 
  * the select

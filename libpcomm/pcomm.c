@@ -503,6 +503,7 @@ pcomm_result_t _pcomm_loop( pcomm_context_t *context ) {
     int read_max, write_max, error_max;
     int max_fd;
     int num_fds;
+    struct timeval timeout;
 
     fd_set read_set;
     fd_set write_set;
@@ -564,7 +565,10 @@ pcomm_result_t _pcomm_loop( pcomm_context_t *context ) {
         read_set_ptr  = (read_max  >= 0) ? &read_set  : NULL;
         error_set_ptr = (error_max >= 0) ? &error_set : NULL;
 
-        num_fds = select( max_fd + 1, read_set_ptr, write_set_ptr, error_set_ptr, context->timeout_ptr );
+        timeout.tv_sec = context->timeout.tv_sec;
+        timeout.tv_usec = context->timeout.tv_usec;
+
+        num_fds = select( max_fd + 1, read_set_ptr, write_set_ptr, error_set_ptr, &timeout );
         if ( num_fds < 0 ) {
             context->exit_now = 1;
             switch (errno) {
@@ -593,6 +597,7 @@ pcomm_result_t _pcomm_loop( pcomm_context_t *context ) {
             }
         } else {
             // call the post select routine if supplied
+            fprintf( stderr, "calling select routine\n" ); // XXX
             if (context->select_callback) {
                 context->select_callback(context);
             }
@@ -632,7 +637,8 @@ pcomm_result_t pcomm_init( pcomm_context_t *context )
         context->prepare_callback = NULL;
         context->select_callback = NULL;
         context->timeout_callback = NULL;
-        context->timeout_ptr = NULL;
+        context->timeout.tv_sec = 0;
+        context->timeout.tv_usec = 0;
         context->initialized = 1;
         context->exit_request = 0;
         context->exit_now = 0;
@@ -798,7 +804,7 @@ pcomm_result_t pcomm_set_page_size( pcomm_context_t *context, size_t page_size )
     return result;
 }
 
-pcomm_result_t pcomm_set_timeout( pcomm_context_t *context, struct timeval *timeout_ptr )
+pcomm_result_t pcomm_set_timeout( pcomm_context_t *context, struct timeval *timeout )
 {
     pcomm_result_t result = PCOMM_SUCCESS;
 
@@ -807,7 +813,8 @@ pcomm_result_t pcomm_set_timeout( pcomm_context_t *context, struct timeval *time
     } else if (!context->initialized) {
         result = PCOMM_UNINITIALIZED_CONTEXT;
     } else {
-        context->timeout_ptr = timeout_ptr;
+        context->timeout.tv_sec = timeout->tv_sec;
+        context->timeout.tv_usec = timeout->tv_usec;
     }
 
     return result;

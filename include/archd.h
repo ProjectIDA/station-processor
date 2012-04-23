@@ -54,6 +54,9 @@ typedef struct CLIENT_CONTEXT
 {
     struct timeval connect_time;
 
+    uint8_t temp_buffer[MAX_RECORD_SIZE];
+    size_t bytes_buffered;
+
     size_t received;
     size_t confirmed;
 
@@ -102,6 +105,9 @@ typedef struct ARCHD_CONTEXT
 
     // priority queue of records to be archived
     queue_t record_queue;
+    int64_t records_received;
+    int64_t records_archived;
+    int64_t log_record_count;
 
     int debug;
     int record_size;

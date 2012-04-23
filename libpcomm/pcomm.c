@@ -402,6 +402,17 @@ pcomm_result_t _write_fd( pcomm_fd_t *fd_context )
     return result;
 }
 
+/* check how many bytes are buffered on a socket */
+long _bytes_on_socket(int socket)
+{
+    size_t bytes_available = 0;
+    if ( ioctl(socket, FIONREAD, (char *)&bytes_available) < 0 ) {
+        return -1;
+    }
+    return((long)bytes_available);
+}
+
+
 /* Manage I/O and callbacks for all selected file descriptors */
 void _process_selected_fds( pcomm_context_t *context,
                             pcomm_stream_t stream,
@@ -561,6 +572,13 @@ pcomm_result_t _pcomm_loop( pcomm_context_t *context ) {
             continue;
         }
 
+        if (context->debug) {
+            fprintf( stderr, "pcomm: max_fd = %d\n", max_fd );
+            fprintf( stderr, "pcomm:   write_fd = %d\n", write_max );
+            fprintf( stderr, "pcomm:   read_fd  = %d\n", read_max );
+            fprintf( stderr, "pcomm:   error_fd = %d\n", error_max );
+        }
+
         write_set_ptr = (write_max >= 0) ? &write_set : NULL;
         read_set_ptr  = (read_max  >= 0) ? &read_set  : NULL;
         error_set_ptr = (error_max >= 0) ? &error_set : NULL;
@@ -570,6 +588,10 @@ pcomm_result_t _pcomm_loop( pcomm_context_t *context ) {
 
         num_fds = select( max_fd + 1, read_set_ptr, write_set_ptr, error_set_ptr, &timeout );
         if ( num_fds < 0 ) {
+            // before potentially resetting, check for exit
+            if (context->exit_now) {
+                continue;
+            }
             context->exit_now = 1;
             switch (errno) {
                 case EBADF:
@@ -592,17 +614,26 @@ pcomm_result_t _pcomm_loop( pcomm_context_t *context ) {
             if (context->exit_now) {
                 continue;
             }
+            if (context->debug) {
+                fprintf( stderr, "pcomm: timeout occurred (no descriptor selected)\n" );
+            }
             else if (context->timeout_callback) {
                 context->timeout_callback(context);
             }
         } else {
             // call the post select routine if supplied
-            fprintf( stderr, "calling select routine\n" ); // XXX
             if (context->select_callback) {
+                if (context->debug) {
+                    fprintf( stderr, "pcomm: calling select routine\n" );
+                }
                 context->select_callback(context);
             }
             if (context->exit_now) {
                 continue;
+            }
+
+            if (context->debug) {
+                fprintf( stderr, "pcomm: processing file descriptors\n" );
             }
             // This order is intential.
             _process_selected_fds(context, PCOMM_STREAM_ERROR, error_set_ptr);
@@ -640,12 +671,28 @@ pcomm_result_t pcomm_init( pcomm_context_t *context )
         context->timeout.tv_sec = 0;
         context->timeout.tv_usec = 0;
         context->initialized = 1;
+        context->debug = 0;
         context->exit_request = 0;
         context->exit_now = 0;
         context->external_context = NULL;
     }
 
     return result;
+}
+
+void pcomm_set_debug( pcomm_context_t *context, int debug )
+{
+    if (context) {
+        context->debug = debug;
+    }
+}
+
+int pcomm_get_debug( pcomm_context_t *context )
+{
+    if (context) {
+        return context->debug;
+    }
+    return 0;
 }
 
 pcomm_result_t pcomm_destroy( pcomm_context_t *context )
@@ -896,8 +943,7 @@ pcomm_result_t pcomm_add_write_fd( pcomm_context_t *context, int fd,
     return result;
 }
 pcomm_result_t pcomm_monitor_write_fd( pcomm_context_t *context, int fd,
-                                     pcomm_callback_ready ready_callback,
-                                     pcomm_callback_ready close_callback )
+                                       pcomm_callback_ready ready_callback )
 {
     pcomm_result_t result = PCOMM_SUCCESS;
 
@@ -914,7 +960,7 @@ pcomm_result_t pcomm_monitor_write_fd( pcomm_context_t *context, int fd,
                                        0    /*length*/,
                                        ready_callback,
                                        NULL /*io_callback*/,
-                                       close_callback ); 
+                                       NULL /*close_callback*/ ); 
     }
 
     return result;
@@ -936,7 +982,7 @@ pcomm_result_t pcomm_add_read_fd( pcomm_context_t *context, int fd,
     } else if ( !io_callback ) {
         result = PCOMM_NULL_CALLBACK;
     } else {
-        result = _pcomm_add_input_fd( &context->write_fds, fd,
+        result = _pcomm_add_input_fd( &context->read_fds, fd,
                                       0    /*check_only*/,
                                       NULL /*ready_callback*/,
                                       io_callback,
@@ -946,8 +992,7 @@ pcomm_result_t pcomm_add_read_fd( pcomm_context_t *context, int fd,
     return result;
 }
 pcomm_result_t pcomm_monitor_read_fd( pcomm_context_t *context, int fd,
-                                    pcomm_callback_ready ready_callback,
-                                    pcomm_callback_ready close_callback )
+                                      pcomm_callback_ready ready_callback )
 {
     pcomm_result_t result = PCOMM_SUCCESS;
 
@@ -960,11 +1005,11 @@ pcomm_result_t pcomm_monitor_read_fd( pcomm_context_t *context, int fd,
     } else if (!ready_callback) {
         result = PCOMM_NULL_CALLBACK;
     } else {
-        result = _pcomm_add_input_fd( &context->write_fds, fd,
+        result = _pcomm_add_input_fd( &context->read_fds, fd,
                                       1    /*check_only*/,
                                       ready_callback,
                                       NULL /*io_callback*/,
-                                      close_callback ); 
+                                      NULL /*close_callback*/ ); 
     }
 
     return result;
@@ -986,7 +1031,7 @@ pcomm_result_t pcomm_add_error_fd( pcomm_context_t *context, int fd,
     } else if ( !io_callback ) {
         result = PCOMM_NULL_CALLBACK;
     } else {
-        result = _pcomm_add_input_fd( &context->write_fds, fd,
+        result = _pcomm_add_input_fd( &context->error_fds, fd,
                                       0    /*check_only*/,
                                       NULL /*ready_callback*/,
                                       io_callback,
@@ -996,8 +1041,7 @@ pcomm_result_t pcomm_add_error_fd( pcomm_context_t *context, int fd,
     return result;
 }
 pcomm_result_t pcomm_monitor_error_fd( pcomm_context_t *context, int fd,
-                                    pcomm_callback_ready ready_callback,
-                                    pcomm_callback_ready close_callback )
+                                       pcomm_callback_ready ready_callback )
 {
     pcomm_result_t result = PCOMM_SUCCESS;
 
@@ -1010,11 +1054,11 @@ pcomm_result_t pcomm_monitor_error_fd( pcomm_context_t *context, int fd,
     } else if (!ready_callback) {
         result = PCOMM_NULL_CALLBACK;
     } else {
-        result = _pcomm_add_input_fd( &context->write_fds, fd,
+        result = _pcomm_add_input_fd( &context->error_fds, fd,
                                       1    /*check_only*/,
                                       ready_callback,
                                       NULL /*io_callback*/,
-                                      close_callback ); 
+                                      NULL /*close_callback*/ ); 
     }
 
     return result;

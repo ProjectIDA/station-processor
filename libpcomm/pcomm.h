@@ -26,6 +26,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 #include <sys/time.h>
 #include <sys/select.h>
 #include <sys/resource.h>
@@ -136,6 +137,7 @@ struct PCOMM_CONTEXT {
     pcomm_callback_routine timeout_callback;
     struct timeval timeout;
 
+    int debug;
     int exit_now;
     int exit_request;
 }; // pcomm_context_t
@@ -175,6 +177,10 @@ pcomm_result_t pcomm_stop( pcomm_context_t *context, int immediately );
 /* used to maintain an external context relevant to the parent program */
 pcomm_result_t pcomm_set_external_context( pcomm_context_t *context, void *external_context );
 void *pcomm_get_external_context( pcomm_context_t *context );
+
+/* set debug mode for pcomm */
+void pcomm_set_debug( pcomm_context_t *context, int on );
+int pcomm_get_debug( pcomm_context_t *context );
 
 /* used to maintain an external file-descriptor-specific context relevant to
  * the parent program */
@@ -225,18 +231,15 @@ pcomm_result_t pcomm_add_error_fd( pcomm_context_t *context, int fd,
 
 /* add a file descriptor to the WRITE list for alert */
 pcomm_result_t pcomm_monitor_write_fd( pcomm_context_t *context, int fd,
-                                     pcomm_callback_ready ready_callback,
-                                     pcomm_callback_ready close_callback );
+                                       pcomm_callback_ready ready_callback );
 
 /* add a file descriptor to the READ list for alert */
 pcomm_result_t pcomm_monitor_read_fd( pcomm_context_t *context, int fd,
-                                    pcomm_callback_ready ready_callback,
-                                    pcomm_callback_ready close_callback );
+                                      pcomm_callback_ready ready_callback );
 
 /* add a file descriptor to the ERROR list for alert */
 pcomm_result_t pcomm_monitor_error_fd( pcomm_context_t *context, int fd,
-                                     pcomm_callback_ready ready_callback,
-                                     pcomm_callback_ready close_callback );
+                                       pcomm_callback_ready ready_callback );
 
 pcomm_result_t pcomm_remove_read_fd(  pcomm_context_t *context, int fd );
 pcomm_result_t pcomm_remove_write_fd( pcomm_context_t *context, int fd );

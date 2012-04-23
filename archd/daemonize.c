@@ -12,7 +12,7 @@
 #include <signal.h>
 
 /* Change this to whatever your daemon is called */
-#define DAEMON_NAME "q330arch"
+#define DAEMON_NAME "archd"
 
 /* Change this to the user under which to run -- only if run as root */
 #define RUN_AS_USER "maint"

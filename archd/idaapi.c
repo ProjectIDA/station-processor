@@ -14,7 +14,7 @@ yyyy-mm-dd WHO - Changes
 ==============================================================================
 2007-06-12 FCS - Creation
 2009-07-18 FCS - Make Log threshold LOG_ERR instead of LOG_DEBUG
-2011-04-29 FCS - Move to q330arch, add whoami parameter to initialization
+2011-04-29 FCS - Move to archd, add whoami parameter to initialization
                  do a new isidlOpenDiskLoop and isidlCloseDiskLoop on every write
 ******************************************************************************/
 

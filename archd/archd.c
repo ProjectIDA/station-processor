@@ -558,7 +558,7 @@ int main (int argc, char **argv)
         }
     } 
     else {
-        pcomm_set_debug(archd->pcomm, archd->debug);
+        //pcomm_set_debug(archd->pcomm, archd->debug);
 
         if (archd->debug) {
             fprintf(stdout, "\n");
@@ -689,8 +689,6 @@ void callback_archive (pcomm_context_t *pcomm)
 
     if (archd->debug) {
         fprintf(stdout, "%s: callback_archive()\n", WHOAMI);
-        fprintf(stdout, "%s:   start - %lli records buffered\n", WHOAMI, archd->records_received - archd->records_archived);
-        fprintf(stdout, "%s:   start - %lli log records processed\n", WHOAMI, archd->log_record_count);
     }
 
     while (record = (data_record_t *)prioqueue_pop_high(&archd->record_queue))
@@ -760,7 +758,8 @@ void callback_archive (pcomm_context_t *pcomm)
 
     if (archd->debug) {
         fprintf(stdout, "%s:     end - %lli records buffered\n", WHOAMI, archd->records_received - archd->records_archived);
-        fprintf(stdout, "%s:     end - %lli log records processed\n", WHOAMI, archd->log_record_count);
+        fprintf(stdout, "%s:   start - %lli log events processed\n", WHOAMI, archd->log_record_count);
+        fprintf(stdout, "%s:   start - %lli records processed\n", WHOAMI, archd->records_archived);
     }
 }
 
@@ -799,7 +798,11 @@ void callback_connect_request (pcomm_context_t *pcomm, int fd)
     }
 
     if (archd->client_count >= MAX_CLIENTS) {
-        fprintf(stderr, "Maximum number of client reached, rejecting\n");
+        if (archd->debug) {
+            fprintf(stderr, "%s: Maximum number of client reached, rejecting\n", WHOAMI);
+        } else {
+            syslog(LOG_ERR, "%s: Maximum number of client reached, rejecting", WHOAMI);
+        }
         return;
     }
 
@@ -975,9 +978,11 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
 
         bytes_received = recv(fd, client->buffer + client->length, read_size, MSG_DONTWAIT);
 
+        /*
         if (archd->debug) {
             fprintf(stderr, "%s: %d bytes read from %d\n", WHOAMI, bytes_received, fd);
         }
+        */
 
         if (bytes_received < 0) {
             switch (errno) {
@@ -1000,10 +1005,10 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
                 case EPIPE:
                     if (archd->debug) {
                         fprintf(stderr, "%s:%d> connection closed by client %d\n",
-                                WHOAMI, fd);
+                                WHOAMI, __LINE__, fd);
                     } else {
                         syslog(LOG_ERR, "%s:%d> connection closed by client %d",
-                                WHOAMI, fd);
+                                WHOAMI, __LINE__, fd);
                     }
                     callback_client_closed(pcomm, fd);
                     return;
@@ -1013,10 +1018,10 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
                 case ENOMEM:
                     if (archd->debug) {
                         fprintf(stderr, "%s:%d> read failed for client %d, \n",
-                                WHOAMI, fd);
+                                WHOAMI, __LINE__, fd);
                     } else {
                         syslog(LOG_ERR, "%s:%d> read failed for client %d",
-                                WHOAMI, fd);
+                                WHOAMI, __LINE__, fd);
                     }
                 default:
                     break;
@@ -1029,13 +1034,17 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
         client->length += bytes_received;
         bytes_waiting -= bytes_received;
 
+        /*
         if (archd->debug) {
             fprintf(stderr, "%s: %d bytes buffered for %d\n", WHOAMI, client->length, fd);
         }
+        */
 
         // If we don't have a full record's worth, bail for now
         if (client->length < archd->record_size) {
-            fprintf(stderr, "%s: %d bytes buffered for %d, waiting for more\n", WHOAMI, client->length, fd);
+            if (archd->debug) {
+                fprintf(stderr, "%s: %d bytes buffered for %d, waiting for more\n", WHOAMI, client->length, fd);
+            }
             if (bytes_received == 0) {
                 callback_client_closed(pcomm, fd);
                 return;
@@ -1220,10 +1229,10 @@ void callback_client_can_send (pcomm_context_t *pcomm, int fd)
                     case EPIPE:
                         if (archd->debug) {
                             fprintf(stderr, "%s:%d> connection closed by client %d\n",
-                                    WHOAMI, fd);
+                                    WHOAMI, __LINE__, fd);
                         } else {
                             syslog(LOG_ERR, "%s:%d> connection closed by client %d",
-                                    WHOAMI, fd);
+                                    WHOAMI, __LINE__, fd);
                         }
                         callback_client_closed(pcomm, fd);
                         return;

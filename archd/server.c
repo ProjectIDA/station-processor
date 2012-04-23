@@ -38,9 +38,9 @@ yyyy-mm-dd WHO - Changes
 #include <syslog.h>
 
 #include "include/diskloop.h"
-#include "include/q330arch.h"
+#include "include/archd.h"
 
-#define WHOAMI "q330arch"
+#define WHOAMI "archd"
 
 static int iSeedRecordSize;
 static struct s_mapshm *mapshm=0;

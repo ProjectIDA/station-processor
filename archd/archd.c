@@ -760,7 +760,7 @@ void callback_archive (pcomm_context_t *pcomm)
 
     if (archd->debug) {
         fprintf(stdout, "%s:     end - %lli records buffered\n", WHOAMI, archd->records_received - archd->records_archived);
-        fprintf(stdout, "%s:     end - %lli log records procssed\n", WHOAMI, archd->log_record_count);
+        fprintf(stdout, "%s:     end - %lli log records processed\n", WHOAMI, archd->log_record_count);
     }
 }
 
@@ -812,6 +812,7 @@ void callback_connect_request (pcomm_context_t *pcomm, int fd)
         return;
     }
     gettimeofday(&client->connect_time, &archd->tz_info);
+    client->length = 0;
     client->received = 0;
     client->confirmed = 0;
     prioqueue_init(&client->reply_queue);
@@ -955,6 +956,8 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
     char *p_msg;
     char c;
     int k;
+    size_t read_size;
+    char *s_errno;
 
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
     client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_READ, fd);
@@ -963,8 +966,90 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
     if (archd->debug) {
         fprintf(stderr, "%s: %d bytes waiting for client %d\n", WHOAMI, bytes_waiting, fd);
     }
-    while (bytes_waiting >= archd->record_size)
+    while (bytes_waiting >= 0)
     {
+        read_size = archd->record_size;
+        if (client->length > 0) {
+            read_size -= client->length;
+        }
+
+        bytes_received = recv(fd, client->buffer + client->length, read_size, MSG_DONTWAIT);
+
+        if (archd->debug) {
+            fprintf(stderr, "%s: %d bytes read from %d\n", WHOAMI, bytes_received, fd);
+        }
+
+        if (bytes_received < 0) {
+            switch (errno) {
+                case EOPNOTSUPP:
+                    if (archd->debug) {
+                        fprintf(stderr, "%s:%d> bad socket option\n",
+                                WHOAMI, __LINE__);
+                    } else {
+                        syslog(LOG_ERR, "%s:%d> bad socket option",
+                                WHOAMI, __LINE__);
+                    }
+                    exit(1);
+                case EBADF:
+                case ECONNRESET:
+                case EDESTADDRREQ:
+                case EFAULT:
+                case EMSGSIZE:
+                case ENOTCONN:
+                case ENOTSOCK:
+                case EPIPE:
+                    if (archd->debug) {
+                        fprintf(stderr, "%s:%d> connection closed by client %d\n",
+                                WHOAMI, fd);
+                    } else {
+                        syslog(LOG_ERR, "%s:%d> connection closed by client %d",
+                                WHOAMI, fd);
+                    }
+                    callback_client_closed(pcomm, fd);
+                    return;
+                case EAGAIN: // may be the same as EWOULDBLOCK
+                case EINTR:
+                case ENOBUFS:
+                case ENOMEM:
+                    if (archd->debug) {
+                        fprintf(stderr, "%s:%d> read failed for client %d, \n",
+                                WHOAMI, fd);
+                    } else {
+                        syslog(LOG_ERR, "%s:%d> read failed for client %d",
+                                WHOAMI, fd);
+                    }
+                default:
+                    break;
+            }
+            // break out of the loop
+            break;
+        }
+        
+
+        client->length += bytes_received;
+        bytes_waiting -= bytes_received;
+
+        if (archd->debug) {
+            fprintf(stderr, "%s: %d bytes buffered for %d\n", WHOAMI, client->length, fd);
+        }
+
+        // If we don't have a full record's worth, bail for now
+        if (client->length < archd->record_size) {
+            fprintf(stderr, "%s: %d bytes buffered for %d, waiting for more\n", WHOAMI, client->length, fd);
+            if (bytes_received == 0) {
+                callback_client_closed(pcomm, fd);
+                return;
+            }
+            break;
+        }
+
+        // Update the Watchdog for the status display
+        // Save the current time, let others know where updated time is stored
+        // TODO: Keep an eye on this. We may need to fix this logic if the 
+        //       watchdog doesn't work as I expect it should.
+        archd->status_map->archWatchdog[0] = ST_GetCurrentTime2();
+        archd->status_map->ixWriteArch = 0;
+
         if ((record = (data_record_t *)malloc(sizeof(data_record_t))) == NULL) {
             if (archd->debug) {
                 fprintf(stderr, "%s:malloc(): could not allocate memory for record\n", WHOAMI);
@@ -983,30 +1068,9 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
             // Wait for the memory to be freed by the process
             break;
         }
-        bytes_received = recv(fd, record->data, archd->record_size, MSG_DONTWAIT);
 
-        if (bytes_received > 0) {
-            bytes_waiting -= bytes_received;
-
-            // Update the Watchdog for the status display
-            // Save the current time, let others know where updated time is stored
-            // TODO: Keep an eye on this. We may need to fix this logic if the 
-            //       watchdog doesn't work as I expect it should.
-            archd->status_map->archWatchdog[0] = ST_GetCurrentTime2();
-            archd->status_map->ixWriteArch = 0;
-        }
-
-        if (bytes_received < archd->record_size) {
-            // Sanity check to ensure we were not promised more than 
-            // the socket had to offer
-            if (archd->debug) {
-                fprintf(stderr, "%s: ioctl() reported more than available. Exiting now!\n", WHOAMI);
-            } else {
-                syslog(LOG_ERR, "%s: ioctl() reported more than available. Exiting now!", WHOAMI);
-            }
-            pcomm_stop(pcomm, 1/*immediately*/);
-            return;
-        }
+        memcpy(record->data, client->buffer, archd->record_size);
+        client->length = 0;
 
         // Handle channel control commands
         if (strncmp("CHANNELCONTROL-", record->data, 15) == 0)

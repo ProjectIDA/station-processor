@@ -54,8 +54,8 @@ typedef struct CLIENT_CONTEXT
 {
     struct timeval connect_time;
 
-    uint8_t temp_buffer[MAX_RECORD_SIZE];
-    size_t bytes_buffered;
+    uint8_t buffer[MAX_RECORD_SIZE];
+    size_t length;
 
     size_t received;
     size_t confirmed;

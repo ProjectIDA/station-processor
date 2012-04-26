@@ -1,4 +1,4 @@
-# Ignore thise files
+# Ignore these files
 *.[oa]
 aslreq/aslreq
 dispstatus/dispstatus
@@ -25,3 +25,8 @@ ocf_utils/ocfdump
 *.class
 .*.swp
 .*.un~
+*.pc
+archd/archd
+*.so
+*.so.*
+.depend

@@ -30,7 +30,12 @@ int _queue_element_compare(const struct avltree_node *nodeA, const struct avltre
 }
 
 int prioqueue_init(queue_t *queue) {
-    return avltree_init(&queue->tree, _queue_element_compare, 0);
+    int result = -1;
+    if (queue) {
+        queue->size = 0;
+        result = avltree_init(&queue->tree, _queue_element_compare, 0);
+    }
+    return result;
 }
 
 // Adds arbitrary data to the queue.
@@ -51,6 +56,7 @@ int prioqueue_add(queue_t *queue, void *data, int priority)
         element->priority = priority;
         element->data = data;
         avltree_insert(&element->node, &queue->tree);
+        queue->size++;
     }
     return result;
 }
@@ -62,19 +68,26 @@ void *_fetch_queue_item(queue_t *queue, int high, int remove)
     queue_element_t *element;
     void *data = NULL;
 
-    if (high) {
-        node = avltree_last(&queue->tree);
-    } else {
-        node = avltree_first(&queue->tree);
-    }
+    if (queue) {
+        if (high) {
+            node = avltree_last(&queue->tree);
+        } else {
+            node = avltree_first(&queue->tree);
+        }
 
-    if (node) {
-        element = (queue_element_t *)avltree_container_of(node, queue_element_t, node);
-        data = element->data;
+        if (node) {
+            element = (queue_element_t *)avltree_container_of(node, queue_element_t, node);
+            if (element) {
+                data = element->data;
+            }
 
-        if (remove) {
-            avltree_remove(node, &queue->tree);
-            free(element);
+            if (remove) {
+                avltree_remove(node, &queue->tree);
+                if (element) {
+                    free(element);
+                }
+                queue->size--;
+            }
         }
     }
 
@@ -103,5 +116,34 @@ void *prioqueue_peek_low(queue_t *queue)
 void *prioqueue_pop_low(queue_t *queue)
 {
     return _fetch_queue_item(queue, 0/*high*/, 1/*remove*/);
+}
+
+void prioqueue_print_summary(queue_t *queue, int fd, const char *prefix, const char *suffix)
+{
+    struct avltree_node *node;
+    queue_element_t *highest;
+    queue_element_t *lowest;
+
+    if (prefix == NULL) {
+        prefix = "";
+    }
+    if (suffix == NULL) {
+        suffix = "";
+    }
+    if (queue) {
+        node = avltree_last(&queue->tree);
+        highest = (queue_element_t *)avltree_container_of(node, queue_element_t, node);
+        node  = avltree_first(&queue->tree);
+        lowest = (queue_element_t *)avltree_container_of(node, queue_element_t, node);
+        fprintf(fd, "%sprioqueue, %d elements, highest [%d:%d.%d], lowest [%d:%d.%d]%s\n",
+                prefix, queue->size,
+                highest->priority, highest->time_received.tv_sec, highest->time_received.tv_usec,
+                lowest->priority, lowest->time_received.tv_sec, lowest->time_received.tv_usec,
+                suffix);
+    }
+    else {
+        fprintf(fd, "%sprioqueue, NULL%s\n",
+                prefix, suffix);
+    }
 }
 

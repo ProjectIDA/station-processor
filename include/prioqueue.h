@@ -37,6 +37,7 @@ queue_element_t;
 typedef struct QUEUE
 {
     struct avltree tree;
+    size_t size;
 }
 queue_t;
 
@@ -53,6 +54,9 @@ void *prioqueue_pop_high(queue_t *queue);
 // highest priority items
 void *prioqueue_peek_low(queue_t *queue);
 void *prioqueue_pop_low(queue_t *queue);
+
+// print a summary about this priority queue to the specified stream
+void prioqueue_print_summary(queue_t *queue, int fd, const char *prefix, const char *suffix);
 
 #endif // _PRIOQUEUE_H_ defined
 

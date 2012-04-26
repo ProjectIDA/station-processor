@@ -1233,7 +1233,7 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
                 reply = make_reply(record->data + 5, 1);
                 gettimeofday(&record->receive_time, &archd->tz_info);
                 client->received++;
-                prioqueue_add(&archd->record_queue, record, archd->record_size);
+                prioqueue_add(&archd->record_queue, record, 0/*priority*/);
                 archd->records_received++;
         } 
 
@@ -1270,6 +1270,11 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
         // Prevent accidental overwrite/re-evaluation of old ata
         record = NULL;
         reply = NULL;
+    }
+
+    // List highest and lowest priority items in the queue
+    if (archd->debug) {
+        prioqueue_print_summary(&archd->record_queue, stderr, "archd->record_queue: ", "");
     }
 
     if (prioqueue_peek_high(&client->reply_queue)) {

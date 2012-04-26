@@ -85,6 +85,44 @@ static struct s_mapstatus *mapstatus=NULL;
 static archd_context_t *g_archd=NULL;
 //static int iSeedRecordSize;
 
+////////////////////////////////////////////////////////////////////
+//// MEMORY TRACKING FUNCTIONS
+////////////////////////////////////////////////////////////////////
+void mem_print(const char *key, const void *value, const void *obj)
+{
+    fprintf(stderr, "  %s: %lu\n", key, (size_t)value);
+}
+
+void mem_show(Map *map)
+{
+    fprintf(stderr, "Memory Report:\n");
+    map_enum(map, mem_print, NULL);
+    fprintf(stderr, "\n");
+}
+
+void mem_add(Map *map, const char *key)
+{
+    size_t objects = 0;
+    if (map_contains(map, key)) {
+        objects = (size_t)map_get(map, key);
+    }
+    objects++;
+    map_put(map, key, (void *)objects);
+    mem_show(map);
+}
+
+void mem_free(Map *map, const char *key)
+{
+    size_t objects = 1;
+    if (map_contains(map, key)) {
+        objects = (size_t)map_get(map, key);
+    }
+    objects--;
+    map_put(map, key, (void *)objects);
+    mem_show(map);
+}
+
+
 //////////////////////////////////////////////////////////////////////////////
 void ShowUsage()
 {
@@ -383,17 +421,24 @@ int main (int argc, char **argv)
 
     pcomm_result_t pcomm_result;
 
-    if ((archd = malloc(sizeof(archd_context_t))) == NULL) {
+    if ((archd = calloc(sizeof(archd_context_t), 1)) == NULL) {
         fprintf(stderr, "%s: could not allocate memory for archd context\n", WHOAMI);
         exit(1);
     }
+    g_archd = archd;
 
     if ((archd->pcomm = calloc(sizeof(pcomm_context_t), 1)) == NULL) {
         fprintf(stderr, "%s: could not allocate memory for pcomm context\n", WHOAMI);
         exit(1);
     }
 
-    g_archd = archd;
+    if ((archd->memory = map_new(100, NULL, NULL)) == NULL) {
+        fprintf(stderr, "%s: could not initialize memory tracker map\n", WHOAMI);
+        exit(1);
+    }
+
+    // archd->pcomm has been set already
+    // archd->memory has been set already
     archd->tz_info.tz_minuteswest = 0;
     archd->tz_info.tz_dsttime = 0;
     archd->timeout.tv_sec = ASYNC_TIMEOUT_SECONDS;
@@ -558,7 +603,7 @@ int main (int argc, char **argv)
         }
     } 
     else {
-        //pcomm_set_debug(archd->pcomm, archd->debug);
+        pcomm_set_debug(archd->pcomm, archd->debug);
 
         if (archd->debug) {
             fprintf(stdout, "\n");
@@ -578,6 +623,24 @@ int main (int argc, char **argv)
             fprintf(stdout, "archd -> ida_name = '%s'\n", archd->ida_name);
             fprintf(stdout, "\n");
         }
+        /*
+        else {
+            syslog(LOG_ERR, "archd -> pcomm = 0x%0lx", archd->pcomm);
+            syslog(LOG_ERR, "archd -> timeout");
+            syslog(LOG_ERR, "           -> tv_sec = %0d", archd->timeout.tv_sec);
+            syslog(LOG_ERR, "           -> tv_usec = %0d", archd->timeout.tv_usec);
+            syslog(LOG_ERR, "archd -> status_map = 0x%0lx", archd->status_map);
+            syslog(LOG_ERR, "archd -> write_index = %0d", archd->write_index);
+            syslog(LOG_ERR, "archd -> log_message = 0x%0lx", archd->log_message);
+            syslog(LOG_ERR, "archd -> server_port = %0d", archd->server_port);
+            syslog(LOG_ERR, "archd -> server_socket = %0d", archd->server_socket);
+            syslog(LOG_ERR, "archd -> client_count = %0lu", archd->client_count);
+            syslog(LOG_ERR, "archd -> record_queue = 0x%0lx", archd->record_queue);
+            syslog(LOG_ERR, "archd -> debug = %0d", archd->debug);
+            syslog(LOG_ERR, "archd -> record_size = %0d", archd->record_size);
+            syslog(LOG_ERR, "archd -> ida_name = '%s'", archd->ida_name);
+        }
+        */
 
         // RUN pcomm main loop
         pcomm_main(archd->pcomm);
@@ -704,7 +767,10 @@ void callback_archive (pcomm_context_t *pcomm)
             }
             // free up record resources
             free(record->data);
+            mem_free(archd->memory, "seed-data");
             free(record);
+            mem_free(archd->memory, "data-record");
+            record = NULL;
             continue;
         } // Not a LOG record
         archd->log_record_count++;
@@ -717,7 +783,10 @@ void callback_archive (pcomm_context_t *pcomm)
             {
                 // Free up the record's resources
                 free(record->data);
+                mem_free(archd->memory, "seed-data");
                 free(record);
+                mem_free(archd->memory, "data-record");
+                record = NULL;
                 continue;
             }
             else
@@ -730,6 +799,10 @@ void callback_archive (pcomm_context_t *pcomm)
                 {
                     fprintf(stderr, "%s: %s\n", WHOAMI, result_message);
                 }
+                free(archd->log_message->data);
+                mem_free(archd->memory, "seed-data");
+                free(archd->log_message);
+                mem_free(archd->memory, "data-record");
                 archd->log_message = NULL;
             } // combine failed
         } // we have a waiting message to possibly combine with
@@ -750,6 +823,10 @@ void callback_archive (pcomm_context_t *pcomm)
             {
                 fprintf(stderr, "%s: %s\n", WHOAMI, result_message);
             }
+            free(archd->log_message->data);
+            mem_free(archd->memory, "seed-data");
+            free(archd->log_message);
+            mem_free(archd->memory, "data-record");
             archd->log_message = NULL;
         } // timeout elapsed
 
@@ -806,7 +883,7 @@ void callback_connect_request (pcomm_context_t *pcomm, int fd)
         return;
     }
 
-    if ((client = (client_context_t *)malloc(sizeof(client_context_t))) == NULL) {
+    if ((client = (client_context_t *)calloc(sizeof(client_context_t), 1)) == NULL) {
         if (archd->debug) {
             fprintf(stderr, "%s: failed to allocate memory for client context\n", WHOAMI);
         } else {
@@ -814,6 +891,8 @@ void callback_connect_request (pcomm_context_t *pcomm, int fd)
         }
         return;
     }
+    mem_add(archd->memory, "client");
+
     gettimeofday(&client->connect_time, &archd->tz_info);
     client->length = 0;
     client->received = 0;
@@ -925,12 +1004,17 @@ reply_message_t *make_reply(uint8_t *message, size_t length)
     reply_message_t *reply = NULL;
 
     if ((reply = (reply_message_t *)malloc(sizeof(reply_message_t))) != NULL) {
+        mem_add(g_archd->memory, "reply");
         if ((reply->message = (uint8_t *)malloc(length)) == NULL) {
             free(reply);
+            mem_free(g_archd->memory, "reply");
             reply = NULL;
         }
         else {
             memcpy(reply->message, message, length);
+            reply->length = length;
+            reply->sent = 0;
+            mem_add(g_archd->memory, "reply-message");
         }
     }
 
@@ -950,6 +1034,7 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
     int result = 0;
     pcomm_result_t pcomm_result = 0;
     ssize_t bytes_received = 0;
+    ssize_t bytes_sent = 0;
     size_t bytes_waiting = 0;
 
     int   control_id;
@@ -1019,10 +1104,7 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
                     if (archd->debug) {
                         fprintf(stderr, "%s:%d> read failed for client %d, \n",
                                 WHOAMI, __LINE__, fd);
-                    } else {
-                        syslog(LOG_ERR, "%s:%d> read failed for client %d",
-                                WHOAMI, __LINE__, fd);
-                    }
+                    } 
                 default:
                     break;
             }
@@ -1068,6 +1150,7 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
             // Wait for the memory to be freed by the process
             break;
         }
+        mem_add(archd->memory, "data-record");
         if ((record->data = (uint8_t *)malloc(archd->record_size)) == NULL) {
             if (archd->debug) {
                 fprintf(stderr, "%s:malloc(): could not allocate memory for record buffer\n", WHOAMI);
@@ -1077,6 +1160,7 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
             // Wait for the memory to be freed by the process
             break;
         }
+        mem_add(archd->memory, "seed-data");
 
         memcpy(record->data, client->buffer, archd->record_size);
         client->length = 0;
@@ -1150,7 +1234,6 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
                 gettimeofday(&record->receive_time, &archd->tz_info);
                 client->received++;
                 prioqueue_add(&archd->record_queue, record, archd->record_size);
-
                 archd->records_received++;
         } 
 
@@ -1166,7 +1249,23 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
             // processed.
             break;
         }
-        prioqueue_add(&client->reply_queue, reply, 0/*priority*/);
+        if ((bytes_sent = send(fd, reply->message, reply->length, MSG_DONTWAIT)) < reply->length) {
+            // Queue the message if it could not be sent
+            prioqueue_add(&client->reply_queue, reply, 0/*priority*/);
+            if (archd->debug) {
+                fprintf(stderr, "%s: queueing reply because send() blocked\n",
+                        WHOAMI);
+            }
+        }
+        else {
+            // If the message was sent successfully, delete it
+            free(reply->message);
+            mem_free(archd->memory, "reply-message");
+            free(reply);
+            mem_free(archd->memory, "reply");
+            reply = NULL;
+        }
+
 
         // Prevent accidental overwrite/re-evaluation of old ata
         record = NULL;
@@ -1240,15 +1339,29 @@ void callback_client_can_send (pcomm_context_t *pcomm, int fd)
                     case EINTR:
                     case ENOBUFS:
                     case ENOMEM:
+                        if (archd->debug) {
+                            fprintf(stderr, "%s:%d> reply failed to client %d, \n",
+                                    WHOAMI, __LINE__, fd);
+                        } 
                     default:
                         break;
                 }
+            }
+            if (archd->debug) {
+                fprintf(stderr, "%s:%d> WARNING: reply to client %d only sent %d of %d bytes",
+                        WHOAMI, __LINE__, fd, bytes_sent, reply->length);
             }
             // break out of the loop
             break;
         } else {
             // Remove this reply if it was sent succesfully
             prioqueue_pop_high(&client->reply_queue);
+            free(reply->message);
+            mem_free(archd->memory, "reply-message");
+            free(reply);
+            mem_free(archd->memory, "reply");
+            reply = NULL;
+
             client->confirmed++;
         }
     }
@@ -1264,6 +1377,7 @@ void callback_client_closed (pcomm_context_t *pcomm, int fd)
 {
     archd_context_t *archd = NULL;
     client_context_t *client = NULL;
+    reply_message_t *reply = NULL;
 
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
 
@@ -1280,7 +1394,18 @@ void callback_client_closed (pcomm_context_t *pcomm, int fd)
     close(fd);
 
     if (client) {
+        fprintf(stderr, "%s: removing un-sent reply messages for closed client %d\n", WHOAMI, fd);
+        while (reply = (reply_message_t *)prioqueue_peek_high(&client->reply_queue)) {
+            fprintf(stderr, "%s: removing un-sent reply message for closed client %d\n", WHOAMI, fd);
+            prioqueue_pop_high(&client->reply_queue);
+            free(reply->message);
+            mem_free(archd->memory, "reply-message");
+            free(reply);
+            mem_free(archd->memory, "reply");
+            reply = NULL;
+        }
         free(client);
+        mem_free(archd->memory, "client");
     }
 
     archd->client_count--;

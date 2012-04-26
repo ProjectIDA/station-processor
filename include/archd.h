@@ -17,6 +17,7 @@ yyyy-mm-dd WHO - Changes
 #include <pthread.h>
 #include <sys/ioctl.h>
 #include "include/idaapi.h"
+#include "include/map.h"
 #include "include/prioqueue.h"
 #include "libpcomm/pcomm.h"
 
@@ -78,14 +79,20 @@ typedef struct REPLY_MESSAGE
     uint8_t *message;
     size_t   length;
 
-    int reply_sent;
+    int sent;
 }
 reply_message_t;
 
 // structure for tracking archd daemon state
 typedef struct ARCHD_CONTEXT
 {
+    // asynchronous I/O library context
     pcomm_context_t *pcomm;
+
+    // memory tracker
+    Map *memory;
+
+    // quick access to timezone info
     struct timezone tz_info;
     struct timeval timeout;
 

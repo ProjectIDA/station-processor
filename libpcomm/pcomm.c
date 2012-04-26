@@ -215,7 +215,9 @@ pcomm_result_t _pcomm_remove_fd( list_t *list, int fd )
         result = PCOMM_INDEX_NOT_FOUND;
     } else if ( (delete_result = list_delete_at(list, (unsigned int)index)) < 0 ) {
         result = PCOMM_LIST_REMOVE_FAILED;
-    } 
+    } else {
+        free(fd_context);
+    }
     
     return result;
 }
@@ -451,6 +453,9 @@ void _process_selected_fds( pcomm_context_t *context,
                 if ( (fd_context = (pcomm_fd_t *)list_seek(stream_fds, &fds[i])) ) {
                     // Check if we are only notifying that fd is ready
                     if (fd_context->check_only) {
+                        if (context->debug) {
+                            fprintf(stderr, "File descriptor %d is ready\n", fd_context->file_descriptor);
+                        }
                         if (fd_context->ready_callback) {
                             fd_context->ready_callback( context,
                                                         fd_context->file_descriptor );

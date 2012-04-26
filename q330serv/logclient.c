@@ -21,6 +21,7 @@ static char   errmsgbuf[512];
 // Waits for response acknowledgement
 char *q330SeedSend(void *seed_record)
 {
+  char  reply;
   char  *errmsg;
   char  inbuffer[8192];
 
@@ -74,6 +75,7 @@ char *q330SeedSend(void *seed_record)
     }
   } // socket needs to be opened
 
+  //fprintf(stderr, "Sending data to archd...\n");
   // Send record
   if (send(iSocket, seed_record, iSeedRecordSize, 0) != iSeedRecordSize)
   {
@@ -81,9 +83,12 @@ char *q330SeedSend(void *seed_record)
       errno, strerror(errno));
     close(iSocket);
     iSocket = -1;
+    //fprintf(stderr, "Error: %s\n", errmsgbuf);
     return errmsgbuf;
   }
 
+
+  //fprintf(stderr, "Awaiting response confirmation reply archd...\n");
   // Now wait for an acknowlegement response, returns first 48 bytes of data
   if (recv(iSocket, inbuffer, 1, MSG_WAITALL) != 1)
   {
@@ -91,8 +96,11 @@ char *q330SeedSend(void *seed_record)
       errno, strerror(errno));
     close(iSocket);
     iSocket = -1;
+    //fprintf(stderr, "Error: %s\n", errmsgbuf);
     return errmsgbuf;
-  } 
+  }
+  reply = *(char *)inbuffer;
+  //fprintf(stderr, "Archd reply was 0x%02x [%c]\n", (uint8_t)reply, isprint(reply) ? reply : '.');
   return NULL;
 } // q330SeedSend()
 

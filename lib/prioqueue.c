@@ -9,7 +9,7 @@ Routines:
 Update History:
 yyyy-mm-dd WHO - Changes
 ==============================================================================
-2012-04-17 FCS - Creation
+2012-04-17 JDE - Creation
 ******************************************************************************/
 
 #include "include/prioqueue.h"
@@ -56,13 +56,13 @@ int prioqueue_add(queue_t *queue, void *data, int priority)
 }
 
 // helper function for peek/pop operations
-void *_fetch_queue_item(queue_t *queue, int head, int remove)
+void *_fetch_queue_item(queue_t *queue, int high, int remove)
 {
     struct avltree_node *node;
     queue_element_t *element;
     void *data = NULL;
 
-    if (head) {
+    if (high) {
         node = avltree_last(&queue->tree);
     } else {
         node = avltree_first(&queue->tree);
@@ -84,24 +84,24 @@ void *_fetch_queue_item(queue_t *queue, int head, int remove)
 // return highest priority item
 void *prioqueue_peek_high(queue_t *queue)
 {
-    return _fetch_queue_item(queue, 1, 0);
+    return _fetch_queue_item(queue, 1/*high*/, 0/*remove*/);
 }
 
 // remove and return highest priority item
 void *prioqueue_pop_high(queue_t *queue)
 {
-    return _fetch_queue_item(queue, 1, 1);
+    return _fetch_queue_item(queue, 1/*high*/, 1/*remove*/);
 }
 
 // return lowest priority item
 void *prioqueue_peek_low(queue_t *queue)
 {
-    return _fetch_queue_item(queue, 0, 0);
+    return _fetch_queue_item(queue, 0/*high*/, 0/*remove*/);
 }
 
 // remove and return lowest priority item
 void *prioqueue_pop_low(queue_t *queue)
 {
-    return _fetch_queue_item(queue, 0, 1);
+    return _fetch_queue_item(queue, 0/*high*/, 1/*remove*/);
 }
 

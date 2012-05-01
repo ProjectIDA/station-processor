@@ -41,6 +41,24 @@ Routines:
             Used to implement diskloop.config MapStation: keyword
             Changes seed header station name if a MapStation match is found
 
+============================================================
+=== NEW low-level logic wrappers, which will replace the ===
+=== internal logic of the above functions.               ===
+
+    adl_open
+    adl_write
+    adl_flush
+    adl_read
+    adl_close
+
+    adl_oldest_index
+    adl_newest_index
+
+    adl_index_before
+    adl_index_after
+    adl_range_indices
+
+
 Update History:
 yyyy-mm-dd WHO - Changes
 ==============================================================================
@@ -74,11 +92,24 @@ Since these routines can be called by callback functions, everything
 is localy stored in static variables.
 */
 
+// faster version of isalnum()
+#define ALNUM(c) (((c > 47) && (c < 58)) || ((c > 64) && (c < 91)) || ((c > 96) && (c < 123)))
+// timeval to 64-bit time in microseconds
+#define TIME_MICRO(tv) ((tv.tv_sec * 1000000LL) + tv.tv_usec)
+
+// diskloop file flush frequency (1 min.)
+struct timeval flush_interval = {.tv_sec =  60, .tv_usec = 0};
+// index file write frequency (5 min.)
+struct timeval index_interval = {.tv_sec = 300, .tv_usec = 0};
+
 // Need to know when/if the file has been successfully parsed
 // 0 = not parsed
 // 1 = parsed with no errors
 // -1 = parsed with errors
 static int parse_state=0;
+
+// Map which stores a context for each open ASL diskloop
+static Map *pDiskLoops=NULL;
 
 // Will get filled in by Buffer: entries in configuration file
 static struct s_bufconfig *pChanSizeList=NULL;
@@ -106,18 +137,18 @@ static int CHANNEL_OFF = 0;
 static int CHANNEL_ON  = 1;
 
 // Should either be 512 or 4096 to match SEED record size
-static int                iLoopRecordSize=512;
+static int iLoopRecordSize=512;
 
 // What port to send channel set commands to
-static int                iChannelSetPort=9999;
+static int iChannelSetPort=9999;
 
 // What port to send update messages to
-static int                iLogServerPort=8888;
+static int iLogServerPort=8888;
 
 // How many bytes the netserver buffer should have
-static int                iNetBufferSize=401408;
+static int iNetBufferSize=401408;
 
-static int                iLogBufferDepth=1000;
+static int iLogBufferDepth=1000;
 
 // Where the archive data files are stored
 static char loopDir[MAXCONFIGLINELEN+2];
@@ -139,14 +170,186 @@ static char *falcon_password=NULL;
 static char falcon_IP[MAXCONFIGLINELEN+2] = "0.0.0.0";
 static int  falcon_port    = 5080;
 
+
+//////////////////////////////////////////////////////////////////////////////
+// Low-level logic functions
+
+// Open diskloop
+char *adl_open(
+        diskloop_context_t **return_context,
+        const char *station,
+        const char *location,
+        const char *channel
+    );
+
+// Write a record to the diskloop (optional index used if zero or greater)
+char *adl_write(
+        diskloop_context_t *context,
+        int index,
+        char *record
+    );
+
+// Flush diskloop
+char *adl_flush(
+        diskloop_context_t *context
+    );
+
+// Update the index file
+char *adl_write_index(
+        diskloop_context_t *context
+    );
+
+// Read a record from the diskloop (optional index used if zero or greater)
+char *adl_read(
+        diskloop_context_t *context,
+        int index,
+        char *record
+    );
+
+// Close diskloop
+char *adl_close(
+        diskloop_context_t **context
+    );
+
+// Close all open diskloops
+char *adl_close_all();
+
+// Get the index of the oldest record
+char *adl_oldest_index(
+        diskloop_context_t *context,
+        int *index
+    );
+
+// Get the index of the newest record
+char *adl_newest_index(
+        diskloop_context_t *context,
+        int *index
+    );
+
+// Get the index of the record starting on or before this time
+char *adl_index_before(
+        diskloop_context_t *context,
+        STDTIME2  *time,
+        int *index
+    );
+
+// Get the index of the record starting on or after this time
+char *adl_index_after(
+        diskloop_context_t *context,
+        STDTIME2  *time,
+        int *index
+    );
+
+// Get the index of records containing the sandwiched times
+char *adl_range_indices(
+        diskloop_context_t *context,
+        STDTIME2  *start_time,
+        STDTIME2  *end_time,
+        int *start_index,
+        int *end_index
+    );
+// Get the index of the oldest record
+char *adl_oldest_index(
+        diskloop_context_t *context,
+        int *index
+    );
+
+// Get the index of the newest record
+char *adl_newest_index(
+        diskloop_context_t *context,
+        int *index
+    );
+
+// Get the index of the record starting on or before this time
+char *adl_index_before(
+        diskloop_context_t *context,
+        STDTIME2  *time,
+        int *index
+    );
+
+// Get the index of the record starting on or after this time
+char *adl_index_after(
+        diskloop_context_t *context,
+        STDTIME2  *time,
+        int *index
+    );
+
+// Get the index of records containing the sandwiched times
+char *adl_range_indices(
+        diskloop_context_t *context,
+        STDTIME2  *start_time,
+        STDTIME2  *end_time,
+        int *start_index,
+        int *end_index
+    );
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Converts a string to upper case
 char *strToUpper(char *s)
 {
-  size_t i;
-  size_t len = strlen(s);
-  for (i=0; i < len; i++) {
-    s[i] = toupper(s[i]);
-  }
-  return s;
+    size_t i;
+    size_t len = strlen(s);
+    for (i=0; i < len; i++) {
+        s[i] = toupper(s[i]);
+    }
+    return s;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Makes a canonical channel key
+// Ensures that all keys are created in the same way
+// format: SSSS-LL-CCC
+void MakeKey(
+        const char *station,  // station name
+        const char *location, // location code
+        const char *channel,  // channel name
+        char *key // 16-bytes allocated minimum for resulting key
+        )
+{
+    char *p = key;
+    char *t;
+
+    // For each component, add characters until we hit a non-alpha-numeric
+    // character, or null termination
+
+    // strip a leading network identifier (if any exists)
+    t = station;
+    while (ALNUM(*t)) { t++; }
+    if (*t == 0) {
+        // the first non alpha-numeric character was a null termination,
+        // so there was no leading network
+        t = station;
+    } else {
+        // otherwise skip the non-alpha-numeric character
+        t++;
+    }
+
+    // Station
+    while (ALNUM(*t)) {
+        *p = toupper(*t); p++;
+        t++;
+    }
+
+    *p = '-'; p++;
+
+    t = location;
+    // Location
+    while (ALNUM(*t)) {
+        *p = toupper(*t); p++;
+        t++;
+    }
+
+    *p = '-'; p++;
+
+    t = channel;
+    // Channel
+    while (ALNUM(*t)) {
+        *p = toupper(*t); p++;
+        t++;
+    }
+
+    *p = 0; // Null terminate
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -154,304 +357,252 @@ char *strToUpper(char *s)
 // variables so that callback routines can make calls to retrieve
 // them.
 char *ParseDiskLoopConfig(
-  const char *filename    // Name of the configuration file
-  )                       // returns NULL or an error string pointer
+        const char *filename    // Name of the configuration file
+        )                       // returns NULL or an error string pointer
 {
-  FILE  *fp;
-  char  linestr[MAXCONFIGLINELEN+2];
-  char  argstr[MAXCONFIGLINELEN+2];
-  char  argstr2[MAXCONFIGLINELEN+2];
-  char  station[MAXCONFIGLINELEN+2];
-  char  chan[MAXCONFIGLINELEN+2];
-  char  loc[MAXCONFIGLINELEN+2];
-  int   bOK=1;
-  int   bParsed=1;
-  int   iLineNum;
-  int   iArgs;
-  int   count;
-  int   i;
-  int   iMaxLoopSize;
-  int   parseType = PARSE_NONE;
-  struct s_bufconfig *newbuf;
-  struct s_mapstation *newmap;
+    FILE  *fp;
+    char  linestr[MAXCONFIGLINELEN+2];
+    char  argstr[MAXCONFIGLINELEN+2];
+    char  argstr2[MAXCONFIGLINELEN+2];
+    char  station[MAXCONFIGLINELEN+2];
+    char  chan[MAXCONFIGLINELEN+2];
+    char  loc[MAXCONFIGLINELEN+2];
+    int   bOK=1;
+    int   bParsed=1;
+    int   iLineNum;
+    int   iArgs;
+    int   count;
+    int   i;
+    int   iMaxLoopSize;
+    int   parseType = PARSE_NONE;
+    struct s_bufconfig *newbuf;
+    struct s_mapstation *newmap;
 
-  pChanSizeShortcut  = map_new(128, NULL, NULL);
-  pNoArchiveShortcut = map_new(128, NULL, NULL);
-  pNoIDAShortcut     = map_new(128, NULL, NULL);
-  pChannelToArchive  = map_new(128, NULL, NULL);
-  pChannelToIDA      = map_new(128, NULL, NULL);
+    pDiskLoops         = map_new(256, NULL, NULL);
+    pChanSizeShortcut  = map_new(128, NULL, NULL);
+    pNoArchiveShortcut = map_new(128, NULL, NULL);
+    pNoIDAShortcut     = map_new(128, NULL, NULL);
+    pChannelToArchive  = map_new(128, NULL, NULL);
+    pChannelToIDA      = map_new(128, NULL, NULL);
 
-  // Open the configuration file
-  if ((fp = fopen(filename, "r")) == NULL)
-  {
-    sprintf(looperrstr, "ParseDiskLoopConfig: Failed to open %s", filename);
-    return looperrstr;
-  } // error opening file
-  
-  // Loop through all lines in the file
-  iLineNum=0;
-  while (fgets(linestr, MAXCONFIGLINELEN+1, fp) != NULL)
-  {
-    bParsed = 0;
-    iLineNum++;
-
-    // Check for comment
-    if (linestr[0] == '#')
+    // Open the configuration file
+    if ((fp = fopen(filename, "r")) == NULL)
     {
-      bParsed = 1;
-      continue;
-    }
+        sprintf(looperrstr, "ParseDiskLoopConfig: Failed to open %s", filename);
+        return looperrstr;
+    } // error opening file
 
-    // Blank line
-    if (linestr[0] == '\n' || linestr[0] == 0)
+    // Loop through all lines in the file
+    iLineNum=0;
+    while (fgets(linestr, MAXCONFIGLINELEN+1, fp) != NULL)
     {
-      bParsed = 1;
-      continue;
-    }
+        bParsed = 0;
+        iLineNum++;
 
-    if ((iArgs=sscanf(linestr, "Directory: %s", argstr)) == 1)
-    {
-      strcpy(loopDir, argstr);
-      bParsed = 1;
-      continue;
-    }
+        // Check for comment
+        if (linestr[0] == '#')
+        {
+            bParsed = 1;
+            continue;
+        }
 
-    if ((iArgs=sscanf(linestr, "Record Size: %d", &count)) == 1)
-    {
-      iLoopRecordSize = count;
-      bParsed = 1;
-      continue;
-    }
+        // Blank line
+        if (linestr[0] == '\n' || linestr[0] == 0)
+        {
+            bParsed = 1;
+            continue;
+        }
 
-    //    Buffer: [[station]-][loc]/<chan> size
-    //     NoIDA: [[station]-][loc]/<chan>
-    // NoArchive: [[station]-][loc]/<chan>
-    station[0] = 0;
-    loc[0] = 0;
-    chan[0] = 0;
-    parseType = PARSE_NONE;
-    if ((iArgs=sscanf(linestr, "Buffer: %s %d", argstr, &count)) == 2) {
-        parseType = PARSE_BUFFER;
-    }
-    else if ((iArgs=sscanf(linestr, "NoArchive: %s", argstr)) == 1) {
-        parseType = PARSE_NO_ARCHIVE;
-    }
-    else if ((iArgs=sscanf(linestr, "NoIDA: %s", argstr)) == 1) {
-        parseType = PARSE_NO_IDA;
-    }
-    if (parseType != PARSE_NONE) {
-      int i=0;
-      int locStart = 0;
-      int stFound = 0;
-      // check for station name
-      if (argstr[0] == '-')
-      {
+        if ((iArgs=sscanf(linestr, "Directory: %s", argstr)) == 1)
+        {
+            strcpy(loopDir, argstr);
+            bParsed = 1;
+            continue;
+        }
+
+        if ((iArgs=sscanf(linestr, "Record Size: %d", &count)) == 1)
+        {
+            iLoopRecordSize = count;
+            bParsed = 1;
+            continue;
+        }
+
+        //    Buffer: [[station]-][loc]/<chan> size
+        //     NoIDA: [[station]-][loc]/<chan>
+        // NoArchive: [[station]-][loc]/<chan>
         station[0] = 0;
-        locStart = 1;
-      } 
-      else
-      {
-        for (i=0; i < 6; i++) {
-          if (argstr[i] == '-') 
-          {
-            stFound = 1;
-            locStart = i+1;
-            station[i] = 0;
-            i=6;
-          }
-          else if (argstr[i] == 0) 
-          {
-            i=6;
-          }
-          else 
-          {
-            station[i] = argstr[i];
-          }
+        loc[0] = 0;
+        chan[0] = 0;
+        parseType = PARSE_NONE;
+        if ((iArgs=sscanf(linestr, "Buffer: %s %d", argstr, &count)) == 2) {
+            parseType = PARSE_BUFFER;
         }
-        if (!stFound) {
-          station[0] = 0;
+        else if ((iArgs=sscanf(linestr, "NoArchive: %s", argstr)) == 1) {
+            parseType = PARSE_NO_ARCHIVE;
         }
-      }
-      // test for blank location code
-      if (argstr[locStart] == '/')
-      {
-        strcpy(loc, "  ");
-        for (i=locStart; i < (locStart+3); i++)
-         chan[i] = argstr[i+1];
-      }
-      else if (argstr[locStart+2] == '/')
-      {
-        loc[0] = argstr[locStart+0];
-        loc[1] = argstr[locStart+1];
-        loc[2] = 0;
+        else if ((iArgs=sscanf(linestr, "NoIDA: %s", argstr)) == 1) {
+            parseType = PARSE_NO_IDA;
+        }
+        if (parseType != PARSE_NONE) {
+            int i=0;
+            int locStart = 0;
+            int stFound = 0;
+            // check for station name
+            if (argstr[0] == '-')
+            {
+                station[0] = 0;
+                locStart = 1;
+            } 
+            else
+            {
+                for (i=0; i < 6; i++) {
+                    if (argstr[i] == '-') 
+                    {
+                        stFound = 1;
+                        locStart = i+1;
+                        station[i] = 0;
+                        i=6;
+                    }
+                    else if (argstr[i] == 0) 
+                    {
+                        i=6;
+                    }
+                    else 
+                    {
+                        station[i] = argstr[i];
+                    }
+                }
+                if (!stFound) {
+                    station[0] = 0;
+                }
+            }
+            // test for blank location code
+            if (argstr[locStart] == '/')
+            {
+                strcpy(loc, "  ");
+                for (i=locStart; i < (locStart+3); i++)
+                    chan[i] = argstr[i+1];
+            }
+            else if (argstr[locStart+2] == '/')
+            {
+                loc[0] = argstr[locStart+0];
+                loc[1] = argstr[locStart+1];
+                loc[2] = 0;
 
-        for (i=0; i < (3); i++)
-          chan[i] = argstr[locStart+3+i];
-        chan[i] = 0;
-      } // else location code is not blank
-      else argstr[locStart] = 0;
+                for (i=0; i < (3); i++)
+                    chan[i] = argstr[locStart+3+i];
+                chan[i] = 0;
+            } // else location code is not blank
+            else argstr[locStart] = 0;
 
 
-      if (argstr[locStart] != 0)
-      {
-        /*
-        fprintf(stderr, "%s: %5.5s-%2.2s-%3.3s\n", 
-                parseType == PARSE_BUFFER     ? "Buffer" :
-                parseType == PARSE_NO_ARCHIVE ? "NoArchive" :
-                parseType == PARSE_NO_IDA     ? "NoIDA" : "None",
-                station, loc, chan);
-        // */
-        if ((parseType == PARSE_BUFFER) && (count < 4))
+            if (argstr[locStart] != 0)
+            {
+                /*
+                   fprintf(stderr, "%s: %5.5s-%2.2s-%3.3s\n", 
+                   parseType == PARSE_BUFFER     ? "Buffer" :
+                   parseType == PARSE_NO_ARCHIVE ? "NoArchive" :
+                   parseType == PARSE_NO_IDA     ? "NoIDA" : "None",
+                   station, loc, chan);
+                // */
+                if ((parseType == PARSE_BUFFER) && (count < 4))
+                {
+                    sprintf(looperrstr, "Count %d < minimum of 4, Line %d in %s",
+                            count, iLineNum, filename);
+                    fprintf(stderr, "%s\n%s\n", looperrstr, linestr);
+                }
+                else
+                {
+                    // allocate space for new entry
+                    newbuf = (struct s_bufconfig *) malloc(sizeof (struct s_bufconfig));
+                    if (newbuf == NULL)
+                    {
+                        fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
+                                __FILE__, __LINE__);
+                        exit(1);
+                    }
+
+                    // Fill  in record
+                    strncpy(newbuf->station, station, 8);
+                    newbuf->station[7] = 0;
+                    strncpy(newbuf->loc, loc, 4);
+                    newbuf->loc[3] = 0;
+                    strncpy(newbuf->chan, chan, 4);
+                    newbuf->chan[3] = 0;
+                    if (parseType == PARSE_BUFFER) 
+                    {
+                        newbuf->records = count;
+                    } 
+                    else 
+                    {
+                        newbuf->records = 0;
+                    }
+
+                    // Insert new record at head of the list
+                    switch (parseType) {
+                        case PARSE_BUFFER:
+                            newbuf->next = pChanSizeList;
+                            pChanSizeList = newbuf;
+                            break;
+                        case PARSE_NO_ARCHIVE:
+                            newbuf->next = pNoArchiveList;
+                            pNoArchiveList = newbuf;
+                            break;
+                        case PARSE_NO_IDA:
+                            newbuf->next = pNoIDAList;
+                            pNoIDAList = newbuf;
+                            break;
+                    }
+
+                    bParsed = 1;
+                    continue;
+                } // else everything appears to be in order
+            } // location/channel syntax appears to be okay
+        }
+
+        /* Replaced by cleaner approach above.
+        // Buffer: [loc]/<chan> size
+        loc[0] = 0;
+        chan[0] = 0;
+        if ((iArgs=sscanf(linestr, "Buffer: %s %d", argstr, &count)) == 2)
         {
-          sprintf(looperrstr, "Count %d < minimum of 4, Line %d in %s",
-            count, iLineNum, filename);
-          fprintf(stderr, "%s\n%s\n", looperrstr, linestr);
-        }
-        else
+        // test for blank location code
+        int i=0;
+        if (argstr[0] == '/')
         {
-          // allocate space for new entry
-          newbuf = (struct s_bufconfig *) malloc(sizeof (struct s_bufconfig));
-          if (newbuf == NULL)
-          {
-            fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
-                    __FILE__, __LINE__);
-            exit(1);
-          }
-
-          // Fill  in record
-          strncpy(newbuf->station, station, 8);
-          newbuf->station[7] = 0;
-          strncpy(newbuf->loc, loc, 4);
-          newbuf->loc[3] = 0;
-          strncpy(newbuf->chan, chan, 4);
-          newbuf->chan[3] = 0;
-          if (parseType == PARSE_BUFFER) 
-          {
-            newbuf->records = count;
-          } 
-          else 
-          {
-            newbuf->records = 0;
-          }
-
-          // Insert new record at head of the list
-          switch (parseType) {
-              case PARSE_BUFFER:
-                newbuf->next = pChanSizeList;
-                pChanSizeList = newbuf;
-                break;
-              case PARSE_NO_ARCHIVE:
-                newbuf->next = pNoArchiveList;
-                pNoArchiveList = newbuf;
-                break;
-              case PARSE_NO_IDA:
-                newbuf->next = pNoIDAList;
-                pNoIDAList = newbuf;
-                break;
-          }
-
-          bParsed = 1;
-          continue;
-        } // else everything appears to be in order
-      } // location/channel syntax appears to be okay
-    }
-
-/* Replaced by cleaner approach above.
-    // Buffer: [loc]/<chan> size
-    loc[0] = 0;
-    chan[0] = 0;
-    if ((iArgs=sscanf(linestr, "Buffer: %s %d", argstr, &count)) == 2)
-    {
-      // test for blank location code
-      int i=0;
-      if (argstr[0] == '/')
-      {
         strcpy(loc, "  ");
         for (i=0; i < 3; i++)
-         chan[i] = argstr[i+1];
-      }
-      else if (argstr[2] == '/')
-      {
+        chan[i] = argstr[i+1];
+        }
+        else if (argstr[2] == '/')
+        {
         loc[0] = argstr[0];
         loc[1] = argstr[1];
         loc[2] = 0;
 
         for (i=0; i < 3; i++)
-          chan[i] = argstr[i+3];
+        chan[i] = argstr[i+3];
         chan[i] = 0;
-      } // else location code is not blank
-      else argstr[0] = 0;
+        } // else location code is not blank
+        else argstr[0] = 0;
 
-      if (argstr[0] != 0)
-      {
+        if (argstr[0] != 0)
+        {
         if (count < 4)
         {
-          sprintf(looperrstr, "Count %d < minimum of 4, Line %d in %s",
-            count, iLineNum, filename);
-          fprintf(stderr, "%s\n%s\n", looperrstr, linestr);
+        sprintf(looperrstr, "Count %d < minimum of 4, Line %d in %s",
+        count, iLineNum, filename);
+        fprintf(stderr, "%s\n%s\n", looperrstr, linestr);
         }
         else
         {
-          // allocate space for new entry
-          newbuf = (struct s_bufconfig *) malloc(sizeof (struct s_bufconfig));
-          if (newbuf == NULL)
-          {
-            fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
-                    __FILE__, __LINE__);
-            exit(1);
-          }
-
-          // Fill  in record
-          strncpy(newbuf->loc, loc, 4);
-          newbuf->loc[3] = 0;
-          strncpy(newbuf->chan, chan, 4);
-          newbuf->chan[3] = 0;
-          newbuf->records = count;
-
-          // Insert new record at head of the list
-          newbuf->next = pChanSizeList;
-          pChanSizeList = newbuf;
-
-          bParsed = 1;
-          continue;
-        } // else everything appears to be in order
-      } // location/channel syntax appears to be okay
-    } // Buffer: keyword parsed
-
-    // NoArchive: [loc]/<chan>
-    loc[0] = 0;
-    chan[0] = 0;
-    if ((iArgs=sscanf(linestr, "NoArchive: %s", argstr)) == 1)
-    {
-      // test for blank location code
-      int i=0;
-      if (argstr[0] == '/')
-      {
-        strcpy(loc, "  ");
-        for (i=0; i < 3; i++)
-         chan[i] = argstr[i+1];
-      }
-      else if (argstr[2] == '/')
-      {
-        loc[0] = argstr[0];
-        loc[1] = argstr[1];
-        loc[2] = 0;
-
-        for (i=0; i < 3; i++)
-          chan[i] = argstr[i+3];
-        chan[i] = 0;
-      } // else location code is not blank
-      else argstr[0] = 0;
-
-      if (argstr[0] != 0)
-      {
         // allocate space for new entry
         newbuf = (struct s_bufconfig *) malloc(sizeof (struct s_bufconfig));
         if (newbuf == NULL)
         {
-          fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
-                   __FILE__, __LINE__);
-          exit(1);
+        fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
+        __FILE__, __LINE__);
+        exit(1);
         }
 
         // Fill  in record
@@ -459,15 +610,68 @@ char *ParseDiskLoopConfig(
         newbuf->loc[3] = 0;
         strncpy(newbuf->chan, chan, 4);
         newbuf->chan[3] = 0;
-        newbuf->records = 0;
+        newbuf->records = count;
 
         // Insert new record at head of the list
-        newbuf->next = pNoArchiveList;
-        pNoArchiveList = newbuf;
+        newbuf->next = pChanSizeList;
+        pChanSizeList = newbuf;
 
         bParsed = 1;
         continue;
-      } // location/channel syntax appears to be okay
+        } // else everything appears to be in order
+        } // location/channel syntax appears to be okay
+        } // Buffer: keyword parsed
+
+        // NoArchive: [loc]/<chan>
+        loc[0] = 0;
+        chan[0] = 0;
+        if ((iArgs=sscanf(linestr, "NoArchive: %s", argstr)) == 1)
+        {
+        // test for blank location code
+        int i=0;
+        if (argstr[0] == '/')
+        {
+        strcpy(loc, "  ");
+        for (i=0; i < 3; i++)
+            chan[i] = argstr[i+1];
+    }
+        else if (argstr[2] == '/')
+        {
+            loc[0] = argstr[0];
+            loc[1] = argstr[1];
+            loc[2] = 0;
+
+            for (i=0; i < 3; i++)
+                chan[i] = argstr[i+3];
+            chan[i] = 0;
+        } // else location code is not blank
+        else argstr[0] = 0;
+
+        if (argstr[0] != 0)
+        {
+            // allocate space for new entry
+            newbuf = (struct s_bufconfig *) malloc(sizeof (struct s_bufconfig));
+            if (newbuf == NULL)
+            {
+                fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
+                        __FILE__, __LINE__);
+                exit(1);
+            }
+
+            // Fill  in record
+            strncpy(newbuf->loc, loc, 4);
+            newbuf->loc[3] = 0;
+            strncpy(newbuf->chan, chan, 4);
+            newbuf->chan[3] = 0;
+            newbuf->records = 0;
+
+            // Insert new record at head of the list
+            newbuf->next = pNoArchiveList;
+            pNoArchiveList = newbuf;
+
+            bParsed = 1;
+            continue;
+        } // location/channel syntax appears to be okay
     } // NoArchive: keyword parsed
 
     // NoIDA: [loc]/<chan>
@@ -475,891 +679,878 @@ char *ParseDiskLoopConfig(
     chan[0] = 0;
     if ((iArgs=sscanf(linestr, "NoIDA: %s", argstr)) == 1)
     {
-      // test for blank location code
-      int i=0;
-      if (argstr[0] == '/')
-      {
-        strcpy(loc, "  ");
-        for (i=0; i < 3; i++)
-         chan[i] = argstr[i+1];
-      }
-      else if (argstr[2] == '/')
-      {
-        loc[0] = argstr[0];
-        loc[1] = argstr[1];
-        loc[2] = 0;
-
-        for (i=0; i < 3; i++)
-          chan[i] = argstr[i+3];
-        chan[i] = 0;
-      } // else location code is not blank
-      else argstr[0] = 0;
-
-      if (argstr[0] != 0)
-      {
-        // allocate space for new entry
-        newbuf = (struct s_bufconfig *) malloc(sizeof (struct s_bufconfig));
-        if (newbuf == NULL)
+        // test for blank location code
+        int i=0;
+        if (argstr[0] == '/')
         {
-          fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
-                   __FILE__, __LINE__);
-          exit(1);
+            strcpy(loc, "  ");
+            for (i=0; i < 3; i++)
+                chan[i] = argstr[i+1];
         }
+        else if (argstr[2] == '/')
+        {
+            loc[0] = argstr[0];
+            loc[1] = argstr[1];
+            loc[2] = 0;
 
-        // Fill  in record
-        strncpy(newbuf->loc, loc, 4);
-        newbuf->loc[3] = 0;
-        strncpy(newbuf->chan, chan, 4);
-        newbuf->chan[3] = 0;
-        newbuf->records = 0;
+            for (i=0; i < 3; i++)
+                chan[i] = argstr[i+3];
+            chan[i] = 0;
+        } // else location code is not blank
+        else argstr[0] = 0;
 
-        // Insert new record at head of the list
-        newbuf->next = pNoIDAList;
-        pNoIDAList = newbuf;
+        if (argstr[0] != 0)
+        {
+            // allocate space for new entry
+            newbuf = (struct s_bufconfig *) malloc(sizeof (struct s_bufconfig));
+            if (newbuf == NULL)
+            {
+                fprintf(stderr, "%s(%d): malloc in ParseDiskLoopConfig failed.\n",
+                        __FILE__, __LINE__);
+                exit(1);
+            }
 
-        bParsed = 1;
-        continue;
-      } // location/channel syntax appears to be okay
+            // Fill  in record
+            strncpy(newbuf->loc, loc, 4);
+            newbuf->loc[3] = 0;
+            strncpy(newbuf->chan, chan, 4);
+            newbuf->chan[3] = 0;
+            newbuf->records = 0;
+
+            // Insert new record at head of the list
+            newbuf->next = pNoIDAList;
+            pNoIDAList = newbuf;
+
+            bParsed = 1;
+            continue;
+        } // location/channel syntax appears to be okay
     } // NoIDA: keyword parsed
-*/
+    */
 
-    if ((iArgs=sscanf(linestr, "MapStation: %s %s\n", argstr, argstr2)) == 2)
-    {
-      // Verify station name lengths
-      count = strlen(argstr);
-      if (count < 1 || count > 5)
-      {
-        sprintf(looperrstr,
-          "Invalid station name 1 length (%d not 1..5), Line %d in %s",
-          count, iLineNum, filename);
-        fprintf(stderr, "%s\n%s\n", looperrstr, linestr);
-        bOK = 0;
-        continue;
-      }
+        if ((iArgs=sscanf(linestr, "MapStation: %s %s\n", argstr, argstr2)) == 2)
+        {
+            // Verify station name lengths
+            count = strlen(argstr);
+            if (count < 1 || count > 5)
+            {
+                sprintf(looperrstr,
+                        "Invalid station name 1 length (%d not 1..5), Line %d in %s",
+                        count, iLineNum, filename);
+                fprintf(stderr, "%s\n%s\n", looperrstr, linestr);
+                bOK = 0;
+                continue;
+            }
 
-      count = strlen(argstr2);
-      if (count < 1 || count > 5)
-      {
-        sprintf(looperrstr,
-          "Invalid station name 2 length (%d not 1..5), Line %d in %s",
-          count, iLineNum, filename);
-        fprintf(stderr, "%s\n%s\n", looperrstr, linestr);
-        bOK = 0;
-        continue;
-      }
-      
-      // Allocate memory for new mapping
-      newmap = (struct s_mapstation *) malloc(sizeof (struct s_mapstation));
-      if (newmap == NULL)
-      {
-        fprintf(stderr, "malloc in ParseDiskLoopConfig failed.\n");
-        exit(1);
-      }
+            count = strlen(argstr2);
+            if (count < 1 || count > 5)
+            {
+                sprintf(looperrstr,
+                        "Invalid station name 2 length (%d not 1..5), Line %d in %s",
+                        count, iLineNum, filename);
+                fprintf(stderr, "%s\n%s\n", looperrstr, linestr);
+                bOK = 0;
+                continue;
+            }
 
-      for (i=0; i < 5 && argstr[i] != 0; i++)
-      {
-        newmap->station_q330[i] = toupper((int)argstr[i]);
-      }
-      newmap->station_q330[i] = 0;
+            // Allocate memory for new mapping
+            newmap = (struct s_mapstation *) malloc(sizeof (struct s_mapstation));
+            if (newmap == NULL)
+            {
+                fprintf(stderr, "malloc in ParseDiskLoopConfig failed.\n");
+                exit(1);
+            }
 
-      for (i=0; i < 5 && argstr2[i] != 0; i++)
-      {
-        newmap->station[i] = toupper((int)argstr2[i]);
-      }
-      newmap->station[i] = 0;
+            for (i=0; i < 5 && argstr[i] != 0; i++)
+            {
+                newmap->station_q330[i] = toupper((int)argstr[i]);
+            }
+            newmap->station_q330[i] = 0;
 
-      newmap->next = pMapStationList;
-      pMapStationList = newmap;
+            for (i=0; i < 5 && argstr2[i] != 0; i++)
+            {
+                newmap->station[i] = toupper((int)argstr2[i]);
+            }
+            newmap->station[i] = 0;
 
-      bParsed = 1;
-      continue;
-    } // MapStation: parsed
+            newmap->next = pMapStationList;
+            pMapStationList = newmap;
+
+            bParsed = 1;
+            continue;
+        } // MapStation: parsed
 
     if ((iArgs=sscanf(linestr, "LogStation: %s\n", argstr)) == 1)
     {
-      strncpy(log_station, argstr, 5);
-      for (i=0; i<5 && isalnum((int)argstr[i]); i++)
-        ; // find end of station
-      log_station[i] = 0;
-      bParsed = 1;
-      continue;
+        strncpy(log_station, argstr, 5);
+        for (i=0; i<5 && isalnum((int)argstr[i]); i++)
+            ; // find end of station
+        log_station[i] = 0;
+        bParsed = 1;
+        continue;
     } // LogStation: parsed
 
     if ((iArgs=sscanf(linestr, "LogNetwork: %s\n", argstr)) == 1)
     {
-      strncpy(log_network, argstr, 2);
-      log_network[2] = 0;
-      bParsed = 1;
-      continue;
+        strncpy(log_network, argstr, 2);
+        log_network[2] = 0;
+        bParsed = 1;
+        continue;
     } // LogNetwork: parsed
 
     if ((iArgs=sscanf(linestr, "LogChannel: %s\n", argstr)) == 1)
     {
-      strncpy(log_channel, argstr, 3);
-      log_channel[3] = 0;
-      bParsed = 1;
-      continue;
+        strncpy(log_channel, argstr, 3);
+        log_channel[3] = 0;
+        bParsed = 1;
+        continue;
     } // LogChannel: parsed
 
     if ((iArgs=sscanf(linestr, "LogLocation: %s\n", argstr)) == 1)
     {
-      strncpy(log_location, argstr, 2);
-      log_location[3] = 0;
-      bParsed = 1;
-      continue;
+        strncpy(log_location, argstr, 2);
+        log_location[3] = 0;
+        bParsed = 1;
+        continue;
     } // LogLocation: parsed
 
     if ((iArgs=sscanf(linestr, "Logbuffer: %d", &count)) == 1)
     {
-      iLogBufferDepth = count;
-      bParsed = 1;
-      continue;
+        iLogBufferDepth = count;
+        bParsed = 1;
+        continue;
     }
 
     if ((iArgs=sscanf(linestr, "Netbuffer: %d", &count)) == 1)
     {
-      iNetBufferSize = count;
-      bParsed = 1;
-      continue;
+        iNetBufferSize = count;
+        bParsed = 1;
+        continue;
     }
 
     if ((iArgs=sscanf(linestr, "Channelset Port: %d", &count)) == 1)
     {
-      iChannelSetPort = count;
-      bParsed = 1;
-      continue;
+        iChannelSetPort = count;
+        bParsed = 1;
+        continue;
     }
 
     if ((iArgs=sscanf(linestr, "Logserver Port: %d", &count)) == 1)
     {
-      iLogServerPort = count;
-      bParsed = 1;
-      continue;
+        iLogServerPort = count;
+        bParsed = 1;
+        continue;
     }
 
     if ((iArgs=sscanf(linestr, "Falcon Username: %s", argstr)) == 1)
     {
-      falcon_username = malloc(sizeof(argstr)+1);
-      strcpy(falcon_username, argstr);
-      bParsed = 1;
-      continue;
+        falcon_username = malloc(sizeof(argstr)+1);
+        strcpy(falcon_username, argstr);
+        bParsed = 1;
+        continue;
     }
 
     if ((iArgs=sscanf(linestr, "Falcon Password: %s", argstr)) == 1)
     {
-      falcon_password = malloc(sizeof(argstr)+1);
-      strcpy(falcon_password, argstr);
-      bParsed = 1;
-      continue;
+        falcon_password = malloc(sizeof(argstr)+1);
+        strcpy(falcon_password, argstr);
+        bParsed = 1;
+        continue;
     }
 
     if ((iArgs=sscanf(linestr, "Falcon IP: %s", argstr)) == 1)
     {
-      strcpy(falcon_IP, argstr);
-      bParsed = 1;
-      continue;
+        strcpy(falcon_IP, argstr);
+        bParsed = 1;
+        continue;
     }
 
     if ((iArgs=sscanf(linestr, "Falcon Port: %d", &count)) == 1)
     {
-      falcon_port = count;
-      bParsed = 1;
-      continue;
+        falcon_port = count;
+        bParsed = 1;
+        continue;
     }
 
     // If line not recognized then return an error
     if (!bParsed)
     {
-      // Only last parse error message will be returned, all will be printed
-      sprintf(looperrstr, "Failed to parse line %d in %s",
-        iLineNum, filename);
-      fprintf(stderr, "%s\n%s\n", looperrstr, linestr);
-      bOK = 0;
+        // Only last parse error message will be returned, all will be printed
+        sprintf(looperrstr, "Failed to parse line %d in %s",
+                iLineNum, filename);
+        fprintf(stderr, "%s\n%s\n", looperrstr, linestr);
+        bOK = 0;
     } // if parsing errors
-  } // while more lines of data to parse
+    } // while more lines of data to parse
 
-  fclose (fp);
+    fclose (fp);
 
-  // Make sure that none of the diskloop depths will exceed 2 GByte
-  iMaxLoopSize = (0x7fffffff / iLoopRecordSize) - 2;
-  for (newbuf = pChanSizeList; newbuf != NULL; newbuf = newbuf->next)
-  {
-    if (newbuf->records > iMaxLoopSize)
+    // Make sure that none of the diskloop depths will exceed 2 GByte
+    iMaxLoopSize = (0x7fffffff / iLoopRecordSize) - 2;
+    for (newbuf = pChanSizeList; newbuf != NULL; newbuf = newbuf->next)
     {
-      sprintf(looperrstr,
-          "Buffer: %s/%s %d -- Size exceeds 2 GByte limit, max %d!",
-             newbuf->loc, newbuf->chan, newbuf->records, iMaxLoopSize);
-      fprintf(stderr, "%s\n", looperrstr);
-      bOK = 0;
-    } // buffer was too large
-  } // loop trough all buffer size definitions
+        if (newbuf->records > iMaxLoopSize)
+        {
+            sprintf(looperrstr,
+                    "Buffer: %s/%s %d -- Size exceeds 2 GByte limit, max %d!",
+                    newbuf->loc, newbuf->chan, newbuf->records, iMaxLoopSize);
+            fprintf(stderr, "%s\n", looperrstr);
+            bOK = 0;
+        } // buffer was too large
+    } // loop trough all buffer size definitions
 
-  // Set parse state dependent upon any errors detected
-  if (bOK)
-    parse_state = 1;
-  else
-    parse_state = -1;
+    // Set parse state dependent upon any errors detected
+    if (bOK)
+        parse_state = 1;
+    else
+        parse_state = -1;
 
-  if (!bOK) return looperrstr;
-  return NULL;
+    if (!bOK) return looperrstr;
+    return NULL;
 } // ParseDiskLoopConfig()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns how many bytes in each disk loop record
 char *LoopRecordSize(
-  int   *size             // return bytes in each disk loop record
-  )                       // returns NULL or an error string pointer
+        int   *size             // return bytes in each disk loop record
+        )                       // returns NULL or an error string pointer
 {
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "LoopRecordSize: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "LoopRecordSize: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-  *size = iLoopRecordSize;
-  return NULL;
+    *size = iLoopRecordSize;
+    return NULL;
 } // LoopRecordSize()
 
 //////////////////////////////////////////////////////////////////////////////
 // Tell whether the given station-location/channel is on the supplied channel list
 int CheckChannelList(
-  const char          *station,   // Station Name
-  const char          *chan,      // Channel ID
-  const char          *loc,       // Location ID
-  struct s_bufconfig  *ptr,       // List of entries
-  struct s_bufconfig  **entry     // Matching entry if found
-  )
+        const char          *station,   // Station Name
+        const char          *chan,      // Channel ID
+        const char          *loc,       // Location ID
+        struct s_bufconfig  *ptr,       // List of entries
+        struct s_bufconfig  **entry     // Matching entry if found
+        )
 {
-  int bFound = 0;
-  int bMatch = 0;
-  int i;
+    int bFound = 0;
+    int bMatch = 0;
+    int i;
 
-  // Loop through list, return last entry to match
-  for (; ptr != NULL; ptr = ptr->next)
-  {
-    bMatch = 1;
-
-    // Check station name for match
-    for (i=0; i < 5 && bMatch; i++)
+    // Loop through list, return last entry to match
+    for (; ptr != NULL; ptr = ptr->next)
     {
-      if (ptr->station[0] == 0)
-          break;
-      if ((station[i] == 0) && (ptr->station[i] == 0)) {
-        break;
-      }
-      else if ((station[i] == 0) || (ptr->station[i] == 0)) {
-        bMatch = 0;
-      }
-      else if ((toupper(station[i]) != toupper(ptr->station[i])) &&
-               (ptr->station[i] != '?')) {
-        bMatch = 0;
-      }
-    }
+        bMatch = 1;
 
-    // Check location code for match
-    for (i=0; i < 2 && bMatch; i++)
-    {
-      if (ptr->loc[0] == 0)
-          break;
-      if ((toupper(loc[i]) != toupper(ptr->loc[i]))
-          && (ptr->loc[i] != '?'))
-        bMatch = 0;
-    }
+        // Check station name for match
+        for (i=0; i < 5 && bMatch; i++)
+        {
+            if (ptr->station[0] == 0)
+                break;
+            if ((station[i] == 0) && (ptr->station[i] == 0)) {
+                break;
+            }
+            else if ((station[i] == 0) || (ptr->station[i] == 0)) {
+                bMatch = 0;
+            }
+            else if ((toupper(station[i]) != toupper(ptr->station[i])) &&
+                    (ptr->station[i] != '?')) {
+                bMatch = 0;
+            }
+        }
 
-    // Check channel name for match
-    for (i=0; i < 3 && bMatch; i++)
-    {
-      if ((toupper(chan[i]) != toupper(ptr->chan[i]))
-          && (ptr->chan[i] != '?'))
-        bMatch = 0;
-    }
+        // Check location code for match
+        for (i=0; i < 2 && bMatch; i++)
+        {
+            if (ptr->loc[0] == 0)
+                break;
+            if ((toupper(loc[i]) != toupper(ptr->loc[i]))
+                    && (ptr->loc[i] != '?'))
+                bMatch = 0;
+        }
 
-    if (bMatch)
-    {
-      bFound = 1;
-      if (entry != NULL) {
-        *entry = ptr;
-      }
-    }
-  } // check all entries
+        // Check channel name for match
+        for (i=0; i < 3 && bMatch; i++)
+        {
+            if ((toupper(chan[i]) != toupper(ptr->chan[i]))
+                    && (ptr->chan[i] != '?'))
+                bMatch = 0;
+        }
 
-  return bFound;
+        if (bMatch)
+        {
+            bFound = 1;
+            if (entry != NULL) {
+                *entry = ptr;
+            }
+        }
+    } // check all entries
+
+    return bFound;
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
 // Add a channel to a bypass map
 int SetChannel (
-  Map         *map,       // Target map
-  const char  *station,   // Station Name
-  const char  *chan,      // Channel ID
-  const char  *loc,       // Location ID
-  int          send       // Save to archive
-  )
+        Map         *map,       // Target map
+        const char  *station,   // Station Name
+        const char  *chan,      // Channel ID
+        const char  *loc,       // Location ID
+        int          send       // Save to archive
+        )
 {
-  char key[20];
-  int *value = send ? &CHANNEL_ON : &CHANNEL_OFF;
-  int result = *value;
+    char key[20];
+    int *value = send ? &CHANNEL_ON : &CHANNEL_OFF;
+    int result = *value;
 
-  sprintf(key, "%s-%s-%s", station, loc, chan);
-  //fprintf(stderr, "SetChannel(): Adding key='%s' : value=%d\n", key, *value);
-  strToUpper(key);
-  if (!map_put(map, key, value)) {
-    result = CHANNEL_NF;
-  }
-  return result;
+    MakeKey(station, loc, chan, key);
+    //fprintf(stderr, "SetChannel(): Adding key='%s' : value=%d\n", key, *value);
+    if (!map_put(map, key, value)) {
+        result = CHANNEL_NF;
+    }
+    return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // Check whether this channel is listed in a bypass map.
 int CheckChannel (
-  Map         * map,      // Target map
-  const char  *station,   // Station Name
-  const char  *chan,      // Channel ID
-  const char  *loc        // Location ID
-  )
+        Map         * map,      // Target map
+        const char  *station,   // Station Name
+        const char  *chan,      // Channel ID
+        const char  *loc        // Location ID
+        )
 {
-  char key[20];
-  int *result = NULL;
+    char key[20];
+    int *result = NULL;
 
-  // Check keys starting with the most specific, and moving to the least 
-  // spcific. This will allow the user to create blanket rules, then poke
-  // holes with more specific exceptions.
+    // Check keys starting with the most specific, and moving to the least 
+    // spcific. This will allow the user to create blanket rules, then poke
+    // holes with more specific exceptions.
 
-  // Check station, location & channel
-  sprintf(key, "%s-%s-%s", station, loc, chan);
-  strToUpper(key);
-  result = (int *)map_get(map, key);
+    // Check station, location & channel
+    MakeKey(station, loc, chan, key); // S-L-C
+    result = (int *)map_get(map, key);
 
-  if (result == NULL) {
-      // check station & channel
-      sprintf(key, "%s--%s", station, chan);
-      strToUpper(key);
-      result = (int *)map_get(map, key);
-  }
+    if (result == NULL) {
+        // check station & channel
+        MakeKey(station, "", chan, key); // S--C
+        result = (int *)map_get(map, key);
+    }
 
-  if (result == NULL) {
-      // check station & location
-      sprintf(key, "%s-%s-", station, loc);
-      strToUpper(key);
-      result = (int *)map_get(map, key);
-  }
+    if (result == NULL) {
+        // check station & location
+        MakeKey(station, loc, "", key); // S-L-
+        result = (int *)map_get(map, key);
+    }
 
-  if (result == NULL) {
-      // check station
-      sprintf(key, "%s--", station);
-      strToUpper(key);
-      result = (int *)map_get(map, key);
-  }
+    if (result == NULL) {
+        // check station
+        MakeKey(station, "", "", key); // S--
+        result = (int *)map_get(map, key);
+    }
 
-  if (result == NULL) {
-      // check location & channel
-      sprintf(key, "-%s-%s", loc, chan);
-      strToUpper(key);
-      result = (int *)map_get(map, key);
-  }
+    if (result == NULL) {
+        // check location & channel
+        MakeKey("", loc, chan, key); // -L-C
+        result = (int *)map_get(map, key);
+    }
 
-  if (result == NULL) {
-      // check channel
-      sprintf(key, "--%s", chan);
-      strToUpper(key);
-      result = (int *)map_get(map, key);
-  }
+    if (result == NULL) {
+        // check channel
+        MakeKey("", "", chan, key); // --C
+        result = (int *)map_get(map, key);
+    }
 
-  if (result == NULL) {
-      // check location
-      sprintf(key, "-%s-", loc);
-      strToUpper(key);
-      result = (int *)map_get(map, key);
-  }
+    if (result == NULL) {
+        // check location
+        MakeKey("", loc, "", key); // -L-
+        result = (int *)map_get(map, key);
+    }
 
-  if (result == NULL) {
-      // check all data
-      sprintf(key, "--");
-      strToUpper(key);
-      result = (int *)map_get(map, key);
-  }
+    if (result == NULL) {
+        // check all data
+        MakeKey("", "", "", key); // --
+        result = (int *)map_get(map, key);
+    }
 
-  if (result == NULL) {
-      result = &CHANNEL_NF;
-  }
-  //fprintf(stderr, "CheckChannel(): Checking key='%s', result=%d\n", key, *result);
-  return *result;
+    if (result == NULL) {
+        result = &CHANNEL_NF;
+    }
+    //fprintf(stderr, "CheckChannel(): Checking key='%s', result=%d\n", key, *result);
+    return *result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // Remove a channel from a bypass map
 int DefaultChannel(
-  Map         * map,      // Target map
-  const char  *station,   // Station Name
-  const char  *chan,      // Channel ID
-  const char  *loc        // Location ID
-  )
+        Map         * map,      // Target map
+        const char  *station,   // Station Name
+        const char  *chan,      // Channel ID
+        const char  *loc        // Location ID
+        )
 {
-  char key[20];
+    char key[20];
 
-  sprintf(key, "%s-%s-%s", station, loc, chan);
-  //fprintf(stderr, "DefaultChannel(): Removing key='%s'\n", key);
-  strToUpper(key);
-  return map_remove(map, key);
+    MakeKey(station, loc, chan, key);
+    //fprintf(stderr, "DefaultChannel(): Removing key='%s'\n", key);
+    return map_remove(map, key);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // Add a channel to the Archive bypass map
 int SetChannelToArchive(
-  const char  *station,   // Station Name
-  const char  *chan,      // Channel ID
-  const char  *loc,       // Location ID
-  int          send       // Save to archive
-  )
+        const char  *station,   // Station Name
+        const char  *chan,      // Channel ID
+        const char  *loc,       // Location ID
+        int          send       // Save to archive
+        )
 {
-  return SetChannel(pChannelToArchive, station, chan, loc, send);
+    return SetChannel(pChannelToArchive, station, chan, loc, send);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // Check whether this channel should be archived.
 int CheckChannelToArchive(
-  const char  *station,   // Station Name
-  const char  *chan,      // Channel ID
-  const char  *loc        // Location ID
-  )
+        const char  *station,   // Station Name
+        const char  *chan,      // Channel ID
+        const char  *loc        // Location ID
+        )
 {
-  return CheckChannel(pChannelToArchive, station, chan, loc);
+    return CheckChannel(pChannelToArchive, station, chan, loc);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // Remove a channel from the Archive bypass map
 int DefaultChannelToArchive(
-  const char  *station,   // Station Name
-  const char  *chan,      // Channel ID
-  const char  *loc        // Location ID
-  )
+        const char  *station,   // Station Name
+        const char  *chan,      // Channel ID
+        const char  *loc        // Location ID
+        )
 {
-  return DefaultChannel(pChannelToArchive, station, chan, loc);
+    return DefaultChannel(pChannelToArchive, station, chan, loc);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // Add a channel to the IDA bypass map
 int SetChannelToIDA(
-  const char  *station,   // Station Name
-  const char  *chan,      // Channel ID
-  const char  *loc,       // Location ID
-  int          send       // Save to IDA diskloop
-  )
+        const char  *station,   // Station Name
+        const char  *chan,      // Channel ID
+        const char  *loc,       // Location ID
+        int          send       // Save to IDA diskloop
+        )
 {
-  return SetChannel(pChannelToIDA, station, chan, loc, send);
+    return SetChannel(pChannelToIDA, station, chan, loc, send);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // Check whether this channel should be added to the IDA diskloop.
 int CheckChannelToIDA(
-  const char  *station,   // Station Name
-  const char  *chan,      // Channel ID
-  const char  *loc        // Location ID
-  )
+        const char  *station,   // Station Name
+        const char  *chan,      // Channel ID
+        const char  *loc        // Location ID
+        )
 {
-  return CheckChannel(pChannelToIDA, station, chan, loc);
+    return CheckChannel(pChannelToIDA, station, chan, loc);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // Remove a channel from the IDA bypass map
 int DefaultChannelToIDA(
-  const char  *station,   // Station Name
-  const char  *chan,      // Channel ID
-  const char  *loc        // Location ID
-  )
+        const char  *station,   // Station Name
+        const char  *chan,      // Channel ID
+        const char  *loc        // Location ID
+        )
 {
-  return DefaultChannel(pChannelToIDA, station, chan, loc);
+    return DefaultChannel(pChannelToIDA, station, chan, loc);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // Tell whether the given location/channel is on the NoArchive channel list
 int CheckNoArchive(
-  const char  *station,   // Station Name
-  const char  *chan,      // Channel ID
-  const char  *loc        // Location ID
-  )
+        const char  *station,   // Station Name
+        const char  *chan,      // Channel ID
+        const char  *loc        // Location ID
+        )
 {
-  int bypass;
-  int bFound = 0;
-  int *state;
-  struct s_bufconfig *entry;
-  char key[20];
+    int bypass;
+    int bFound = 0;
+    int *state;
+    struct s_bufconfig *entry;
+    char key[20];
 
-  if (parse_state != 0)
-  {
-    // Check if this channel is in the bypass map
-    bypass = CheckChannelToArchive(station, chan, loc);
-    if (bypass == CHANNEL_NF) {
-      // If channel is not in the bypass map, check it against the config
-      sprintf(key, "%s-%s-%s", station, loc, chan);
-      strToUpper(key);
-      state = (int *)map_get(pNoArchiveShortcut, key);
-      if (state == NULL) {
-        //fprintf(stderr, "CheckNoArchive: record not found; performing list lookup\n");
-        bFound = CheckChannelList(station, chan, loc, pNoArchiveList, &entry);
-        if (bFound) {
-            map_put(pNoArchiveShortcut, key, &CHANNEL_OFF);
-        } 
-        else {
-            map_put(pNoArchiveShortcut, key, &CHANNEL_ON);
+    if (parse_state != 0)
+    {
+        // Check if this channel is in the bypass map
+        bypass = CheckChannelToArchive(station, chan, loc);
+        if (bypass == CHANNEL_NF) {
+            // If channel is not in the bypass map, check it against the config
+            MakeKey(station, loc, chan, key);
+            state = (int *)map_get(pNoArchiveShortcut, key);
+            if (state == NULL) {
+                //fprintf(stderr, "CheckNoArchive: record not found; performing list lookup\n");
+                bFound = CheckChannelList(station, chan, loc, pNoArchiveList, &entry);
+                if (bFound) {
+                    map_put(pNoArchiveShortcut, key, &CHANNEL_OFF);
+                } 
+                else {
+                    map_put(pNoArchiveShortcut, key, &CHANNEL_ON);
+                }
+            }
+            else { 
+                //fprintf(stderr, "CheckNoArchive: found record in shortcut map\n");
+                if (*state == CHANNEL_OFF) {
+                    bFound = 1;
+                }
+            }
         }
-      }
-      else { 
-        //fprintf(stderr, "CheckNoArchive: found record in shortcut map\n");
-        if (*state == CHANNEL_OFF) {
+        else if (bypass == CHANNEL_OFF){
+            //fprintf(stderr, "CheckNoArchive: found record in bypass map\n");
             bFound = 1;
         }
-      }
     }
-    else if (bypass == CHANNEL_OFF){
-      //fprintf(stderr, "CheckNoArchive: found record in bypass map\n");
-      bFound = 1;
-    }
-  }
 
-  return bFound;
+    return bFound;
 } // CheckNoArchive()
 
 //////////////////////////////////////////////////////////////////////////////
 // Tell whether the given location/channel is on the NoIDA channel list
 int CheckNoIDA(
-  const char  *station,   // Station Name
-  const char  *chan,      // Channel ID
-  const char  *loc        // Location ID
-  )
+        const char  *station,   // Station Name
+        const char  *chan,      // Channel ID
+        const char  *loc        // Location ID
+        )
 {
-  int bypass;
-  int bFound = 0;
-  int *state;
-  struct s_bufconfig *entry;
-  char key[20];
+    int bypass;
+    int bFound = 0;
+    int *state;
+    struct s_bufconfig *entry;
+    char key[20];
 
-  if (parse_state != 0)
-  {
-    // Check if this channel is in the bypass map
-    bypass = CheckChannelToIDA(station, chan, loc);
-    if (bypass == CHANNEL_NF) {
-      // If channel is not in the bypass map, check it against the config
-      sprintf(key, "%s-%s-%s", station, loc, chan);
-      strToUpper(key);
-      state = (int *)map_get(pNoIDAShortcut, key);
-      if (state == NULL) {
-        //fprintf(stderr, "CheckNoIDA: record not found; performing list lookup\n");
-        bFound = CheckChannelList(station, chan, loc, pNoIDAList, &entry);
-        if (bFound) {
-            map_put(pNoIDAShortcut, key, &CHANNEL_OFF);
-        } 
-        else {
-            map_put(pNoIDAShortcut, key, &CHANNEL_ON);
+    if (parse_state != 0)
+    {
+        // Check if this channel is in the bypass map
+        bypass = CheckChannelToIDA(station, chan, loc);
+        if (bypass == CHANNEL_NF) {
+            // If channel is not in the bypass map, check it against the config
+            MakeKey(station, loc, chan, key);
+            state = (int *)map_get(pNoIDAShortcut, key);
+            if (state == NULL) {
+                //fprintf(stderr, "CheckNoIDA: record not found; performing list lookup\n");
+                bFound = CheckChannelList(station, chan, loc, pNoIDAList, &entry);
+                if (bFound) {
+                    map_put(pNoIDAShortcut, key, &CHANNEL_OFF);
+                } 
+                else {
+                    map_put(pNoIDAShortcut, key, &CHANNEL_ON);
+                }
+            }
+            else { 
+                //fprintf(stderr, "CheckNoIDA: found channel in shortcut map\n");
+                if (*state == CHANNEL_OFF) {
+                    bFound = 1;
+                }
+            }
         }
-      }
-      else { 
-        //fprintf(stderr, "CheckNoIDA: found channel in shortcut map\n");
-        if (*state == CHANNEL_OFF) {
+        else if (bypass == CHANNEL_OFF){
+            //fprintf(stderr, "CheckNoIDA: found channel in bypass map\n");
             bFound = 1;
         }
-      }
     }
-    else if (bypass == CHANNEL_OFF){
-      //fprintf(stderr, "CheckNoIDA: found channel in bypass map\n");
-      bFound = 1;
-    }
-  }
 
-  return bFound;
+    return bFound;
 } // CheckNoIDA()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns the number of records for the given channel
 char *NumChanRecords(
-  const char  *station,   // Station Name
-  const char  *chan,      // Channel ID
-  const char  *loc,       // Location ID
-  int         *records
-  )                       // returns NULL or an error string pointer
+        const char  *station,   // Station Name
+        const char  *chan,      // Channel ID
+        const char  *loc,       // Location ID
+        int         *records
+        )                       // returns NULL or an error string pointer
 {
-  int bFound = 0;
-  struct s_bufconfig *entry;
-  char key[20];
+    int bFound = 0;
+    struct s_bufconfig *entry;
+    char key[20];
 
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "NumChanRecords: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
-  
-  sprintf(key, "%s-%s-%s", station, loc, chan);
-  strToUpper(key);
-  entry = (struct s_bufconfig *)map_get(pChanSizeShortcut, key);
-  if (entry == NULL) {
-    fprintf(stderr, "NumChanRecords: record not found in map, performing list lookup\n");
-    bFound = CheckChannelList(station, chan, loc, pChanSizeList, &entry);
-    if (bFound && (entry != NULL)) {
-      map_put(pChanSizeShortcut, key, entry);
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "NumChanRecords: ParseDiskLoopConfig not run yet");
+        return looperrstr;
     }
-  }
-  else {
-    fprintf(stderr, "NumChanRecords: found record in shortcupt map\n");
-    bFound = 1;
-  }
 
-  if (bFound && (entry != NULL)) {
-    *records = entry->records;
-  }
+    MakeKey(station, loc, chan, key);
+    entry = (struct s_bufconfig *)map_get(pChanSizeShortcut, key);
+    if (entry == NULL) {
+        fprintf(stderr, "NumChanRecords: record not found in map, performing list lookup\n");
+        bFound = CheckChannelList(station, chan, loc, pChanSizeList, &entry);
+        if (bFound && (entry != NULL)) {
+            map_put(pChanSizeShortcut, key, entry);
+        }
+    }
+    else {
+        fprintf(stderr, "NumChanRecords: found record in shortcupt map\n");
+        bFound = 1;
+    }
 
-  if (!bFound)
-  {
-    sprintf(looperrstr, "NumChanRecords: No Buffer: entries matching %s/%s",
-      loc, chan);
-    return looperrstr;
-  }
+    if (bFound && (entry != NULL)) {
+        *records = entry->records;
+    }
 
-  return NULL;
+    if (!bFound)
+    {
+        sprintf(looperrstr, "NumChanRecords: No Buffer: entries matching %s/%s",
+                loc, chan);
+        return looperrstr;
+    }
+
+    return NULL;
 } // NumChanRecords()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns the number of LOG records
 char *NumLogRecords(
-  int *records            // stores how many records disk buffer stores
-  )                       // returns NULL or an error string pointer
+        int *records            // stores how many records disk buffer stores
+        )                       // returns NULL or an error string pointer
 {
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "NumLogRecords: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "NumLogRecords: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-  *records = iLogBufferDepth;
-  return NULL;
+    *records = iLogBufferDepth;
+    return NULL;
 } // NumLogRecords()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns the directory string where archive files are stored
 char *LoopDirectory(
-  char *dir               // Should have MAXCONFIGLINELEN+1 chars allocated
-  )                       // returns NULL or an error string pointer
+        char *dir               // Should have MAXCONFIGLINELEN+1 chars allocated
+        )                       // returns NULL or an error string pointer
 {
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "LoopDirectory: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "LoopDirectory: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-  strcpy(dir, loopDir);
-  return NULL;
+    strcpy(dir, loopDir);
+    return NULL;
 } // LoopDirectory()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns the number of bytes to use for the netserver buffer
 char *NetBufferSize(
-  int *size               // return value for buffer size in bytes
-  )
+        int *size               // return value for buffer size in bytes
+        )
 {
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "NetBufferSize: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "NetBufferSize: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-  *size = iNetBufferSize;
-  return NULL;
+    *size = iNetBufferSize;
+    return NULL;
 } // NetBufferSize()
 
 //////////////////////////////////////////////////////////////////////////////
 // Return the Station, Network, Channel, Location to use for log messages
 char *LogSNCL(char *station, char *network, char *channel, char *location)
 {
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "LogSNCL: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
-  strcpy(station, log_station);
-  strcpy(network, log_network);
-  strcpy(channel, log_channel);
-  strcpy(location, log_location);
-  return NULL;
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "LogSNCL: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
+    strcpy(station, log_station);
+    strcpy(network, log_network);
+    strcpy(channel, log_channel);
+    strcpy(location, log_location);
+    return NULL;
 } // LogSNCL()
 
 
 //////////////////////////////////////////////////////////////////////////////
 // Used to change the defaults returned by LogSNCL
 char *SetLogSNCL(const char *station, const char *network,
-                 const char *channel, const char *location)
+        const char *channel, const char *location)
 {
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "SetLogSNCL: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
-  strncpy(log_station, station, 5);
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "SetLogSNCL: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
+    strncpy(log_station, station, 5);
     log_station[4] = 0;
-  strncpy(log_network, network, 2);
+    strncpy(log_network, network, 2);
     log_network[2] = 0;
-  strncpy(log_channel, channel, 3);
+    strncpy(log_channel, channel, 3);
     log_channel[3] = 0;
-  strncpy(log_location, location, 2);
+    strncpy(log_location, location, 2);
     log_location[2] = 0;
-  return NULL;
+    return NULL;
 } // SetLogSNCL()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns the UDP port where channel set commands are sent to
 char *ChannelSetPort(
-  int *port               // returns port number
-  )                       // returns NULL or an error string pointer
+        int *port               // returns port number
+        )                       // returns NULL or an error string pointer
 {
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "ChannelSetPort: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "ChannelSetPort: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-  *port = iChannelSetPort;
-  return NULL;
+    *port = iChannelSetPort;
+    return NULL;
 } // ChannelSetPort()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns the TCP port where log messages are sent to
 char *LogServerPort(
-  int *port               // returns port number
-  )                       // returns NULL or an error string pointer
+        int *port               // returns port number
+        )                       // returns NULL or an error string pointer
 {
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "LoopServerPort: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "LoopServerPort: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-  *port = iLogServerPort;
-  return NULL;
+    *port = iLogServerPort;
+    return NULL;
 } // LoopServerPort()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns username to log into falcon, NULL means use station name
 char *FalconUsername(char *username)
 {
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "FalconUsername: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "FalconUsername: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-  if (falcon_username != NULL)
-    strcpy(username, falcon_username);
-  else
-    username[0] = 0;
+    if (falcon_username != NULL)
+        strcpy(username, falcon_username);
+    else
+        username[0] = 0;
 
-  return NULL;
+    return NULL;
 } // FalconUsername()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns password to log into falcon, NULL means use station name
 char *FalconPassword(char *password)
 {
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "FalconPassword: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "FalconPassword: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-  if (falcon_password != NULL)
-    strcpy(password, falcon_password);
-  else
-    password[0] = 0;
+    if (falcon_password != NULL)
+        strcpy(password, falcon_password);
+    else
+        password[0] = 0;
 
-  return NULL;
+    return NULL;
 } // FalconPassword()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns Falcon IP address
 char *FalconIP(char *ip)
 {
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "FalconIP: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "FalconIP: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-  strcpy(ip, falcon_IP);
+    strcpy(ip, falcon_IP);
 
-  return NULL;
+    return NULL;
 } // FalconIP()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns Falcon port number
 char *FalconPort(int *port)
 {
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "FalconPort: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "FalconPort: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-  *port = falcon_port;
-  return NULL;
+    *port = falcon_port;
+    return NULL;
 } // FalconPort()
 
 //////////////////////////////////////////////////////////////////////////////
-// Remaps the station name in the seeed record if diskloop.config
+// Remaps the station name in the seed record if diskloop.config
 // has an applicable MapStation: entry 
 // Returns 1 on a remap, 0 on no remap
 int RemapStationName(                      
-  char *str_header)        // seed record pointer
+        char *str_header)        // seed record pointer
 {
-  seed_header *pheader;
-  char station[8];
-  char mapStation[8];
-  int  i;
+    seed_header *pheader;
+    char station[8];
+    char mapStation[8];
+    int  i;
 
-  char *mapstation=NULL;
-  struct s_mapstation *ptr;
+    char *mapstation=NULL;
+    struct s_mapstation *ptr;
 
-  pheader = (seed_header *)str_header;
+    pheader = (seed_header *)str_header;
 
-  // Parse station name
-  for (i=0; i < 5 
-       && isalnum((int)pheader->station_id_call_letters[i]); i++)
-    station[i] = pheader->station_id_call_letters[i];
-  station[i] = 0;
+    // Parse station name
+    for (i=0; i < 5 
+            && isalnum((int)pheader->station_id_call_letters[i]); i++)
+        station[i] = pheader->station_id_call_letters[i];
+    station[i] = 0;
 
-  // Now remap q330 station name if match found
-  strcpy(mapStation, station);
-  strToUpper(mapStation);
-  ptr = (struct s_mapstation *)map_get(pMapStationShortcut, mapStation);
-  if (ptr != NULL) {
-    mapstation = ptr->station;
-  }
-  else {
-    for (ptr=pMapStationList; ptr != NULL; ptr=ptr->next)
-    {
-      if (strcmp(station, ptr->station_q330) == 0)
-      {
+    // Now remap q330 station name if match found
+    strcpy(mapStation, station);
+    strToUpper(mapStation);
+    ptr = (struct s_mapstation *)map_get(pMapStationShortcut, mapStation);
+    if (ptr != NULL) {
         mapstation = ptr->station;
-        strcpy(mapStation, ptr->station_q330);
-        strToUpper(mapStation);
-        map_put(pMapStationShortcut, mapStation, ptr);
-        break;
-      }
-    } // check all station name remap entries
-  }
-
-  // Change seed record station name if we are remapping
-  if (mapstation != NULL)
-  {
-    for (i=0; i < 5 && mapstation[i] != 0; i++)
-    {
-      pheader->station_id_call_letters[i] = mapstation[i];
     }
-    // blank pad the station name to 5 chars
-    for (; i < 5; i++)
-    {
-      pheader->station_id_call_letters[i] = ' ';
+    else {
+        for (ptr=pMapStationList; ptr != NULL; ptr=ptr->next)
+        {
+            if (strcmp(station, ptr->station_q330) == 0)
+            {
+                mapstation = ptr->station;
+                strcpy(mapStation, ptr->station_q330);
+                strToUpper(mapStation);
+                map_put(pMapStationShortcut, mapStation, ptr);
+                break;
+            }
+        } // check all station name remap entries
     }
-  }
 
-  return (mapstation != NULL);
+    // Change seed record station name if we are remapping
+    if (mapstation != NULL)
+    {
+        for (i=0; i < 5 && mapstation[i] != 0; i++)
+        {
+            pheader->station_id_call_letters[i] = mapstation[i];
+        }
+        // blank pad the station name to 5 chars
+        for (; i < 5; i++)
+        {
+            pheader->station_id_call_letters[i] = ' ';
+        }
+    }
+
+    return (mapstation != NULL);
 
 } // RemapSationName()
 
@@ -1368,480 +1559,998 @@ int RemapStationName(
 // Also maps q330 station name to final station name if needed
 // Returns pointer to string after network ID
 char *StripNetworkID(
-  const char  *station    // Station name possibly includeing network id
-  )                       // returns pointer skipping past network id
+        const char  *station    // Station name possibly includeing network id
+        )                       // returns pointer skipping past network id
 {
-  int i;
-  char *retstation;
-  struct s_mapstation *ptr;
-  char mapStation[8];
+    int i;
+    char *retstation;
+    struct s_mapstation *ptr;
+    char mapStation[8];
 
-  for (i=0; station[i] != 0 && station[i] != '-'; i++)
-    ; // just find end of string, of network-station separator
+    for (i=0; station[i] != 0 && station[i] != '-'; i++)
+        ; // just find end of string, of network-station separator
 
-  if (station[i] == '-')
-    retstation = (char *)&station[i+1];
-  else
-    retstation = (char *)station;
+    if (station[i] == '-')
+        retstation = (char *)&station[i+1];
+    else
+        retstation = (char *)station;
 
-  // Now remap q330 station name if match found
-  strcpy(mapStation, retstation);
-  strToUpper(mapStation);
-  ptr = (struct s_mapstation *)map_get(pMapStationShortcut, mapStation);
-  if (ptr != NULL) {
-    retstation = ptr->station;
-  }
-  else {
-    for (ptr=pMapStationList; ptr != NULL; ptr=ptr->next)
-    {
-      if (strcmp(retstation, ptr->station_q330) == 0)
-      {
+    // Now remap q330 station name if match found
+    strcpy(mapStation, retstation);
+    strToUpper(mapStation);
+    ptr = (struct s_mapstation *)map_get(pMapStationShortcut, mapStation);
+    if (ptr != NULL) {
         retstation = ptr->station;
-        strcpy(mapStation, ptr->station_q330);
-        strToUpper(mapStation);
-        map_put(pMapStationShortcut, mapStation, ptr);
-        break;
-      }
-    } // check all station name remap entries
-  }
+    }
+    else {
+        for (ptr=pMapStationList; ptr != NULL; ptr=ptr->next)
+        {
+            if (strcmp(retstation, ptr->station_q330) == 0)
+            {
+                retstation = ptr->station;
+                strcpy(mapStation, ptr->station_q330);
+                strToUpper(mapStation);
+                map_put(pMapStationShortcut, mapStation, ptr);
+                break;
+            }
+        } // check all station name remap entries
+    }
 
-  return retstation;
+    return retstation;
 } // StripNetworkID()
+
+//////////////////////////////////////////////////////////////////////////////
+// Makes a canonical diskloop file name
+// Ensures that the path to a diskloop is always created the same way
+// format: archive_directory/SSSS/[LL_]CCC[suffix]
+void DiskloopFileName(
+        const char *station,  // station name
+        const char *location, // location code
+        const char *channel,  // channel name
+        const char *suffix,   // file name suffix
+        char *name // buffer with enough space allocated for complete path to file
+        )
+{
+    char *p = name;
+    char *t;
+
+    t = loopDir;
+    // diskloop directory
+    while (*t > 31) {
+        *p = *t; p++;
+        t++;
+    }
+    *p = '/'; p++;
+
+    t = StripNetworkID(station);
+    // Station
+    while (ALNUM(*t)) {
+        *p = toupper(*t); p++;
+        t++;
+    }
+    *p = '/'; p++;
+
+    t = location;
+    // Location
+    while (ALNUM(*t)) {
+        *p = toupper(*t); p++;
+        t++;
+    }
+    if (t != location) {
+        *p = '_'; p++;
+    }
+
+    t = channel;
+    // Channel
+    while (ALNUM(*t)) {
+        *p = toupper(*t); p++;
+        t++;
+    }
+
+    t = suffix;
+    // suffix
+    while (*t > 31) {
+        *p = *t; p++;
+        t++;
+    }
+
+    *p = 0;
+}
+
 
 //////////////////////////////////////////////////////////////////////////////
 // Called when we need to start a new buffer set
 char *NewBuffer(
-  const char  *station,   // station name
-  const char  *chan,      // Channel ID
-  const char  *loc        // Location ID
-  )                       // returns NULL or an error string pointer
+        const char  *station,   // station name
+        const char  *chan,      // Channel ID
+        const char  *loc        // Location ID
+        )                       // returns NULL or an error string pointer
 {
-  char  buf_filename[2*MAXCONFIGLINELEN+2];
-  char  idx_filename[2*MAXCONFIGLINELEN+2];
-  char  msg[2*MAXCONFIGLINELEN+2];
-  FILE  *fp_buf;
-  FILE  *fp_idx;
-  int   iRecord;
-  int   iMaxRecord;
+    char  buf_filename[2*MAXCONFIGLINELEN+2];
+    char  idx_filename[2*MAXCONFIGLINELEN+2];
+    char  msg[2*MAXCONFIGLINELEN+2];
+    FILE  *fp_buf;
+    FILE  *fp_idx;
+    int   iRecord;
+    int   iMaxRecord;
 
-  // Get names of buffer and index files
-  // If blank location code, leave off leading location code in filename
-  if (loc[0] == ' ' || loc[0] == 0)
-  {
-    sprintf(buf_filename, "%s/%s/%s.buf",
-        loopDir, StripNetworkID(station), chan);
-    sprintf(idx_filename, "%s/%s/%s.idx",
-        loopDir, StripNetworkID(station), chan);
-  }
-  else
-  {
-    sprintf(buf_filename, "%s/%s/%s_%s.buf",
-        loopDir, StripNetworkID(station), loc, chan);
-    sprintf(idx_filename, "%s/%s/%s_%s.idx",
-        loopDir, StripNetworkID(station), loc, chan);
-  }
+    // Get names of buffer and index files
+    DiskloopFileName(station, loc, chan, ".buf", buf_filename);
+    DiskloopFileName(station, loc, chan, ".idx", idx_filename);
 
-  // Create/truncate buffer file
-  if ((fp_buf=fopen(buf_filename, "w")) == NULL)
-  {
-    // Buffer file does not exist so start a new set
-    sprintf(looperrstr, "NewBuffer: failed to create %s",
-             idx_filename);
-    return looperrstr;
-  }
-  fclose(fp_buf);
+    // Create/truncate buffer file
+    if ((fp_buf=fopen(buf_filename, "w")) == NULL)
+    {
+        // Buffer file does not exist so start a new set
+        sprintf(looperrstr, "NewBuffer: failed to create %s",
+                idx_filename);
+        return looperrstr;
+    }
+    fclose(fp_buf);
 
-  // Create/truncate index file
-  if ((fp_idx=fopen(idx_filename, "w")) == NULL)
-  {
-    sprintf(looperrstr, "NewBuffer: failed to find %s",
-             idx_filename);
-    return looperrstr;
-  } // unable to create index file
+    // Create/truncate index file
+    if ((fp_idx=fopen(idx_filename, "w")) == NULL)
+    {
+        sprintf(looperrstr, "NewBuffer: failed to find %s",
+                idx_filename);
+        return looperrstr;
+    } // unable to create index file
 
-  // Get how many records this channel should have
-  if (NumChanRecords(station, chan, loc, &iMaxRecord) != NULL)
-  {
+    // Get how many records this channel should have
+    if (NumChanRecords(station, chan, loc, &iMaxRecord) != NULL)
+    {
+        fclose(fp_idx);
+        return looperrstr;
+    }
+
+    // Update the index file
+    iRecord = -1;
+    sprintf(msg, "%d %d", iRecord, iMaxRecord);
+    fprintf(fp_idx, "%-30.30s\n", msg);
+    fprintf(fp_idx, "%-30.30s\n", msg);
+    fprintf(fp_idx, "%-30.30s\n", msg);
     fclose(fp_idx);
-    return looperrstr;
-  }
 
-  // Update the index file
-  iRecord = -1;
-  sprintf(msg, "%d %d", iRecord, iMaxRecord);
-  fprintf(fp_idx, "%-30.30s\n", msg);
-  fprintf(fp_idx, "%-30.30s\n", msg);
-  fprintf(fp_idx, "%-30.30s\n", msg);
-  fclose(fp_idx);
-
-  return NULL;
+    return NULL;
 } // NewBuffer()
 
 //////////////////////////////////////////////////////////////////////////////
 // Parses str_header to get station, channel, location, time start/end
 char *ParseSeedHeader(
-const char    *str_header,  // Header buffer
-char          *station,     // return station name
-char          *chan,        // return Channel ID
-char          *loc,         // return Location ID
-STDTIME2      *ptRecStart,  // Returns start time for record
-STDTIME2      *ptRecEnd,    // Returns end time for record
-int           *piSeqNum,    // Returns the sequence number for the record
-int           *piSamples    // Returns the number of samples
-  )                         // returns NULL or an error string pointer
+        const char    *str_header,  // Header buffer
+        char          *station,     // return station name
+        char          *chan,        // return Channel ID
+        char          *loc,         // return Location ID
+        STDTIME2      *ptRecStart,  // Returns start time for record
+        STDTIME2      *ptRecEnd,    // Returns end time for record
+        int           *piSeqNum,    // Returns the sequence number for the record
+        int           *piSamples    // Returns the number of samples
+        )                         // returns NULL or an error string pointer
 {
-  int i;
-  int iRateFactor;
-  int iRateMult;
-  int iSamples;
-  int iSpanDay;
-  int iSpanHour;
-  int iSpanMin;
-  int iSpanSec;
-  int iSpanTMSec;
-  double dSampleRate;
-  seed_header *pheader;
-  char str[10];
+    int i;
+    int iRateFactor;
+    int iRateMult;
+    int iSamples;
+    int iSpanDay;
+    int iSpanHour;
+    int iSpanMin;
+    int iSpanSec;
+    int iSpanTMSec;
+    double dSampleRate;
+    seed_header *pheader;
+    char str[10];
 
-  pheader = (seed_header *)str_header;
+    pheader = (seed_header *)str_header;
 
-  // Parse the sequence number
-  *piSeqNum = 0;
-  strncpy(str, pheader->sequence, 6);
-  str[6] = 0;
-  sscanf(str, "%d", piSeqNum);
-  
-  // Parse station name
-  for (i=0; i < 5 
-       && isalnum((int)pheader->station_id_call_letters[i]); i++)
-    station[i] = pheader->station_id_call_letters[i];
-  station[i] = 0;
+    // Parse the sequence number
+    *piSeqNum = 0;
+    strncpy(str, pheader->sequence, 6);
+    str[6] = 0;
+    sscanf(str, "%d", piSeqNum);
 
-  // Parse location name
-  for (i=0; i < 2; i++)
-    loc[i] = pheader->location_id[i];
-  loc[i] = 0;
+    // Parse station name
+    for (i=0; i < 5 
+            && isalnum((int)pheader->station_id_call_letters[i]); i++)
+        station[i] = pheader->station_id_call_letters[i];
+    station[i] = 0;
 
-  // Parse channel name
-  for (i=0; i < 3; i++)
-    chan[i] = pheader->channel_id[i];
-  chan[i] = 0;
+    // Parse location name
+    for (i=0; i < 2; i++)
+        loc[i] = pheader->location_id[i];
+    loc[i] = 0;
 
-  // Parse Record Start time
-  ptRecStart->year = ntohs(pheader->yr);
-  ptRecStart->day = ntohs(pheader->jday);
-  ptRecStart->hour = (int)pheader->hr;
-  ptRecStart->minute = (int)pheader->minute;
-  ptRecStart->second = (int)pheader->seconds;
-  ptRecStart->tenth_msec = ntohs(pheader->tenth_millisec);
+    // Parse channel name
+    for (i=0; i < 3; i++)
+        chan[i] = pheader->channel_id[i];
+    chan[i] = 0;
 
-  // Parse samples
-  iSamples = (unsigned short)ntohs(pheader->samples_in_record);
-  iRateFactor = (short)ntohs(pheader->sample_rate_factor);
-  iRateMult = (short)ntohs(pheader->sample_rate_multiplier);
+    // Parse Record Start time
+    ptRecStart->year = ntohs(pheader->yr);
+    ptRecStart->day = ntohs(pheader->jday);
+    ptRecStart->hour = (int)pheader->hr;
+    ptRecStart->minute = (int)pheader->minute;
+    ptRecStart->second = (int)pheader->seconds;
+    ptRecStart->tenth_msec = ntohs(pheader->tenth_millisec);
 
-  *piSamples = iSamples;
+    // Parse samples
+    iSamples = (unsigned short)ntohs(pheader->samples_in_record);
+    iRateFactor = (short)ntohs(pheader->sample_rate_factor);
+    iRateMult = (short)ntohs(pheader->sample_rate_multiplier);
 
-  // Get sample rate, See SEED Reference Manual Chp 8
-  // Fixed Section of Data Header for formulas
-  dSampleRate = 0;
-  if (iRateFactor > 0 && iRateMult > 0)
-    dSampleRate = (double)(iRateFactor * iRateMult);
+    *piSamples = iSamples;
 
-  if (iRateFactor > 0 && iRateMult < 0)
-    dSampleRate = -((double)iRateFactor / (double)iRateMult);
-  
-  if (iRateFactor < 0 && iRateMult > 0)
-    dSampleRate = -((double)iRateMult / (double)iRateFactor);
+    // Get sample rate, See SEED Reference Manual Chp 8
+    // Fixed Section of Data Header for formulas
+    dSampleRate = 0;
+    if (iRateFactor > 0 && iRateMult > 0)
+        dSampleRate = (double)(iRateFactor * iRateMult);
 
-  if (iRateFactor < 0 && iRateMult < 0)
-    dSampleRate = 1.0 / (double)(iRateFactor * iRateMult);
+    if (iRateFactor > 0 && iRateMult < 0)
+        dSampleRate = -((double)iRateFactor / (double)iRateMult);
 
-  // Get Span time in tenths of milliseconds
-  if (iRateFactor != 0 && iRateMult != 0)
-    iSpanTMSec = (int)((iSamples / dSampleRate) * 10000.0);
-  else
-    iSpanTMSec = 0;
+    if (iRateFactor < 0 && iRateMult > 0)
+        dSampleRate = -((double)iRateMult / (double)iRateFactor);
 
-//fprintf(stdout, "Samp=%d Factor=%d Mult=%d dSampleRate=%.5f, TMSec=%d\n",
-//iSamples, iRateFactor, iRateMult, dSampleRate, iSpanTMSec);
+    if (iRateFactor < 0 && iRateMult < 0)
+        dSampleRate = 1.0 / (double)(iRateFactor * iRateMult);
+
+    // Get Span time in tenths of milliseconds
+    if (iRateFactor != 0 && iRateMult != 0)
+        iSpanTMSec = (int)((iSamples / dSampleRate) * 10000.0);
+    else
+        iSpanTMSec = 0;
+
+    //fprintf(stdout, "Samp=%d Factor=%d Mult=%d dSampleRate=%.5f, TMSec=%d\n",
+    //iSamples, iRateFactor, iRateMult, dSampleRate, iSpanTMSec);
 
 
-  // Add to start time to get end time
-  iSpanSec = iSpanTMSec/10000;
-  iSpanTMSec = iSpanTMSec % 10000;
-  iSpanMin = iSpanSec / 60;
-  iSpanSec = iSpanSec % 60;
-  iSpanHour = iSpanMin / 60;
-  iSpanMin = iSpanMin % 60;
-  iSpanDay = iSpanHour / 24;
-  iSpanHour = iSpanHour % 24;
-//fprintf(stdout, "%s + ", ST_PrintDate2(*ptRecStart, 1));
-//fprintf(stdout, "%03d,%02d:%02d:%02d.%04d",
-//iSpanDay, iSpanHour, iSpanMin, iSpanSec, iSpanTMSec);
-  *ptRecEnd = ST_AddToTime2(*ptRecStart, 
-          iSpanDay, iSpanHour, iSpanMin, iSpanSec, iSpanTMSec);
-//fprintf(stdout, " = %s\n", ST_PrintDate2(*ptRecEnd, 1));
-  return NULL;
+    // Add to start time to get end time
+    iSpanSec = iSpanTMSec/10000;
+    iSpanTMSec = iSpanTMSec % 10000;
+    iSpanMin = iSpanSec / 60;
+    iSpanSec = iSpanSec % 60;
+    iSpanHour = iSpanMin / 60;
+    iSpanMin = iSpanMin % 60;
+    iSpanDay = iSpanHour / 24;
+    iSpanHour = iSpanHour % 24;
+    //fprintf(stdout, "%s + ", ST_PrintDate2(*ptRecStart, 1));
+    //fprintf(stdout, "%03d,%02d:%02d:%02d.%04d",
+    //iSpanDay, iSpanHour, iSpanMin, iSpanSec, iSpanTMSec);
+    *ptRecEnd = ST_AddToTime2(*ptRecStart, 
+            iSpanDay, iSpanHour, iSpanMin, iSpanSec, iSpanTMSec);
+    //fprintf(stdout, " = %s\n", ST_PrintDate2(*ptRecEnd, 1));
+    return NULL;
 } // ParseSeedHeader()
 
 //////////////////////////////////////////////////////////////////////////////
 // The index info is repeated 3 times.  So even if we read it during the
 // middle of a write, either the first two, or second two lines should agree.
 char *ParseIndexInfo(
-  FILE *fp_idx,       // opened file pointer to index file
-  int  *iFlipRecord,  // Returns current position within circular buffer
-  int  *iMaxRecord    // Maximum size of circular buffer
-  )                   // NULL okay, error string otherwise
+        FILE *fp_idx,       // opened file pointer to index file
+        int  *iFlipRecord,  // Returns current position within circular buffer
+        int  *iMaxRecord    // Maximum size of circular buffer
+        )                   // NULL okay, error string otherwise
 {
-  int flip1,flip2,flip3;
-  int max1,max2,max3;
-  int iArg;
-  int iCount;
-  char indexbuf[93];
+    int flip1,flip2,flip3;
+    int max1,max2,max3;
+    int iArg;
+    int iCount;
+    char indexbuf[93];
 
-  if ((iCount=fread(indexbuf, 1, 93, fp_idx)) != 93)
-  {
-    sprintf(looperrstr, "ParseIndexInfo:  Index data file size != 93 chars");
-    return looperrstr;
-  }
+    if ((iCount=fread(indexbuf, 1, 93, fp_idx)) != 93)
+    {
+        sprintf(looperrstr, "ParseIndexInfo:  Index data file size != 93 chars");
+        return looperrstr;
+    }
 
-  if ((iArg = sscanf(&indexbuf[0], "%d %d", &flip1, &max1)) != 2)
-  {
-    sprintf(looperrstr, "ParseIndexInfo: format error in index file line 1");
-    return looperrstr;
-  }
-  *iFlipRecord = flip1;
-  *iMaxRecord = max1;
-  if ((iArg = sscanf(&indexbuf[31], "%d %d", &flip2, &max2)) != 2)
-  {
-    sprintf(looperrstr, "ParseIndexInfo: format error in index file line 2");
-    return looperrstr;
-  }
+    if ((iArg = sscanf(&indexbuf[0], "%d %d", &flip1, &max1)) != 2)
+    {
+        sprintf(looperrstr, "ParseIndexInfo: format error in index file line 1");
+        return looperrstr;
+    }
+    *iFlipRecord = flip1;
+    *iMaxRecord = max1;
+    if ((iArg = sscanf(&indexbuf[31], "%d %d", &flip2, &max2)) != 2)
+    {
+        sprintf(looperrstr, "ParseIndexInfo: format error in index file line 2");
+        return looperrstr;
+    }
 
-  // If line 1 and 2 are in agreement we are done
-  if (flip1 == flip2 || max1 == max2)
+    // If line 1 and 2 are in agreement we are done
+    if (flip1 == flip2 || max1 == max2)
+        return NULL;
+
+    // Otherwise line 3 will contain uncontaminated data
+    // Because write point had to be between line 1 and 2
+    if ((iArg = sscanf(&indexbuf[62], "%d %d", &flip3, &max3)) != 2)
+    {
+        sprintf(looperrstr, "ParseIndexInfo: format error in index file line 3");
+        return looperrstr;
+    }
+
+    *iFlipRecord = flip3;
+    *iMaxRecord = max3;
     return NULL;
-
-  // Otherwise line 3 will contain uncontaminated data
-  // Because write point had to be between line 1 and 2
-  if ((iArg = sscanf(&indexbuf[62], "%d %d", &flip3, &max3)) != 2)
-  {
-    sprintf(looperrstr, "ParseIndexInfo: format error in index file line 3");
-    return looperrstr;
-  }
-
-  *iFlipRecord = flip3;
-  *iMaxRecord = max3;
-  return NULL;
 } // ParseIndexInfo()
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Opens a diskloop if it has not already been opened,
+// otherwise it just uses the existing context
+char *adl_open(
+        diskloop_context_t **return_context, // caller's context ponter
+        const char *station,  // station name
+        const char *location, // location code
+        const char *channel   // channel name
+    )
+{
+    diskloop_context_t *context = NULL;
+    char  key[20];
+
+    int   loop_offset = 0;
+    long  loop_size = 0;
+
+    // locate context for this 
+    MakeKey(station, location, channel, key);
+    context = (diskloop_context_t *)map_get(pDiskLoops, key);
+
+    // If there is no context for this channel, create it
+    if (context == NULL) {
+        if ((context = (diskloop_context_t *)calloc(sizeof(diskloop_context_t), 1)) == NULL) {
+            strcpy(looperrstr, "Could not allocate memory for diskloop context.");
+            goto error;
+        }
+        MakeKey(station, location, channel, context->key);
+
+        DiskloopFileName(station, location, channel, ".buf", context->loop_name);
+        DiskloopFileName(station, location, channel, ".idx", context->index_name);
+
+        // Make sure that buffer file exists
+        if ((context->loop_fp=fopen(context->loop_name, "r")) == NULL)
+        {
+            // Buffer file does not exist so start a new set
+            if (NewBuffer(station, channel, location) != NULL) {
+                goto error;
+            }
+        }
+        if (context->loop_fp != NULL) {
+            fclose(context->loop_fp);
+        }
+
+        // Make sure that index file exists
+        if ((context->index_fp=fopen(context->index_name, "r")) == NULL)
+        {
+            // Index file does not exist so start fresh
+            if (NewBuffer(station, channel, location) != NULL) {
+                goto error;
+            }
+            if ((context->index_fp=fopen(context->index_name, "r")) == NULL)
+            {
+                sprintf(looperrstr, "adl_open: failed to find %s",
+                        context->index_name);
+                goto error;
+            }
+            context->index = -1;
+            context->size = 0;
+        } // unable to open index file
+
+        // Load index info
+        if (ParseIndexInfo(context->index_fp, &context->index, &context->capacity) != NULL)
+        {
+            sprintf(looperrstr, "adl_open: Index file format error in %s",
+                    context->index_name);
+            fclose(context->index_fp);
+            goto error;
+        } // error reading index and max record value
+
+        if (context->index < -1 || context->index >= context->capacity)
+        {
+            sprintf(looperrstr, "adl_open: Invalid index -1 <= %d < %d in %s",
+                    context->index, context->capacity, context->index_name);
+            fclose(context->index_fp);
+            goto error;
+        } // error reading index and max record value
+        fclose(context->index_fp);
+
+        // Open the buffer file for write access
+        if ((context->loop_fp=fopen(context->loop_name, "r+")) == NULL)
+        {
+            // Buffer file does not exist so start a new set
+            sprintf(looperrstr, "adl_open: Failed to open %s for updating",
+                    context->loop_name);
+            goto error;
+        }
+
+        fseek(context->loop_fp, 0, SEEK_END);
+        loop_size = ftell(context->loop_fp);
+
+        context->size = context->capacity;
+        // If the diskloop is not full, we have not yet looped around,
+        // so start at the end.
+        if ((loop_size / context->record_size) < context->capacity) {
+            // Integer arithmetic will jump us to the end of the last complete
+            // record, overwriting any partial record
+            context->index = loop_size / context->record_size - 1;
+            context->size = context->index + 1;
+            fseek(context->loop_fp, context->index * context->record_size, SEEK_SET);
+        }
+        // If the diskloop is full, we continue with the following logic
+        else if (context->index >= 0)
+        {
+        // TODO: Impmlement the following logic
+        //        - read record from last position, and following record
+        //          (following record may be at the beginning of the diskloop)
+        //        - if the last record is younger than the following, we are okay
+        //          because the idx file matches the expected order
+        //        - however, if the last record is older than the following, we
+        //          close without syncing the idx file, and must do a binary
+        //          search for the youngest record, and replace it (because it
+        //          could be only a partial record)
+        //
+        // Get the header for the last record written
+
+            char      temp_A[8192];
+            char      temp_B[8192];
+
+            char      rec_A_station[6];
+            char      rec_A_chan[4];
+            char      rec_A_loc[4];
+            STDTIME2  rec_A_start;
+            STDTIME2  rec_A_end;
+            int       rec_A_seqnum;
+            int       rec_A_samples;
+
+            char      rec_B_station[6];
+            char      rec_B_chan[4];
+            char      rec_B_loc[4];
+            STDTIME2  rec_B_start;
+            STDTIME2  rec_B_end;
+            int       rec_B_seqnum;
+            int       rec_B_samples;
+
+            DELTA_T2  delta_t2;
+            long      delta_ms;
+            int       iRateFactor;
+            seed_header *pheader;
+
+            size_t bytes_read;
+            int tmp_index = 0;
+            
+            // Read the candidate newest record.
+            if (context->index >= context->capacity) {
+                context->index = 0;
+            }
+            fseek(context->loop_fp, context->index * context->record_size, SEEK_SET);
+            bytes_read = fread(temp_A, context->record_size, 1, context->loop_fp);
+            if (bytes_read < context->record_size) {
+                sprintf(looperrstr, "adl_open: could not read newest record for %s", context->index_name);
+                fclose(context->index_fp);
+                goto error;
+            }
+
+            // Read the following record.
+            tmp_index = context->index + 1;
+            if (context->index >= context->capacity) {
+                tmp_index = 0;
+            }
+            fseek(context->loop_fp, tmp_index * context->record_size, SEEK_SET);
+            bytes_read = fread(temp_B, context->record_size, 1, context->loop_fp);
+            if (bytes_read < context->record_size) {
+                sprintf(looperrstr, "adl_open: could read following record for %s", context->index_name);
+                fclose(context->index_fp);
+                goto error;
+            }
+
+            // Read the last record as indicated in the index file
+            ParseSeedHeader(temp_A, rec_A_station, rec_A_chan, rec_A_loc,
+                    &rec_A_start, &rec_A_end, &rec_A_seqnum, &rec_A_samples);
+            // Read the record following the last in the index file
+            ParseSeedHeader(temp_B, rec_B_station, rec_B_chan, rec_B_loc,
+                    &rec_B_start, &rec_B_end, &rec_B_seqnum, &rec_B_samples);
+
+            // Test to see if this record Starts before last record ended
+            // Only test records with data in them
+            delta_t2 = ST_DiffTimes2(rec_A_start, rec_B_start);
+            delta_ms = ST_DeltaToMS2(delta_t2);
+
+            // If the next record is newer than the current, we need to
+            // search for the newest record, update the index, and seek
+            // to the correct position in the diskloop.
+            if (delta_ms < 0) {
+                adl_newest_index(context, &context->index);
+            }
+        } // previous record should exist
+
+        // Go to desired position in the circular buffer file
+        loop_offset = context->index * context->record_size;
+        fseek(context->loop_fp, loop_offset, SEEK_SET);
+        if (loop_offset != ftell(context->loop_fp))
+        {
+            sprintf(looperrstr, "adl_open: Unable to seek to record %d in %s",
+                    context->index, context->loop_name);
+            goto error;
+        } // Failed to seek to required file buffer position
+
+        // Open the index file for writing
+        if ((context->index_fp=fopen(context->index_name, "r+")) == NULL)
+        {
+            // Index file does not exist so start fresh
+            sprintf(looperrstr, "adl_open: failed to open %s for updating",
+                    context->index_name);
+            goto error;
+        } // unable to open index file
+
+        // Add this diskloop context to the map
+        map_put(pDiskLoops, context->key, context);
+    } // create new context
+
+    // if we made it here, no error was encountered
+    goto success;
+
+ error:
+    if (context) {
+        free(context);
+    }
+    return looperrstr;
+
+ success:
+    *return_context = context;
+    return NULL;
+}
+
+char *adl_write(
+        diskloop_context_t *context, // diskloop context
+        int index, // record index
+        char *record // record buffer
+    )
+{
+    int  new_index = 0;
+    struct timeval now;
+    uint64_t now_stamp;
+    uint64_t flush_stamp;
+    uint64_t index_stamp;
+
+    seed_header *pheader;
+    char      rec_station[6];
+    char      rec_chan[4];
+    char      rec_loc[4];
+    STDTIME2  rec_start;
+    STDTIME2  rec_end;
+    int       rec_seqnum;
+    int       rec_samples;
+    DELTA_T2  delta_time;
+    long      delta_ms;
+    int       rate_factor;
+    char     *issue = NULL;
+
+    ParseSeedHeader(record, rec_station, rec_chan, rec_loc,
+                    &rec_start, &rec_end,
+                    &rec_seqnum, &rec_samples);
+
+    delta_time = ST_DiffTimes2(rec_start, context->last_record_start);
+    delta_ms = ST_DeltaToMS2(delta_time);
+    pheader = (seed_header *)record;
+    rate_factor = (short)ntohs(pheader->sample_rate_factor);
+    if ( (rec_samples > 0) &&
+         (context->last_record_samples > 0) &&
+         (rate_factor != 0) )
+    {
+        if (delta_ms < -1) {
+            issue = "overlap";
+        } else if (delta_ms > 1) {
+            issue = "gap";
+        }
+
+        if (issue) {
+            printf("DEBUG detected %s (%ld) %s %s/%s new record %d vs %d.\n",
+                    issue, delta_ms, rec_station, rec_loc, rec_chan,
+                    rec_seqnum, context->last_record_seqnum);
+            printf("%s < ", ST_PrintDate2(rec_start, TRUE));
+            printf("%s\n", ST_PrintDate2(context->last_record_start, TRUE));
+        }
+    }
+
+    if (index < 0) {
+        new_index = context->index + 1;
+        if (new_index >= context->capacity) {
+            new_index = 0;
+            fseek(context->loop_fp, 0, SEEK_SET);
+        }
+    }
+    else {
+        if (index >= context->capacity) {
+            sprintf(looperrstr, "adl_write: Requested index [%d] is out of range", index);
+            goto error;
+        }
+        new_index = index;
+    }
+
+    // Write the new record
+    if (fwrite(record, context->record_size, 1, context->loop_fp) != 1)
+    {
+        sprintf(looperrstr, "adl_write: Unable to write to index %d", new_index);
+        record[0] = 0; // TODO: determine if this is a good idea
+        goto error;
+    } // Failed to write record
+
+    // update context size if this is an append operation
+    if ( (context->size < context->capacity) &&
+         (context->size == new_index) ) {
+        context->size++;
+    }
+    context->index = new_index;
+    context->last_record_seqnum = rec_seqnum;
+    context->last_record_samples = rec_samples;
+    memcpy(&context->last_record_start, &rec_start, sizeof(STDTIME2));
+
+    gettimeofday(&now, NULL);
+    now_stamp   = (uint64_t)TIME_MICRO(now);
+    flush_stamp = (uint64_t)TIME_MICRO(context->last_flush);
+    index_stamp = (uint64_t)TIME_MICRO(context->last_index);
+
+    // If the index interval has been met, we need to flush and 
+    // record the current index.
+    if ((now_stamp - index_stamp) >= TIME_MICRO(index_interval)) {
+        adl_flush(context);
+        adl_write_index(context);
+    }
+    // Otherwise, we just flush the diskloop if the flush interval
+    // has been met.
+    else if ((now_stamp - flush_stamp) >= TIME_MICRO(flush_interval)) {
+        adl_flush(context);
+    }
+
+    // if we made it here, no error was encountered
+    goto success;
+
+ error:
+    return looperrstr;
+
+ success:
+    return NULL;
+}
+
+char *adl_flush(
+        diskloop_context_t *context // diskloop context
+    )
+{
+    fflush(context->loop_fp);
+    gettimeofday(&context->last_flush, NULL);
+
+    return NULL;
+}
+
+char *adl_write_index(
+        diskloop_context_t *context // diskloop context
+    )
+{
+    char msg[2*MAXCONFIGLINELEN+2];
+
+    fseek(context->index_fp, 0, SEEK_SET);
+    sprintf(msg, "%d %d", context->index, context->capacity);
+    fprintf(context->index_fp, "%-30.30s\n", msg);
+    fprintf(context->index_fp, "%-30.30s\n", msg);
+    fprintf(context->index_fp, "%-30.30s\n", msg);
+    fflush(context->index_fp);
+    gettimeofday(&context->last_index, NULL);
+
+    return NULL;
+}
+
+char *adl_read(
+        diskloop_context_t *context, // diskloop context
+        int index, // record index
+        char *databuf // record buffer
+    )
+{
+    int loop_seek = 0;
+
+    if (index < 0) {
+        index = context->index;
+    }
+
+    if (index >= context->capacity) {
+        sprintf(looperrstr, "adl_read: Requested index [%d] is out of range", index);
+        goto error;
+    }
+
+    loop_seek = index * context->record_size;
+    fseek(context->loop_fp, loop_seek, SEEK_SET);
+    if (ftell(context->loop_fp) != loop_seek) {
+        sprintf(looperrstr, "adl_write: Could not seek to requested index [%d]", index);
+        goto error;
+    }
+        
+    if (fread(databuf, context->record_size, 1, context->loop_fp) != 1)
+    {
+        sprintf(looperrstr, "adl_read: Unable to read record at index %d", index);
+        goto error;
+    }
+
+    // if we made it here, no error was encountered
+    goto success;
+
+ error:
+    return looperrstr;
+
+ success:
+    return NULL;
+}
+
+char *adl_close(
+        diskloop_context_t **close_context // diskloop context
+    )
+{
+    diskloop_context_t *context = *close_context;
+
+    map_remove(pDiskLoops, context->key);
+    adl_flush(context);
+    fclose(context->loop_fp);
+    adl_write_index(context);
+    fclose(context->index_fp);
+    free(context);
+    *close_context = NULL;
+
+    return NULL;
+}
+
+
+void close_callback(const char *key, const void *value, const void *obj)
+{
+    adl_close((diskloop_context_t **)(&value));
+}
+
+char *adl_close_all()
+{
+    map_enum(pDiskLoops, close_callback, NULL);
+    return NULL;
+}
+
+char *adl_oldest_index(
+        diskloop_context_t *context,
+        int *index
+    )
+{
+    return NULL;
+}
+
+char *adl_newest_index(
+        diskloop_context_t *context,
+        int *index
+    )
+{
+    return NULL;
+}
+
+char *adl_index_before(
+        diskloop_context_t *context,
+        STDTIME2  *time,
+        int *index
+    )
+{
+    return NULL;
+}
+
+char *adl_index_after(
+        diskloop_context_t *context,
+        STDTIME2  *time,
+        int *index
+    )
+{
+    return NULL;
+}
+
+char *adl_range_indices(
+        diskloop_context_t *context,
+        STDTIME2  *start_time,
+        STDTIME2  *end_time,
+        int *start_index,
+        int *end_index
+    )
+{
+    return NULL;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 // Write a record of SEED data
 // Hides all of the logic needed to run a circular buffer from main program
 char *WriteChan(
-  const char  *station,   // station name
-  const char  *chan,      // Channel ID
-  const char  *loc,       // Location ID
-  char        *databuf    // Seed record pointer
-  )                       // returns NULL or an error string pointer
+        const char  *station,   // station name
+        const char  *chan,      // Channel ID
+        const char  *loc,       // Location ID
+        char        *databuf    // Seed record pointer
+        )                       // returns NULL or an error string pointer
 {
-  char  buf_filename[2*MAXCONFIGLINELEN+2];
-  char  idx_filename[2*MAXCONFIGLINELEN+2];
-  char  msg[2*MAXCONFIGLINELEN+2];
-  FILE  *fp_buf;
-  FILE  *fp_idx;
-  int   iRecord;
-  int   iMaxRecord;
-  int   iSeek;
+    char  buf_filename[2*MAXCONFIGLINELEN+2];
+    char  idx_filename[2*MAXCONFIGLINELEN+2];
+    char  msg[2*MAXCONFIGLINELEN+2];
+    FILE  *fp_buf;
+    FILE  *fp_idx;
+    int   iRecord;
+    int   iMaxRecord;
+    int   iSeek;
+    //diskloop_context_t *context;
 
-  // The configuration file must be parsed before this routine can work
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "WriteChan: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
+    // The configuration file must be parsed before this routine can work
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "WriteChan: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-  // Get names of buffer and index files
-  // If blank location code, leave off leading location code in filename
-  if (loc[0] == ' ' || loc[0] == 0 || loc[0] == '_')
-  {
-    sprintf(buf_filename, "%s/%s/%s.buf",
-        loopDir, StripNetworkID(station), chan);
-    sprintf(idx_filename, "%s/%s/%s.idx",
-        loopDir, StripNetworkID(station), chan);
-  }
-  else
-  {
-    sprintf(buf_filename, "%s/%s/%s_%s.buf",
-        loopDir, StripNetworkID(station), loc, chan);
-    sprintf(idx_filename, "%s/%s/%s_%s.idx",
-        loopDir, StripNetworkID(station), loc, chan);
-  }
+    /* XXX
+    if (adl_open(station, loc, chan, &context) != NULL) {
+        return looperrstr;
+    }
+    */
 
-  // Make sure that buffer file exists
-  if ((fp_buf=fopen(buf_filename, "r")) == NULL)
-  {
-    // Buffer file does not exist so start a new set
-    if (NewBuffer(station, chan, loc) != NULL)
-      return looperrstr;
-  }
-  if (fp_buf != NULL) fclose(fp_buf);
+    // Get names of buffer and index files
+    DiskloopFileName(station, loc, chan, ".buf", buf_filename);
+    DiskloopFileName(station, loc, chan, ".idx", idx_filename);
 
-  // Make sure that index file exists
-  if ((fp_idx=fopen(idx_filename, "r")) == NULL)
-  {
-    // Index file does not exist so start fresh
-    if (NewBuffer(station, chan, loc) != NULL)
-      return looperrstr;
+    // Make sure that buffer file exists
+    if ((fp_buf=fopen(buf_filename, "r")) == NULL)
+    {
+        // Buffer file does not exist so start a new set
+        if (NewBuffer(station, chan, loc) != NULL)
+            return looperrstr;
+    }
+    if (fp_buf != NULL) fclose(fp_buf);
+
+    // Make sure that index file exists
     if ((fp_idx=fopen(idx_filename, "r")) == NULL)
     {
-      sprintf(looperrstr, "WriteChan: failed to find %s",
-               idx_filename);
-      return looperrstr;
-    }
-  } // unable to open index file
+        // Index file does not exist so start fresh
+        if (NewBuffer(station, chan, loc) != NULL)
+            return looperrstr;
+        if ((fp_idx=fopen(idx_filename, "r")) == NULL)
+        {
+            sprintf(looperrstr, "WriteChan: failed to find %s",
+                    idx_filename);
+            return looperrstr;
+        }
+    } // unable to open index file
 
-  // Load index info
-  if (ParseIndexInfo(fp_idx, &iRecord, &iMaxRecord) != NULL)
-  {
-    sprintf(looperrstr, "WriteChan: Index file format error in %s",
-             idx_filename);
-    fclose(fp_idx);
-    return looperrstr;
-  } // error reading index and max record value
-
-  if (iRecord < -1 || iRecord >= iMaxRecord)
-  {
-    sprintf(looperrstr, "WriteChan: Invalid index -1 <= %d < %d in %s",
-            iRecord, iMaxRecord, idx_filename);
-    fclose(fp_idx);
-    return looperrstr;
-  } // error reading index and max record value
-  fclose(fp_idx);
-
-  // Get the header for the last record written
-  if (iRecord >= 0)
-  {
-    char      tempbuf[8192];
-    char      rec_station[6];
-    char      rec_chan[4];
-    char      rec_loc[4];
-    STDTIME2  rec_tStart;
-    STDTIME2  rec_tEnd;
-    STDTIME2  cur_tStart;
-    STDTIME2  cur_tEnd;
-    DELTA_T2  tDelta;
-    long      lMs;
-    int       rec_seqnum;
-    int       rec_samples;
-    int       cur_seqnum;
-    int       cur_samples;
-    int       iRateFactor;
-    seed_header *pheader;
-
-
-    // A previous record exists
-    if (ReadLast(station, chan, loc, tempbuf) == NULL)
+    // Load index info
+    if (ParseIndexInfo(fp_idx, &iRecord, &iMaxRecord) != NULL)
     {
-      // We successfully read last record so get timespan
-      ParseSeedHeader(tempbuf, rec_station, rec_chan, rec_loc,
-                      &rec_tStart, &rec_tEnd, &rec_seqnum, &rec_samples);
-      // Get timespan for current record
-      ParseSeedHeader(databuf, rec_station, rec_chan, rec_loc,
-                      &cur_tStart, &cur_tEnd, &cur_seqnum, &cur_samples);
+        sprintf(looperrstr, "WriteChan: Index file format error in %s",
+                idx_filename);
+        fclose(fp_idx);
+        return looperrstr;
+    } // error reading index and max record value
 
-      // Test to see if this record Starts before last record ended
-      // Only test records with data in them
-      tDelta = ST_DiffTimes2(cur_tStart, rec_tEnd);
-      lMs = ST_DeltaToMS2(tDelta);
-      pheader = (seed_header *)databuf;
-      iRateFactor = (short)ntohs(pheader->sample_rate_factor);
-      if (cur_samples > 0 && rec_samples > 0 && iRateFactor != 0 &&
-          lMs < -1)
-      {
-        printf("DEBUG detected overlap (%ld) %s %s/%s new record %d vs %d.\n",
-            lMs, station, loc, chan, cur_seqnum, rec_seqnum);
-        printf("%s < ", ST_PrintDate2(cur_tStart, TRUE));
-        printf("%s\n", ST_PrintDate2(rec_tEnd, TRUE));
-      }
-      if (cur_samples > 0 && rec_samples > 0 && iRateFactor != 0 &&
-          lMs > 1)
-      {
-        printf("DEBUG detected gap (%ld) %s %s/%s new record %d vs %d.\n",
-            lMs, station, loc, chan, cur_seqnum, rec_seqnum);
-        printf("%s > ", ST_PrintDate2(cur_tStart, TRUE));
-        printf("%s\n", ST_PrintDate2(rec_tEnd, TRUE));
-      }
+    if (iRecord < -1 || iRecord >= iMaxRecord)
+    {
+        sprintf(looperrstr, "WriteChan: Invalid index -1 <= %d < %d in %s",
+                iRecord, iMaxRecord, idx_filename);
+        fclose(fp_idx);
+        return looperrstr;
+    } // error reading index and max record value
+    fclose(fp_idx);
 
-/* Remove former 4096 check for overwrite record
-      // Check for matching record number and a greater number of samples
-      if (rec_seqnum == cur_seqnum && rec_samples < cur_samples)
-      {
-        // overwrite older partial data
-        // Cause an overwrite by decrementing pointer
-        iRecord--;
-        fprintf(stdout, "Replacing duplicate data for %s %s/%s\n",
-                rec_station, rec_loc, rec_chan);
-      } // sequence numbers match, and additional data
-*/
-    } // Able to read previuos record
-  } // previous record should exist
+    // Get the header for the last record written
+    if (iRecord >= 0)
+    {
+        char      tempbuf[8192];
+        char      rec_station[6];
+        char      rec_chan[4];
+        char      rec_loc[4];
+        STDTIME2  rec_tStart;
+        STDTIME2  rec_tEnd;
+        STDTIME2  cur_tStart;
+        STDTIME2  cur_tEnd;
+        DELTA_T2  tDelta;
+        long      lMs;
+        int       rec_seqnum;
+        int       rec_samples;
+        int       cur_seqnum;
+        int       cur_samples;
+        int       iRateFactor;
+        seed_header *pheader;
 
-  // Increment index to point to next free record
-  iRecord = (iRecord + 1) % iMaxRecord;
 
-  // Open the buffer file for write access
-  if ((fp_buf=fopen(buf_filename, "r+")) == NULL)
-  {
-    // Buffer file does not exist so start a new set
-    sprintf(looperrstr, "WriteChan: Failed to open %s for updating",
-            buf_filename);
-    return looperrstr;
-  }
+        // A previous record exists
+        if (ReadLast(station, chan, loc, tempbuf) == NULL)
+        {
+            // We successfully read last record so get timespan
+            ParseSeedHeader(tempbuf, rec_station, rec_chan, rec_loc,
+                    &rec_tStart, &rec_tEnd, &rec_seqnum, &rec_samples);
+            // Get timespan for current record
+            ParseSeedHeader(databuf, rec_station, rec_chan, rec_loc,
+                    &cur_tStart, &cur_tEnd, &cur_seqnum, &cur_samples);
 
-  // Go to desired position in the circular buffer file
-  iSeek = iRecord * iLoopRecordSize;
-  fseek(fp_buf, iSeek, SEEK_SET);
-  if (iSeek != ftell(fp_buf))
-  {
-    sprintf(looperrstr, "WriteChan: Unable to seek to record %d in %s",
-            iRecord, buf_filename);
+            // Test to see if this record Starts before last record ended
+            // Only test records with data in them
+            tDelta = ST_DiffTimes2(cur_tStart, rec_tEnd);
+            lMs = ST_DeltaToMS2(tDelta);
+            pheader = (seed_header *)databuf;
+            iRateFactor = (short)ntohs(pheader->sample_rate_factor);
+            if (cur_samples > 0 && rec_samples > 0 && iRateFactor != 0 &&
+                    lMs < -1)
+            {
+                printf("DEBUG detected overlap (%ld) %s %s/%s new record %d vs %d.\n",
+                        lMs, station, loc, chan, cur_seqnum, rec_seqnum);
+                printf("%s < ", ST_PrintDate2(cur_tStart, TRUE));
+                printf("%s\n", ST_PrintDate2(rec_tEnd, TRUE));
+            }
+            if (cur_samples > 0 && rec_samples > 0 && iRateFactor != 0 &&
+                    lMs > 1)
+            {
+                printf("DEBUG detected gap (%ld) %s %s/%s new record %d vs %d.\n",
+                        lMs, station, loc, chan, cur_seqnum, rec_seqnum);
+                printf("%s > ", ST_PrintDate2(cur_tStart, TRUE));
+                printf("%s\n", ST_PrintDate2(rec_tEnd, TRUE));
+            }
+
+            /* Remove former 4096 check for overwrite record
+            // Check for matching record number and a greater number of samples
+            if (rec_seqnum == cur_seqnum && rec_samples < cur_samples)
+            {
+            // overwrite older partial data
+            // Cause an overwrite by decrementing pointer
+            iRecord--;
+            fprintf(stdout, "Replacing duplicate data for %s %s/%s\n",
+            rec_station, rec_loc, rec_chan);
+            } // sequence numbers match, and additional data
+             */
+        } // Able to read previuos record
+    } // previous record should exist
+
+    // Increment index to point to next free record
+    iRecord = (iRecord + 1) % iMaxRecord;
+
+    // Open the buffer file for write access
+    if ((fp_buf=fopen(buf_filename, "r+")) == NULL)
+    {
+        // Buffer file does not exist so start a new set
+        sprintf(looperrstr, "WriteChan: Failed to open %s for updating",
+                buf_filename);
+        return looperrstr;
+    }
+
+    // Go to desired position in the circular buffer file
+    iSeek = iRecord * iLoopRecordSize;
+    fseek(fp_buf, iSeek, SEEK_SET);
+    if (iSeek != ftell(fp_buf))
+    {
+        sprintf(looperrstr, "WriteChan: Unable to seek to record %d in %s",
+                iRecord, buf_filename);
+        fclose(fp_buf);
+        return looperrstr;
+    } // Failed to seek to required file buffer position
+
+    // Write the new record
+    if (fwrite(databuf, iLoopRecordSize, 1, fp_buf) != 1)
+    {
+        sprintf(looperrstr, "WriteChan: Unable to write record %d in %s",
+                iRecord, buf_filename);
+        databuf[0] = 0;
+        fclose(fp_buf);
+        return looperrstr;
+    } // Failed to write record
     fclose(fp_buf);
-    return looperrstr;
-  } // Failed to seek to required file buffer position
 
-  // Write the new record
-  if (fwrite(databuf, iLoopRecordSize, 1, fp_buf) != 1)
-  {
-    sprintf(looperrstr, "WriteChan: Unable to write record %d in %s",
-            iRecord, buf_filename);
-    databuf[0] = 0;
-    fclose(fp_buf);
-    return looperrstr;
-  } // Failed to write record
-  fclose(fp_buf);
+    // Write the new index values
+    if ((fp_idx=fopen(idx_filename, "r+")) == NULL)
+    {
+        // Index file does not exist so start fresh
+        sprintf(looperrstr, "WriteChan: failed to open %s for updating",
+                idx_filename);
+        return looperrstr;
+    } // unable to open index file
 
-  // Write the new index values
-  if ((fp_idx=fopen(idx_filename, "r+")) == NULL)
-  {
-    // Index file does not exist so start fresh
-    sprintf(looperrstr, "WriteChan: failed to open %s for updating",
-             idx_filename);
-    return looperrstr;
-  } // unable to open index file
+    // Update the index file
+    // index is writen three times so reader can detect midstream update
+    sprintf(msg, "%d %d", iRecord, iMaxRecord);
+    fprintf(fp_idx, "%-30.30s\n", msg);
+    fprintf(fp_idx, "%-30.30s\n", msg);
+    fprintf(fp_idx, "%-30.30s\n", msg);
+    fclose(fp_idx);
 
-  // Update the index file
-  // index is writen three times so reader can detect midstream update
-  sprintf(msg, "%d %d", iRecord, iMaxRecord);
-  fprintf(fp_idx, "%-30.30s\n", msg);
-  fprintf(fp_idx, "%-30.30s\n", msg);
-  fprintf(fp_idx, "%-30.30s\n", msg);
-  fclose(fp_idx);
-
-//fprintf(stdout, "DEBUG WriteChan %s/%s to %d/%d\n",
-//loc, chan, iRecord, iMaxRecord);
-  return NULL;
+    //fprintf(stdout, "DEBUG WriteChan %s/%s to %d/%d\n",
+    //loc, chan, iRecord, iMaxRecord);
+    return NULL;
 } // WriteChan()
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1851,844 +2560,779 @@ char *WriteChan(
 // If no data exists , the first byte of databuf will be null
 // Returns error string if something bad happened.
 char *ReadIndex(
-  const char  *station,   // station name
-  const char  *chan,      // Channel ID
-  const char  *loc,       // Location ID
-  int         index,      // Index of record to read, will wrap index if needed
-  char        *databuf    // Seed record pointer
-  )                       // returns NULL or an error string pointer
+        const char  *station,   // station name
+        const char  *chan,      // Channel ID
+        const char  *loc,       // Location ID
+        int         index,      // Index of record to read, will wrap index if needed
+        char        *databuf    // Seed record pointer
+        )                       // returns NULL or an error string pointer
 {
-  char  buf_filename[2*MAXCONFIGLINELEN+2];
-  char  idx_filename[2*MAXCONFIGLINELEN+2];
-  FILE  *fp_buf;
-  FILE  *fp_idx;
-  int   iRecord;
-  int   iMaxRecord;
-  int   iSeek;
+    char  buf_filename[2*MAXCONFIGLINELEN+2];
+    char  idx_filename[2*MAXCONFIGLINELEN+2];
+    FILE  *fp_buf;
+    FILE  *fp_idx;
+    int   iRecord;
+    int   iMaxRecord;
+    int   iSeek;
 
-  // The configuration file must be parsed before this routine can work
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "ReadLast: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
+    // The configuration file must be parsed before this routine can work
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "ReadLast: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-  // Get names of buffer and index files
-  // If blank location code, leave off leading location code in filename
-  if (loc[0] == ' ' || loc[0] == 0)
-  {
-    sprintf(buf_filename, "%s/%s/%s.buf",
-        loopDir, StripNetworkID(station), chan);
-    sprintf(idx_filename, "%s/%s/%s.idx",
-        loopDir, StripNetworkID(station), chan);
-  }
-  else
-  {
-    sprintf(buf_filename, "%s/%s/%s_%s.buf",
-        loopDir, StripNetworkID(station), loc, chan);
-    sprintf(idx_filename, "%s/%s/%s_%s.idx",
-        loopDir, StripNetworkID(station), loc, chan);
-  }
+    // Get names of buffer and index files
+    DiskloopFileName(station, loc, chan, ".buf", buf_filename);
+    DiskloopFileName(station, loc, chan, ".idx", idx_filename);
 
-  // Make sure that buffer file exists
-  if ((fp_buf=fopen(buf_filename, "r")) == NULL)
-  {
-    // Buffer file does not exist so no records to return
-    databuf[0] = 0;
+    // Make sure that buffer file exists
+    if ((fp_buf=fopen(buf_filename, "r")) == NULL)
+    {
+        // Buffer file does not exist so no records to return
+        databuf[0] = 0;
+        return NULL;
+    }
+
+    // Make sure that index file exists
+    if ((fp_idx=fopen(idx_filename, "r")) == NULL)
+    {
+        // Index file does not exist so no last record to return
+        fclose(fp_buf);
+        databuf[0] = 0;
+        return NULL;
+    }
+
+    // Load index info
+    if (ParseIndexInfo(fp_idx, &iRecord, &iMaxRecord) != NULL)
+    {
+        sprintf(looperrstr, "ReadLast: Data format error in %s",
+                idx_filename);
+        databuf[0] = 0;
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // error reading index and max record value
+
+    if (iRecord < 0 || iRecord >= iMaxRecord)
+    {
+        sprintf(looperrstr, "ReadLast: Invalid index 0 <= %d < %d in %s",
+                iRecord, iMaxRecord, idx_filename);
+        databuf[0] = 0;
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // error reading index and max record value
+
+    // Normalize user requested index
+    if (index < 0)
+        index += (1+index/iMaxRecord)*iMaxRecord;
+    if (index >= iMaxRecord)
+        index = index % iMaxRecord;
+
+    // Get data at the specified index
+    iSeek = index * iLoopRecordSize;
+    fseek(fp_buf, iSeek, SEEK_SET);
+    if (iSeek != ftell(fp_buf))
+    {
+        sprintf(looperrstr, "ReadLast: Unable to seek to record %d in %s",
+                index, buf_filename);
+        databuf[0] = 0;
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // Failed to seek to required file buffer position
+
+    if (fread(databuf, iLoopRecordSize, 1, fp_buf) != 1)
+    {
+        sprintf(looperrstr, "ReadLast: Unable to read record %d in %s",
+                iRecord, buf_filename);
+        databuf[0] = 0;
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // Failed to read record
+
+    //fprintf(stdout,"DEBUG ReadLast(%s,%s,%s) return %d/%d\n",
+    //station, chan, loc, iRecord, iMaxRecord);
+    fclose(fp_buf);
+    fclose(fp_idx);
     return NULL;
-  }
-
-  // Make sure that index file exists
-  if ((fp_idx=fopen(idx_filename, "r")) == NULL)
-  {
-    // Index file does not exist so no last record to return
-    fclose(fp_buf);
-    databuf[0] = 0;
-    return NULL;
-  }
-
-  // Load index info
-  if (ParseIndexInfo(fp_idx, &iRecord, &iMaxRecord) != NULL)
-  {
-    sprintf(looperrstr, "ReadLast: Data format error in %s",
-             idx_filename);
-    databuf[0] = 0;
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // error reading index and max record value
-
-  if (iRecord < 0 || iRecord >= iMaxRecord)
-  {
-    sprintf(looperrstr, "ReadLast: Invalid index 0 <= %d < %d in %s",
-            iRecord, iMaxRecord, idx_filename);
-    databuf[0] = 0;
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // error reading index and max record value
-
-  // Normalize user requested index
-  if (index < 0)
-    index += (1+index/iMaxRecord)*iMaxRecord;
-  if (index >= iMaxRecord)
-    index = index % iMaxRecord;
-
-  // Get data at the specified index
-  iSeek = index * iLoopRecordSize;
-  fseek(fp_buf, iSeek, SEEK_SET);
-  if (iSeek != ftell(fp_buf))
-  {
-    sprintf(looperrstr, "ReadLast: Unable to seek to record %d in %s",
-            index, buf_filename);
-    databuf[0] = 0;
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // Failed to seek to required file buffer position
-
-  if (fread(databuf, iLoopRecordSize, 1, fp_buf) != 1)
-  {
-    sprintf(looperrstr, "ReadLast: Unable to read record %d in %s",
-            iRecord, buf_filename);
-    databuf[0] = 0;
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // Failed to read record
-
-//fprintf(stdout,"DEBUG ReadLast(%s,%s,%s) return %d/%d\n",
-//station, chan, loc, iRecord, iMaxRecord);
-  fclose(fp_buf);
-  fclose(fp_idx);
-  return NULL;
 } // ReadIndex()
 
 //////////////////////////////////////////////////////////////////////////////
 // Read the last record of data written to this channel
 // Required to implement the MSA_GETARC callback from q330lib
 char *ReadLast(
-  const char  *station,   // station name
-  const char  *chan,      // Channel ID
-  const char  *loc,       // Location ID
-  char        *databuf    // Seed record pointer
-  )                       // returns NULL or an error string pointer
+        const char  *station,   // station name
+        const char  *chan,      // Channel ID
+        const char  *loc,       // Location ID
+        char        *databuf    // Seed record pointer
+        )                       // returns NULL or an error string pointer
 {
-  char  buf_filename[2*MAXCONFIGLINELEN+2];
-  char  idx_filename[2*MAXCONFIGLINELEN+2];
-  FILE  *fp_buf;
-  FILE  *fp_idx;
-  int   iRecord;
-  int   iMaxRecord;
-  int   iSeek;
+    char  buf_filename[2*MAXCONFIGLINELEN+2];
+    char  idx_filename[2*MAXCONFIGLINELEN+2];
+    FILE  *fp_buf;
+    FILE  *fp_idx;
+    int   iRecord;
+    int   iMaxRecord;
+    int   iSeek;
 
-  // The configuration file must be parsed before this routine can work
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "ReadLast: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
+    // The configuration file must be parsed before this routine can work
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "ReadLast: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
 
-  // Get names of buffer and index files
-  // If blank location code, leave off leading location code in filename
-  if (loc[0] == ' ' || loc[0] == 0)
-  {
-    sprintf(buf_filename, "%s/%s/%s.buf",
-        loopDir, StripNetworkID(station), chan);
-    sprintf(idx_filename, "%s/%s/%s.idx",
-        loopDir, StripNetworkID(station), chan);
-  }
-  else
-  {
-    sprintf(buf_filename, "%s/%s/%s_%s.buf",
-        loopDir, StripNetworkID(station), loc, chan);
-    sprintf(idx_filename, "%s/%s/%s_%s.idx",
-        loopDir, StripNetworkID(station), loc, chan);
-  }
+    // Get names of buffer and index files
+    DiskloopFileName(station, loc, chan, ".buf", buf_filename);
+    DiskloopFileName(station, loc, chan, ".idx", idx_filename);
 
-  // Make sure that buffer file exists
-  if ((fp_buf=fopen(buf_filename, "r")) == NULL)
-  {
-    // Buffer file does not exist so no last record to return
-    databuf[0] = 0;
+    // Make sure that buffer file exists
+    if ((fp_buf=fopen(buf_filename, "r")) == NULL)
+    {
+        // Buffer file does not exist so no last record to return
+        databuf[0] = 0;
+        return NULL;
+    }
+
+    // Make sure that index file exists
+    if ((fp_idx=fopen(idx_filename, "r")) == NULL)
+    {
+        // Index file does not exist so no last record to return
+        fclose(fp_buf);
+        databuf[0] = 0;
+        return NULL;
+    }
+
+    // Load index info
+    if (ParseIndexInfo(fp_idx, &iRecord, &iMaxRecord) != NULL)
+    {
+        sprintf(looperrstr, "ReadLast: Data format error in %s",
+                idx_filename);
+        databuf[0] = 0;
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // error reading index and max record value
+
+    if (iRecord < 0 || iRecord >= iMaxRecord)
+    {
+        sprintf(looperrstr, "ReadLast: Invalid index 0 <= %d < %d in %s",
+                iRecord, iMaxRecord, idx_filename);
+        databuf[0] = 0;
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // error reading index and max record value
+
+    // Get data at the specified index
+    iSeek = iRecord * iLoopRecordSize;
+    fseek(fp_buf, iSeek, SEEK_SET);
+    if (iSeek != ftell(fp_buf))
+    {
+        sprintf(looperrstr, "ReadLast: Unable to seek to record %d in %s",
+                iRecord, buf_filename);
+        databuf[0] = 0;
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // Failed to seek to required file buffer position
+
+    if (fread(databuf, iLoopRecordSize, 1, fp_buf) != 1)
+    {
+        sprintf(looperrstr, "ReadLast: Unable to read record %d in %s",
+                iRecord, buf_filename);
+        databuf[0] = 0;
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // Failed to read record
+
+    //fprintf(stdout,"DEBUG ReadLast(%s,%s,%s) return %d/%d\n",
+    //station, chan, loc, iRecord, iMaxRecord);
+    fclose(fp_buf);
+    fclose(fp_idx);
     return NULL;
-  }
-
-  // Make sure that index file exists
-  if ((fp_idx=fopen(idx_filename, "r")) == NULL)
-  {
-    // Index file does not exist so no last record to return
-    fclose(fp_buf);
-    databuf[0] = 0;
-    return NULL;
-  }
-
-  // Load index info
-  if (ParseIndexInfo(fp_idx, &iRecord, &iMaxRecord) != NULL)
-  {
-    sprintf(looperrstr, "ReadLast: Data format error in %s",
-             idx_filename);
-    databuf[0] = 0;
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // error reading index and max record value
-
-  if (iRecord < 0 || iRecord >= iMaxRecord)
-  {
-    sprintf(looperrstr, "ReadLast: Invalid index 0 <= %d < %d in %s",
-            iRecord, iMaxRecord, idx_filename);
-    databuf[0] = 0;
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // error reading index and max record value
-
-  // Get data at the specified index
-  iSeek = iRecord * iLoopRecordSize;
-  fseek(fp_buf, iSeek, SEEK_SET);
-  if (iSeek != ftell(fp_buf))
-  {
-    sprintf(looperrstr, "ReadLast: Unable to seek to record %d in %s",
-            iRecord, buf_filename);
-    databuf[0] = 0;
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // Failed to seek to required file buffer position
-
-  if (fread(databuf, iLoopRecordSize, 1, fp_buf) != 1)
-  {
-    sprintf(looperrstr, "ReadLast: Unable to read record %d in %s",
-            iRecord, buf_filename);
-    databuf[0] = 0;
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // Failed to read record
-
-//fprintf(stdout,"DEBUG ReadLast(%s,%s,%s) return %d/%d\n",
-//station, chan, loc, iRecord, iMaxRecord);
-  fclose(fp_buf);
-  fclose(fp_idx);
-  return NULL;
 } // ReadLast()
 
 //////////////////////////////////////////////////////////////////////////////
 // Read the last record of data written to this channel
 char *GetRecordRange(
-  const char  *station,   // station name
-  const char  *chan,      // Channel ID
-  const char  *loc,       // Location ID
-  STDTIME2    tBeginTime, // Start time
-  STDTIME2    tEndTime,   // End time
-  int         *iFirst,    // Returns the first record index within the time
-  int         *iLast,     // Returns the last record index within the time
-  int         *iCount,    // Returns number of records within the time
-  int         *iLoopSize  // Returns size of circular buffer in records
-  )                       // returns NULL or an error string pointer
-                          // iFirst == -1 if no records were found
+        const char  *station,   // station name
+        const char  *chan,      // Channel ID
+        const char  *loc,       // Location ID
+        STDTIME2    tBeginTime, // Start time
+        STDTIME2    tEndTime,   // End time
+        int         *iFirst,    // Returns the first record index within the time
+        int         *iLast,     // Returns the last record index within the time
+        int         *iCount,    // Returns number of records within the time
+        int         *iLoopSize  // Returns size of circular buffer in records
+        )                       // returns NULL or an error string pointer
+// iFirst == -1 if no records were found
 {
-  char  buf_filename[2*MAXCONFIGLINELEN+2];
-  char  idx_filename[2*MAXCONFIGLINELEN+2];
-  char  str_header[FRAME_SIZE];
-  char    recStation[8];
-  char    recLoc[4];
-  char    recChan[4];
-  FILE  *fp_buf;
-  FILE  *fp_idx;
-  STDTIME2    tRecStart;
-  STDTIME2    tRecEnd;
-  int   iFlipRecord;
-  int   iMaxRecord;
-  int   iRecord;
-  int   iSeek;
-  int   iHigh;
-  int   iLow;
-  int   iMid;
-  int   iPre;
-  int   iPost;
-  int   iCmp;
-  int   iSeqNum;
-  int   iSamples;
+    char  buf_filename[2*MAXCONFIGLINELEN+2];
+    char  idx_filename[2*MAXCONFIGLINELEN+2];
+    char  str_header[FRAME_SIZE];
+    char    recStation[8];
+    char    recLoc[4];
+    char    recChan[4];
+    FILE  *fp_buf;
+    FILE  *fp_idx;
+    STDTIME2    tRecStart;
+    STDTIME2    tRecEnd;
+    int   iFlipRecord;
+    int   iMaxRecord;
+    int   iRecord;
+    int   iSeek;
+    int   iHigh;
+    int   iLow;
+    int   iMid;
+    int   iPre;
+    int   iPost;
+    int   iCmp;
+    int   iSeqNum;
+    int   iSamples;
 
-  *iFirst = *iLast = *iLoopSize = -1;
-  *iCount = 0;
-
-  // The configuration file must be parsed before this routine can work
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "GetRecordRange: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
-
-  // Get names of buffer and index files
-  // If blank location code, leave off leading location code in filename
-  if (loc[0] == ' ' || loc[0] == 0)
-  {
-    sprintf(buf_filename, "%s/%s/%s.buf",
-        loopDir, StripNetworkID(station), chan);
-    sprintf(idx_filename, "%s/%s/%s.idx",
-        loopDir, StripNetworkID(station), chan);
-  }
-  else
-  {
-    sprintf(buf_filename, "%s/%s/%s_%s.buf",
-        loopDir, StripNetworkID(station), loc, chan);
-    sprintf(idx_filename, "%s/%s/%s_%s.idx",
-        loopDir, StripNetworkID(station), loc, chan);
-  }
-
-  // Make sure that buffer file exists
-  if ((fp_buf=fopen(buf_filename, "r")) == NULL)
-  {
-    // Buffer file does not exist so no last record to return
-    return NULL;
-  }
-
-  // Make sure that index file exists
-  if ((fp_idx=fopen(idx_filename, "r")) == NULL)
-  {
-    // Index file does not exist so no last record to return
-    fclose(fp_buf);
-    return NULL;
-  }
-
-  // Load index info
-  if (ParseIndexInfo(fp_idx, &iFlipRecord, &iMaxRecord) != NULL)
-  {
-    sprintf(looperrstr, "GetRecordRange: Data format error in %s",
-             idx_filename);
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // error reading index and max record value
-
-  // Skip records just ahead of write point as a safety buffer
-  iLow = LOOPDEADRECORDS+1;
-  iHigh = iMaxRecord;
-
-  // Check for special case of circular buffer has not yet been filled once
-  // If missing records would compose our dead space we don't care
-  fseek(fp_buf, 0, SEEK_END);
-  iSeek = ftell(fp_buf);
-  if ((iMaxRecord-LOOPDEADRECORDS) * iLoopRecordSize > iSeek)
-  {
-    iMaxRecord = iSeek/iLoopRecordSize;
-    iHigh = iMaxRecord;
-    iLow = 1;
-  }
-
-  *iLoopSize = iMaxRecord;
-  if (iFlipRecord < 0 || iFlipRecord >= iMaxRecord)
-  {
-    sprintf(looperrstr, "GetRecordRange: Invalid index 0 <= %d < %d in %s",
-            iFlipRecord, iMaxRecord, idx_filename);
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // error reading index and max record value
-
-  //
-  // Binary search for last record with End time before tBeginTime
-  while (iLow <= iHigh)
-  {
-    // Get mid point for our binary search test
-    iMid = (iHigh+iLow)/2;
-
-    // Convert iMid to a record offset inside circular buffer
-    iRecord = (iFlipRecord+iMid) % iMaxRecord;
-
-    // Seek to the record position
-    iSeek = iRecord * iLoopRecordSize;
-    fseek(fp_buf, iSeek, SEEK_SET);
-    if (iSeek != ftell(fp_buf))
-    {
-      // Seek should never fail if we set up correctly
-      sprintf(looperrstr, "GetRecordRange: Unable to seek to record %d in %s",
-              iRecord, buf_filename);
-      fclose(fp_buf);
-      fclose(fp_idx);
-      return looperrstr;
-    } // Failed to seek to required file buffer position
-
-    // Read in the header only
-    if (fread(str_header, FRAME_SIZE, 1, fp_buf) != 1)
-    {
-      // read should never fail if we set up correctly
-      sprintf(looperrstr, "GetRecordRange: Unable to read record %d in %s",
-              iRecord, buf_filename);
-      fclose(fp_buf);
-      fclose(fp_idx);
-      return looperrstr;
-    } // Failed to read record
-
-    // parse out header string
-    if (ParseSeedHeader(str_header, recStation, recChan, recLoc,
-                &tRecStart, &tRecEnd, &iSeqNum, &iSamples) != NULL)
-    {
-      fclose(fp_buf);
-      fclose(fp_idx);
-      return looperrstr;
-    } // error parsing header
-
-    // See if record End Time is after desired start time
-    if ((iCmp=ST_TimeComp2(tRecEnd, tBeginTime)) >= 0)
-    {
-      // Need to find an earlier record
-      iHigh = iMid-1;
-    }
-    else
-    {
-      // Need to find a later record
-      iLow = iMid+1;
-    }
-  } // Binary search while loop
-
-  // iHigh now points to first record completely before time span of interest
-  iPre = iHigh;
-
-  //
-  // Binary search for first record with Start time after tEndTime
-  iLow = iPre+1;
-  iHigh = iMaxRecord;
-  while (iLow <= iHigh)
-  {
-    // Get mid point for our binary search test
-    iMid = (iHigh+iLow)/2;
-
-    // Convert iMid to a record offset inside circular buffer
-    iRecord = (iFlipRecord+iMid) % iMaxRecord;
-
-    // Seek to the record position
-    iSeek = iRecord * iLoopRecordSize;
-    fseek(fp_buf, iSeek, SEEK_SET);
-    if (iSeek != ftell(fp_buf))
-    {
-      sprintf(looperrstr, "GetRecordRange: Unable to seek to record %d in %s",
-              iRecord, buf_filename);
-      fclose(fp_buf);
-      fclose(fp_idx);
-      return looperrstr;
-    } // Failed to seek to required file buffer position
-
-    // Read in the header only
-    if (fread(str_header, FRAME_SIZE, 1, fp_buf) != 1)
-    {
-      // read should never fail if we set up correctly
-      sprintf(looperrstr, "GetRecordRange: Unable to read record %d in %s",
-              iRecord, buf_filename);
-      fclose(fp_buf);
-      fclose(fp_idx);
-      return looperrstr;
-    } // Failed to read record
-
-    // parse out header string
-    if (ParseSeedHeader(str_header, recStation, recChan, recLoc,
-                &tRecStart, &tRecEnd, &iSamples, &iSeqNum) != NULL)
-    {
-      fclose(fp_buf);
-      fclose(fp_idx);
-      return looperrstr;
-    } // error parsing header
-
-    // See if record Start time is after desired end time
-    if (ST_TimeComp2(tRecStart, tEndTime) > 0)
-    {
-      // Need to find an earlier record
-      iHigh = iMid-1;
-    }
-    else
-      iLow = iMid+1;
-  } // Binary search while loop
-
-  // iLow points to first record completely after time span of interest
-  iPost = iLow;
-
-  // Check for case of no records within desired time span
-  *iCount = iPost - iPre - 1;
-  if (*iCount < 1)
-  {
-    *iFirst = -1;
+    *iFirst = *iLast = *iLoopSize = -1;
     *iCount = 0;
-  }
-  else
-  {
-    *iFirst = (iPre + 1 + iFlipRecord) % iMaxRecord;
-    *iLast = (iPost - 1 + iFlipRecord) % iMaxRecord;
-  }
 
-  fclose(fp_buf);
-  fclose(fp_idx);
+    // The configuration file must be parsed before this routine can work
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "GetRecordRange: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-  return NULL;
+    // Get names of buffer and index files
+    DiskloopFileName(station, loc, chan, ".buf", buf_filename);
+    DiskloopFileName(station, loc, chan, ".idx", idx_filename);
+
+    // Make sure that buffer file exists
+    if ((fp_buf=fopen(buf_filename, "r")) == NULL)
+    {
+        // Buffer file does not exist so no last record to return
+        return NULL;
+    }
+
+    // Make sure that index file exists
+    if ((fp_idx=fopen(idx_filename, "r")) == NULL)
+    {
+        // Index file does not exist so no last record to return
+        fclose(fp_buf);
+        return NULL;
+    }
+
+    // Load index info
+    if (ParseIndexInfo(fp_idx, &iFlipRecord, &iMaxRecord) != NULL)
+    {
+        sprintf(looperrstr, "GetRecordRange: Data format error in %s",
+                idx_filename);
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // error reading index and max record value
+
+    // Skip records just ahead of write point as a safety buffer
+    iLow = LOOPDEADRECORDS+1;
+    iHigh = iMaxRecord;
+
+    // Check for special case of circular buffer has not yet been filled once
+    // If missing records would compose our dead space we don't care
+    fseek(fp_buf, 0, SEEK_END);
+    iSeek = ftell(fp_buf);
+    if ((iMaxRecord-LOOPDEADRECORDS) * iLoopRecordSize > iSeek)
+    {
+        iMaxRecord = iSeek/iLoopRecordSize;
+        iHigh = iMaxRecord;
+        iLow = 1;
+    }
+
+    *iLoopSize = iMaxRecord;
+    if (iFlipRecord < 0 || iFlipRecord >= iMaxRecord)
+    {
+        sprintf(looperrstr, "GetRecordRange: Invalid index 0 <= %d < %d in %s",
+                iFlipRecord, iMaxRecord, idx_filename);
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // error reading index and max record value
+
+    //
+    // Binary search for last record with End time before tBeginTime
+    while (iLow <= iHigh)
+    {
+        // Get mid point for our binary search test
+        iMid = (iHigh+iLow)/2;
+
+        // Convert iMid to a record offset inside circular buffer
+        iRecord = (iFlipRecord+iMid) % iMaxRecord;
+
+        // Seek to the record position
+        iSeek = iRecord * iLoopRecordSize;
+        fseek(fp_buf, iSeek, SEEK_SET);
+        if (iSeek != ftell(fp_buf))
+        {
+            // Seek should never fail if we set up correctly
+            sprintf(looperrstr, "GetRecordRange: Unable to seek to record %d in %s",
+                    iRecord, buf_filename);
+            fclose(fp_buf);
+            fclose(fp_idx);
+            return looperrstr;
+        } // Failed to seek to required file buffer position
+
+        // Read in the header only
+        if (fread(str_header, FRAME_SIZE, 1, fp_buf) != 1)
+        {
+            // read should never fail if we set up correctly
+            sprintf(looperrstr, "GetRecordRange: Unable to read record %d in %s",
+                    iRecord, buf_filename);
+            fclose(fp_buf);
+            fclose(fp_idx);
+            return looperrstr;
+        } // Failed to read record
+
+        // parse out header string
+        if (ParseSeedHeader(str_header, recStation, recChan, recLoc,
+                    &tRecStart, &tRecEnd, &iSeqNum, &iSamples) != NULL)
+        {
+            fclose(fp_buf);
+            fclose(fp_idx);
+            return looperrstr;
+        } // error parsing header
+
+        // See if record End Time is after desired start time
+        if ((iCmp=ST_TimeComp2(tRecEnd, tBeginTime)) >= 0)
+        {
+            // Need to find an earlier record
+            iHigh = iMid-1;
+        }
+        else
+        {
+            // Need to find a later record
+            iLow = iMid+1;
+        }
+    } // Binary search while loop
+
+    // iHigh now points to first record completely before time span of interest
+    iPre = iHigh;
+
+    //
+    // Binary search for first record with Start time after tEndTime
+    iLow = iPre+1;
+    iHigh = iMaxRecord;
+    while (iLow <= iHigh)
+    {
+        // Get mid point for our binary search test
+        iMid = (iHigh+iLow)/2;
+
+        // Convert iMid to a record offset inside circular buffer
+        iRecord = (iFlipRecord+iMid) % iMaxRecord;
+
+        // Seek to the record position
+        iSeek = iRecord * iLoopRecordSize;
+        fseek(fp_buf, iSeek, SEEK_SET);
+        if (iSeek != ftell(fp_buf))
+        {
+            sprintf(looperrstr, "GetRecordRange: Unable to seek to record %d in %s",
+                    iRecord, buf_filename);
+            fclose(fp_buf);
+            fclose(fp_idx);
+            return looperrstr;
+        } // Failed to seek to required file buffer position
+
+        // Read in the header only
+        if (fread(str_header, FRAME_SIZE, 1, fp_buf) != 1)
+        {
+            // read should never fail if we set up correctly
+            sprintf(looperrstr, "GetRecordRange: Unable to read record %d in %s",
+                    iRecord, buf_filename);
+            fclose(fp_buf);
+            fclose(fp_idx);
+            return looperrstr;
+        } // Failed to read record
+
+        // parse out header string
+        if (ParseSeedHeader(str_header, recStation, recChan, recLoc,
+                    &tRecStart, &tRecEnd, &iSamples, &iSeqNum) != NULL)
+        {
+            fclose(fp_buf);
+            fclose(fp_idx);
+            return looperrstr;
+        } // error parsing header
+
+        // See if record Start time is after desired end time
+        if (ST_TimeComp2(tRecStart, tEndTime) > 0)
+        {
+            // Need to find an earlier record
+            iHigh = iMid-1;
+        }
+        else
+            iLow = iMid+1;
+    } // Binary search while loop
+
+    // iLow points to first record completely after time span of interest
+    iPost = iLow;
+
+    // Check for case of no records within desired time span
+    *iCount = iPost - iPre - 1;
+    if (*iCount < 1)
+    {
+        *iFirst = -1;
+        *iCount = 0;
+    }
+    else
+    {
+        *iFirst = (iPre + 1 + iFlipRecord) % iMaxRecord;
+        *iLast = (iPost - 1 + iFlipRecord) % iMaxRecord;
+    }
+
+    fclose(fp_buf);
+    fclose(fp_idx);
+
+    return NULL;
 } // GetRecordRange()
 
 //////////////////////////////////////////////////////////////////////////////
 // Print a list of all the spans for the given channel
 char *DumpSpans(
-  const char  *station,   // station name
-  const char  *chan,      // Channel ID
-  const char  *loc        // Location ID
-  )                       // returns NULL or an error string pointer
+        const char  *station,   // station name
+        const char  *chan,      // Channel ID
+        const char  *loc        // Location ID
+        )                       // returns NULL or an error string pointer
 {
-  char  buf_filename[2*MAXCONFIGLINELEN+2];
-  char  idx_filename[2*MAXCONFIGLINELEN+2];
-  char  str_header[FRAME_SIZE];
-  char    recStation[8];
-  char    recLoc[4];
-  char    recChan[4];
-  FILE  *fp_buf;
-  FILE  *fp_idx;
-  STDTIME2    tRecStart;
-  STDTIME2    tRecEnd;
-  DELTA_T2    tDeltaT;
-  long        lDeltaTMS;
-  int   iFlipRecord;
-  int   iMaxRecord;
-  int   iRecord;
-  int   iSeek;
-  int   iMid;
-  int   iSpanIndex;
-  int   bFirst=1;
-  int   iCount;
-  int   iSeqNum;
-  int   iSamples;
-  STDTIME2    tSpanStart;
-  STDTIME2    tSpanEnd;
+    char  buf_filename[2*MAXCONFIGLINELEN+2];
+    char  idx_filename[2*MAXCONFIGLINELEN+2];
+    char  str_header[FRAME_SIZE];
+    char    recStation[8];
+    char    recLoc[4];
+    char    recChan[4];
+    FILE  *fp_buf;
+    FILE  *fp_idx;
+    STDTIME2    tRecStart;
+    STDTIME2    tRecEnd;
+    DELTA_T2    tDeltaT;
+    long        lDeltaTMS;
+    int   iFlipRecord;
+    int   iMaxRecord;
+    int   iRecord;
+    int   iSeek;
+    int   iMid;
+    int   iSpanIndex;
+    int   bFirst=1;
+    int   iCount;
+    int   iSeqNum;
+    int   iSamples;
+    STDTIME2    tSpanStart;
+    STDTIME2    tSpanEnd;
 
 
-  // The configuration file must be parsed before this routine can work
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "DumpSpans: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
-
-  // Get names of buffer and index files
-  // If blank location code, leave off leading location code in filename
-  if (loc[0] == ' ' || loc[0] == 0)
-  {
-    sprintf(buf_filename, "%s/%s/%s.buf",
-        loopDir, StripNetworkID(station), chan);
-    sprintf(idx_filename, "%s/%s/%s.idx",
-        loopDir, StripNetworkID(station), chan);
-  }
-  else
-  {
-    sprintf(buf_filename, "%s/%s/%s_%s.buf",
-        loopDir, StripNetworkID(station), loc, chan);
-    sprintf(idx_filename, "%s/%s/%s_%s.idx",
-        loopDir, StripNetworkID(station), loc, chan);
-  }
-
-  // Make sure that buffer file exists
-  if ((fp_buf=fopen(buf_filename, "r")) == NULL)
-  {
-    // Buffer file does not exist so no last record to return
-    return NULL;
-  }
-
-  // Make sure that index file exists
-  if ((fp_idx=fopen(idx_filename, "r")) == NULL)
-  {
-    // Index file does not exist so no last record to return
-    fclose(fp_buf);
-    return NULL;
-  }
-
-  // Load index info
-  if (ParseIndexInfo(fp_idx, &iFlipRecord, &iMaxRecord) != NULL)
-  {
-    sprintf(looperrstr, "DumpSpans: Data format error in %s",
-             idx_filename);
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // error reading index and max record value
-
-  if (iFlipRecord < 0 || iFlipRecord >= iMaxRecord)
-  {
-    sprintf(looperrstr, "DumpSpans: Invalid index 0 <= %d < %d in %s",
-            iFlipRecord, iMaxRecord, idx_filename);
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // error reading index and max record value
-
-  // Verify what the last record is in case buffer has never been filled
-  iMid = LOOPDEADRECORDS+1;
-  fseek(fp_buf, 0, SEEK_END);
-  iSeek = ftell(fp_buf);
-  if ((iMaxRecord-LOOPDEADRECORDS) * iLoopRecordSize > iSeek)
-  {
-    printf("Circular buffer filling, %d of %d records total filled.\n",
-      iSeek/iLoopRecordSize, iMaxRecord);
-    iMaxRecord = iSeek/iLoopRecordSize;
-    iMid = 1;
-  }
-
-  // Loop through all records in file
-  bFirst = 1;
-  iCount = 0;
-  for (; iMid <= iMaxRecord; iMid++)
-  {
-    // Convert iMid to a record offset inside circular buffer
-    iRecord = (iFlipRecord+iMid) % iMaxRecord;
-    if (bFirst)
-      iSpanIndex = iRecord;
-
-    // Seek to the record position
-    iSeek = iRecord * iLoopRecordSize;
-    fseek(fp_buf, iSeek, SEEK_SET);
-    if (iSeek != ftell(fp_buf))
+    // The configuration file must be parsed before this routine can work
+    if (parse_state == 0)
     {
-      // If seek failed, assume we hit the end of file
-      sprintf(looperrstr, "DumpSpans: Unable to seek to header %d in %s",
-              iRecord, buf_filename);
-      fclose(fp_buf);
-      fclose(fp_idx);
-      return looperrstr;
-    } // Failed to seek to required file buffer position
+        sprintf(looperrstr, "DumpSpans: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-    // Read in the header only
-    if (fread(str_header, FRAME_SIZE, 1, fp_buf) != 1)
+    // Get names of buffer and index files
+    DiskloopFileName(station, loc, chan, ".buf", buf_filename);
+    DiskloopFileName(station, loc, chan, ".idx", idx_filename);
+
+    // Make sure that buffer file exists
+    if ((fp_buf=fopen(buf_filename, "r")) == NULL)
     {
-      
-      sprintf(looperrstr, "DumpSpans: Unable to read header %d in %s",
-              iRecord, buf_filename);
-      fclose(fp_buf);
-      fclose(fp_idx);
-      return looperrstr;
-    } // Failed to read record
+        // Buffer file does not exist so no last record to return
+        return NULL;
+    }
 
-    // parse out header info
-    if (ParseSeedHeader(str_header, recStation, recChan, recLoc,
-                &tRecStart, &tRecEnd, &iSeqNum, &iSamples) != NULL)
+    // Make sure that index file exists
+    if ((fp_idx=fopen(idx_filename, "r")) == NULL)
     {
-      fclose(fp_buf);
-      fclose(fp_idx);
-      return looperrstr;
-    } // error parsing header
+        // Index file does not exist so no last record to return
+        fclose(fp_buf);
+        return NULL;
+    }
 
-    // If not first record, check for gap
-    if (!bFirst)
+    // Load index info
+    if (ParseIndexInfo(fp_idx, &iFlipRecord, &iMaxRecord) != NULL)
     {
-      tDeltaT = ST_DiffTimes2(tRecStart, tSpanEnd);
-      lDeltaTMS = ST_DeltaToMS2(tDeltaT);
+        sprintf(looperrstr, "DumpSpans: Data format error in %s",
+                idx_filename);
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // error reading index and max record value
 
-      if (lDeltaTMS > 10 || lDeltaTMS < -10)
-      {
-        printf("%s %s/%s Span %s",
+    if (iFlipRecord < 0 || iFlipRecord >= iMaxRecord)
+    {
+        sprintf(looperrstr, "DumpSpans: Invalid index 0 <= %d < %d in %s",
+                iFlipRecord, iMaxRecord, idx_filename);
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // error reading index and max record value
+
+    // Verify what the last record is in case buffer has never been filled
+    iMid = LOOPDEADRECORDS+1;
+    fseek(fp_buf, 0, SEEK_END);
+    iSeek = ftell(fp_buf);
+    if ((iMaxRecord-LOOPDEADRECORDS) * iLoopRecordSize > iSeek)
+    {
+        printf("Circular buffer filling, %d of %d records total filled.\n",
+                iSeek/iLoopRecordSize, iMaxRecord);
+        iMaxRecord = iSeek/iLoopRecordSize;
+        iMid = 1;
+    }
+
+    // Loop through all records in file
+    bFirst = 1;
+    iCount = 0;
+    for (; iMid <= iMaxRecord; iMid++)
+    {
+        // Convert iMid to a record offset inside circular buffer
+        iRecord = (iFlipRecord+iMid) % iMaxRecord;
+        if (bFirst)
+            iSpanIndex = iRecord;
+
+        // Seek to the record position
+        iSeek = iRecord * iLoopRecordSize;
+        fseek(fp_buf, iSeek, SEEK_SET);
+        if (iSeek != ftell(fp_buf))
+        {
+            // If seek failed, assume we hit the end of file
+            sprintf(looperrstr, "DumpSpans: Unable to seek to header %d in %s",
+                    iRecord, buf_filename);
+            fclose(fp_buf);
+            fclose(fp_idx);
+            return looperrstr;
+        } // Failed to seek to required file buffer position
+
+        // Read in the header only
+        if (fread(str_header, FRAME_SIZE, 1, fp_buf) != 1)
+        {
+
+            sprintf(looperrstr, "DumpSpans: Unable to read header %d in %s",
+                    iRecord, buf_filename);
+            fclose(fp_buf);
+            fclose(fp_idx);
+            return looperrstr;
+        } // Failed to read record
+
+        // parse out header info
+        if (ParseSeedHeader(str_header, recStation, recChan, recLoc,
+                    &tRecStart, &tRecEnd, &iSeqNum, &iSamples) != NULL)
+        {
+            fclose(fp_buf);
+            fclose(fp_idx);
+            return looperrstr;
+        } // error parsing header
+
+        // If not first record, check for gap
+        if (!bFirst)
+        {
+            tDeltaT = ST_DiffTimes2(tRecStart, tSpanEnd);
+            lDeltaTMS = ST_DeltaToMS2(tDeltaT);
+
+            if (lDeltaTMS > 10 || lDeltaTMS < -10)
+            {
+                printf("%s %s/%s Span %s",
+                        station, loc, chan, ST_PrintDate2(tSpanStart, 1));
+                printf(" to %s %d records, start index %d, %ld tms gap\n",
+                        ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex, lDeltaTMS);
+
+                // Remember new span start time
+                tSpanStart = tRecStart;
+                iSpanIndex = iRecord;
+                iCount=0;
+            }  // found a gap or overlap
+        } // Not the first record
+        else
+        {
+            tSpanStart = tRecStart;
+            bFirst = 0;
+        } // first record
+
+        tSpanEnd = tRecEnd;
+        iCount++;
+    } // loop through all records
+
+    // Print out last remaining span
+    printf("%s %s/%s Span %s",
             station, loc, chan, ST_PrintDate2(tSpanStart, 1));
-        printf(" to %s %d records, start index %d, %ld tms gap\n",
-            ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex, lDeltaTMS);
+    printf(" to %s %d records, start index %d\n",
+            ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex);
 
-        // Remember new span start time
-        tSpanStart = tRecStart;
-        iSpanIndex = iRecord;
-        iCount=0;
-      }  // found a gap or overlap
-    } // Not the first record
-    else
-    {
-      tSpanStart = tRecStart;
-      bFirst = 0;
-    } // first record
-    
-    tSpanEnd = tRecEnd;
-    iCount++;
-  } // loop through all records
+    fclose(fp_buf);
+    fclose(fp_idx);
 
-  // Print out last remaining span
-  printf("%s %s/%s Span %s",
-      station, loc, chan, ST_PrintDate2(tSpanStart, 1));
-  printf(" to %s %d records, start index %d\n",
-      ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex);
-
-  fclose(fp_buf);
-  fclose(fp_idx);
-
-  return NULL;
+    return NULL;
 } // DumpSpans()
 
 //////////////////////////////////////////////////////////////////////////////
 // Print a list of all the spans for the given channel
 char *RangeSpans(
-  const char  *station,    // station name
-  const char  *chan,       // Channel ID
-  const char  *loc,        // Location ID
-  int         firstRecord, // First record in range
-  int         lastRecord   // Last record in range
-  )                        // returns NULL or an error string pointer
+        const char  *station,    // station name
+        const char  *chan,       // Channel ID
+        const char  *loc,        // Location ID
+        int         firstRecord, // First record in range
+        int         lastRecord   // Last record in range
+        )                        // returns NULL or an error string pointer
 {
-  char  buf_filename[2*MAXCONFIGLINELEN+2];
-  char  idx_filename[2*MAXCONFIGLINELEN+2];
-  char  str_header[FRAME_SIZE];
-  char    recStation[8];
-  char    recLoc[4];
-  char    recChan[4];
-  FILE  *fp_buf;
-  FILE  *fp_idx;
-  STDTIME2    tRecStart;
-  STDTIME2    tRecEnd;
-  DELTA_T2    tDeltaT;
-  long        lDeltaTMS;
-  int   iFlipRecord;
-  int   iMaxRecord;
-  int   iRecord;
-  int   iSeek;
-  int   iMid;
-  int   iSpanIndex;
-  int   bFirst=1;
-  int   iCount;
-  int   iSeqNum;
-  int   iSamples;
-  STDTIME2    tSpanStart;
-  STDTIME2    tSpanEnd;
+    char  buf_filename[2*MAXCONFIGLINELEN+2];
+    char  idx_filename[2*MAXCONFIGLINELEN+2];
+    char  str_header[FRAME_SIZE];
+    char    recStation[8];
+    char    recLoc[4];
+    char    recChan[4];
+    FILE  *fp_buf;
+    FILE  *fp_idx;
+    STDTIME2    tRecStart;
+    STDTIME2    tRecEnd;
+    DELTA_T2    tDeltaT;
+    long        lDeltaTMS;
+    int   iFlipRecord;
+    int   iMaxRecord;
+    int   iRecord;
+    int   iSeek;
+    int   iMid;
+    int   iSpanIndex;
+    int   bFirst=1;
+    int   iCount;
+    int   iSeqNum;
+    int   iSamples;
+    STDTIME2    tSpanStart;
+    STDTIME2    tSpanEnd;
 
 
-  // The configuration file must be parsed before this routine can work
-  if (parse_state == 0)
-  {
-    sprintf(looperrstr, "RangeSpans: ParseDiskLoopConfig not run yet");
-    return looperrstr;
-  }
-
-  // Get names of buffer and index files
-  // If blank location code, leave off leading location code in filename
-  if (loc[0] == ' ' || loc[0] == 0)
-  {
-    sprintf(buf_filename, "%s/%s/%s.buf",
-        loopDir, StripNetworkID(station), chan);
-    sprintf(idx_filename, "%s/%s/%s.idx",
-        loopDir, StripNetworkID(station), chan);
-  }
-  else
-  {
-    sprintf(buf_filename, "%s/%s/%s_%s.buf",
-        loopDir, StripNetworkID(station), loc, chan);
-    sprintf(idx_filename, "%s/%s/%s_%s.idx",
-        loopDir, StripNetworkID(station), loc, chan);
-  }
-
-  // Make sure that buffer file exists
-  if ((fp_buf=fopen(buf_filename, "r")) == NULL)
-  {
-    // Buffer file does not exist so no last record to return
-    return NULL;
-  }
-
-  // Make sure that index file exists
-  if ((fp_idx=fopen(idx_filename, "r")) == NULL)
-  {
-    // Index file does not exist so no last record to return
-    fclose(fp_buf);
-    return NULL;
-  }
-
-  // Load index info
-  if (ParseIndexInfo(fp_idx, &iFlipRecord, &iMaxRecord) != NULL)
-  {
-    sprintf(looperrstr, "RangeSpans: Data format error in %s",
-             idx_filename);
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // error reading index and max record value
-
-  if (iFlipRecord < 0 || iFlipRecord >= iMaxRecord)
-  {
-    sprintf(looperrstr, "RangeSpans: Invalid index 0 <= %d < %d in %s",
-            iFlipRecord, iMaxRecord, idx_filename);
-    fclose(fp_buf);
-    fclose(fp_idx);
-    return looperrstr;
-  } // error reading index and max record value
-
-  // Loop through all records in file
-  bFirst = 1;
-  iCount = 0;
-  for (iMid=firstRecord; (iMid%iMaxRecord) != ((lastRecord+1)%iMaxRecord);
-       iMid++)
-  {
-    // Convert iMid to a record offset inside circular buffer
-    iRecord = iMid % iMaxRecord;
-    if (bFirst)
-      iSpanIndex = iRecord;
-
-    // Seek to the record position
-    iSeek = iRecord * iLoopRecordSize;
-    fseek(fp_buf, iSeek, SEEK_SET);
-    if (iSeek != ftell(fp_buf))
+    // The configuration file must be parsed before this routine can work
+    if (parse_state == 0)
     {
-      // If seek failed, assume we hit the end of file
-      sprintf(looperrstr, "RangeSpans: Unable to seek to header %d in %s",
-              iRecord, buf_filename);
-      fclose(fp_buf);
-      fclose(fp_idx);
-      return looperrstr;
-    } // Failed to seek to required file buffer position
+        sprintf(looperrstr, "RangeSpans: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
 
-    // Read in the header only
-    if (fread(str_header, FRAME_SIZE, 1, fp_buf) != 1)
+    // Get names of buffer and index files
+    DiskloopFileName(station, loc, chan, ".buf", buf_filename);
+    DiskloopFileName(station, loc, chan, ".idx", idx_filename);
+
+    // Make sure that buffer file exists
+    if ((fp_buf=fopen(buf_filename, "r")) == NULL)
     {
-      
-      sprintf(looperrstr, "RangeSpans: Unable to read header %d in %s",
-              iRecord, buf_filename);
-      fclose(fp_buf);
-      fclose(fp_idx);
-      return looperrstr;
-    } // Failed to read record
+        // Buffer file does not exist so no last record to return
+        return NULL;
+    }
 
-    // parse out header info
-    if (ParseSeedHeader(str_header, recStation, recChan, recLoc,
-                &tRecStart, &tRecEnd, &iSeqNum, &iSamples) != NULL)
+    // Make sure that index file exists
+    if ((fp_idx=fopen(idx_filename, "r")) == NULL)
     {
-      fclose(fp_buf);
-      fclose(fp_idx);
-      return looperrstr;
-    } // error parsing header
+        // Index file does not exist so no last record to return
+        fclose(fp_buf);
+        return NULL;
+    }
 
-    // If not first record, check for gap
-    if (!bFirst)
+    // Load index info
+    if (ParseIndexInfo(fp_idx, &iFlipRecord, &iMaxRecord) != NULL)
     {
-      tDeltaT = ST_DiffTimes2(tRecStart, tSpanEnd);
-      lDeltaTMS = ST_DeltaToMS2(tDeltaT);
+        sprintf(looperrstr, "RangeSpans: Data format error in %s",
+                idx_filename);
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // error reading index and max record value
 
-      if (lDeltaTMS > 10 || lDeltaTMS < -10)
-      {
-        printf("%s %s/%s Span %s",
+    if (iFlipRecord < 0 || iFlipRecord >= iMaxRecord)
+    {
+        sprintf(looperrstr, "RangeSpans: Invalid index 0 <= %d < %d in %s",
+                iFlipRecord, iMaxRecord, idx_filename);
+        fclose(fp_buf);
+        fclose(fp_idx);
+        return looperrstr;
+    } // error reading index and max record value
+
+    // Loop through all records in file
+    bFirst = 1;
+    iCount = 0;
+    for (iMid=firstRecord; (iMid%iMaxRecord) != ((lastRecord+1)%iMaxRecord);
+            iMid++)
+    {
+        // Convert iMid to a record offset inside circular buffer
+        iRecord = iMid % iMaxRecord;
+        if (bFirst)
+            iSpanIndex = iRecord;
+
+        // Seek to the record position
+        iSeek = iRecord * iLoopRecordSize;
+        fseek(fp_buf, iSeek, SEEK_SET);
+        if (iSeek != ftell(fp_buf))
+        {
+            // If seek failed, assume we hit the end of file
+            sprintf(looperrstr, "RangeSpans: Unable to seek to header %d in %s",
+                    iRecord, buf_filename);
+            fclose(fp_buf);
+            fclose(fp_idx);
+            return looperrstr;
+        } // Failed to seek to required file buffer position
+
+        // Read in the header only
+        if (fread(str_header, FRAME_SIZE, 1, fp_buf) != 1)
+        {
+
+            sprintf(looperrstr, "RangeSpans: Unable to read header %d in %s",
+                    iRecord, buf_filename);
+            fclose(fp_buf);
+            fclose(fp_idx);
+            return looperrstr;
+        } // Failed to read record
+
+        // parse out header info
+        if (ParseSeedHeader(str_header, recStation, recChan, recLoc,
+                    &tRecStart, &tRecEnd, &iSeqNum, &iSamples) != NULL)
+        {
+            fclose(fp_buf);
+            fclose(fp_idx);
+            return looperrstr;
+        } // error parsing header
+
+        // If not first record, check for gap
+        if (!bFirst)
+        {
+            tDeltaT = ST_DiffTimes2(tRecStart, tSpanEnd);
+            lDeltaTMS = ST_DeltaToMS2(tDeltaT);
+
+            if (lDeltaTMS > 10 || lDeltaTMS < -10)
+            {
+                printf("%s %s/%s Span %s",
+                        station, loc, chan, ST_PrintDate2(tSpanStart, 1));
+                printf(" to %s %d records, start index %d, %ld tms gap\n",
+                        ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex, lDeltaTMS);
+
+                // Remember new span start time
+                tSpanStart = tRecStart;
+                iSpanIndex = iRecord;
+                iCount=0;
+            }  // found a gap or overlap
+        } // Not the first record
+        else
+        {
+            tSpanStart = tRecStart;
+            bFirst = 0;
+        } // first record
+
+        tSpanEnd = tRecEnd;
+        iCount++;
+    } // loop through all records
+
+    // Print out last remaining span
+    printf("%s %s/%s Span %s",
             station, loc, chan, ST_PrintDate2(tSpanStart, 1));
-        printf(" to %s %d records, start index %d, %ld tms gap\n",
-            ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex, lDeltaTMS);
+    printf(" to %s %d records, start index %d\n",
+            ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex);
 
-        // Remember new span start time
-        tSpanStart = tRecStart;
-        iSpanIndex = iRecord;
-        iCount=0;
-      }  // found a gap or overlap
-    } // Not the first record
-    else
-    {
-      tSpanStart = tRecStart;
-      bFirst = 0;
-    } // first record
-    
-    tSpanEnd = tRecEnd;
-    iCount++;
-  } // loop through all records
+    fclose(fp_buf);
+    fclose(fp_idx);
 
-  // Print out last remaining span
-  printf("%s %s/%s Span %s",
-      station, loc, chan, ST_PrintDate2(tSpanStart, 1));
-  printf(" to %s %d records, start index %d\n",
-      ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex);
-
-  fclose(fp_buf);
-  fclose(fp_idx);
-
-  return NULL;
+    return NULL;
 } // RangeSpans()
 

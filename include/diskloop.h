@@ -29,6 +29,27 @@ yyyy-mm-dd WHO - Changes
 #define PARSE_NO_ARCHIVE    2
 #define PARSE_NO_IDA        3
 
+typedef struct DISKLOOP_CONTEXT
+{
+    char        key[20];        // key for this context
+    char        loop_name[2*MAXCONFIGLINELEN+2];  // name of diskloop file
+    char        index_name[2*MAXCONFIGLINELEN+2]; // name of index file
+    FILE       *loop_fp;        // file descriptor for the diskloop
+    FILE       *index_fp;       // file descriptor for the index file
+
+    int         record_size;    // size of archive records
+    int         capacity;       // how much space is allocated for this diskloop
+    int         size;           // how much space is already used by this diskloop
+    int         index;          // index of the last record
+
+    int      last_record_seqnum;  // sequence numer of last written record
+    int      last_record_samples; // samples in last written record
+    STDTIME2 last_record_start; // timestamp in last written record
+    struct timeval last_flush;  // last time writes were flushed
+    struct timeval last_index;  // last time the index file was written
+}
+diskloop_context_t;
+
 // When diskloop.config is parsed, the channel buffersize data goes here
 struct s_bufconfig
 {

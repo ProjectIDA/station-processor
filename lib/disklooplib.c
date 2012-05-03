@@ -217,6 +217,14 @@ char *adl_close(
 // Close all open diskloops
 char *adl_close_all();
 
+// Get the index of the record based on its relationship to the supplied time
+char *adl_locate_index(
+        diskloop_context_t *context,
+        STDTIME2 *time,
+        int whence,
+        int *index
+    );
+
 // Get the index of the oldest record
 char *adl_oldest_index(
         diskloop_context_t *context,
@@ -253,26 +261,6 @@ char *adl_range_indices(
         int inclusive,
         int *start_index,
         int *end_index
-    );
-
-// Get the index of the record based on its relationship to the supplied time
-char *adl_locate_index(
-        diskloop_context_t *context,
-        STDTIME2 *time,
-        int whence,
-        int *index
-    );
-
-// Get the index of the oldest record
-char *adl_oldest_index(
-        diskloop_context_t *context,
-        int *index
-    );
-
-// Get the index of the newest record
-char *adl_newest_index(
-        diskloop_context_t *context,
-        int *index
     );
 
 
@@ -1888,7 +1876,7 @@ void max_time(STDTIME2 *time)
 
 //////////////////////////////////////////////////////////////////////////////
 // Opens a diskloop if it has not already been opened,
-// otherwise it just uses the existing context
+// otherwise it just sets the existing context
 char *adl_open(
         diskloop_context_t **return_context, // caller's context ponter
         const char *station,  // station name
@@ -1995,18 +1983,6 @@ char *adl_open(
         // If the diskloop is full, we continue with the following logic
         else if (context->index >= 0)
         {
-        // TODO: Impmlement the following logic
-        //        - read record from last position, and following record
-        //          (following record may be at the beginning of the diskloop)
-        //        - if the last record is younger than the following, we are okay
-        //          because the idx file matches the expected order
-        //        - however, if the last record is older than the following, we
-        //          close without syncing the idx file, and must do a binary
-        //          search for the youngest record, and replace it (because it
-        //          could be only a partial record)
-        //
-        // Get the header for the last record written
-
             char      temp_A[8192];
             char      temp_B[8192];
 
@@ -2109,6 +2085,8 @@ char *adl_open(
     return NULL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Writes to the diskloop associated with the supplied context
 char *adl_write(
         diskloop_context_t *context, // diskloop context
         int index, // record index
@@ -2222,6 +2200,8 @@ char *adl_write(
     return NULL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Flushes all cached writes the diskloop file
 char *adl_flush(
         diskloop_context_t *context // diskloop context
     )
@@ -2235,6 +2215,8 @@ char *adl_flush(
     return NULL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Updates the index file for this diskloop with the stored state information
 char *adl_write_index(
         diskloop_context_t *context // diskloop context
     )
@@ -2259,6 +2241,8 @@ char *adl_write_index(
     return NULL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Reads a record from the diskloop (uses current location if index is -1)
 char *adl_read(
         diskloop_context_t *context, // diskloop context
         int index, // record index
@@ -2299,6 +2283,8 @@ char *adl_read(
     return NULL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Closes this diskloop, flushing writes and updating index before doing so.
 char *adl_close(
         diskloop_context_t **close_context // diskloop context
     )
@@ -2317,17 +2303,23 @@ char *adl_close(
 }
 
 
+//////////////////////////////////////////////////////////////////////////////
+// Callback for adl_close_all to close every open diskloop.
 void close_callback(const char *key, const void *value, const void *obj)
 {
     adl_close((diskloop_context_t **)(&value));
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Close all open diskloops. Used when the archive daemon closes cleanly.
 char *adl_close_all()
 {
     map_enum(pDiskLoops, close_callback, NULL);
     return NULL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Swap two pointers.
 void swap(void **ptr_a, void **ptr_b)
 {
     void *swap_temp;
@@ -2336,11 +2328,15 @@ void swap(void **ptr_a, void **ptr_b)
     *ptr_a = swap_temp;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Simplified call to check STDTIME2 differences in milliseconds
 int compare_dcc_times(STDTIME2 *time_a, STDTIME2 *time_b)
 {
     return ST_DeltaToMS2(ST_DiffTimes2(*time_a, *time_b));
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Wrapper for populating record_info_t with internal buffer contents
 void prepare_record_info(record_info_t *info)
 {
     ParseSeedHeader(info->buffer, info->station, info->channel, info->location,
@@ -2348,6 +2344,11 @@ void prepare_record_info(record_info_t *info)
     info->rate_factor = (short)ntohs(((seed_header *)(&info->buffer))->sample_rate_factor);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Low-level logic re-used by all index locator functions
+//
+// Does a binary search through the diskloop looking for the record matching
+// the relationship to 'time' specified by 'whence'
 char *adl_locate_index(
         diskloop_context_t *context,
         STDTIME2 *time,
@@ -2620,6 +2621,8 @@ char *adl_locate_index(
     return NULL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Locate the index of the oldest record in the diskloop
 char *adl_oldest_index(
         diskloop_context_t *context,
         int *index
@@ -2630,6 +2633,8 @@ char *adl_oldest_index(
     return adl_locate_index(context, &temp_time, INDEX_BEFORE_INCLUSIVE, index);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Locate the index of the newest record in the diskloop
 char *adl_newest_index(
         diskloop_context_t *context,
         int *index
@@ -2640,6 +2645,9 @@ char *adl_newest_index(
     return adl_locate_index(context, &temp_time, INDEX_AFTER_INCLUSIVE, index);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Locate the index of the record occuring before (or at when inclusive is
+// true) the specified time
 char *adl_index_before(
         diskloop_context_t *context,
         STDTIME2  *time,
@@ -2651,6 +2659,9 @@ char *adl_index_before(
     return adl_locate_index(context, time, whence, index);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Locate the index of the record occuring after (or at when inclusive is
+// true) the specified time
 char *adl_index_after(
         diskloop_context_t *context,
         STDTIME2  *time,
@@ -2662,6 +2673,8 @@ char *adl_index_after(
     return adl_locate_index(context, time, whence, index);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Locate the indices sandwiching the requested time
 char *adl_range_indices(
         diskloop_context_t *context,
         STDTIME2  *start_time,
@@ -2675,12 +2688,17 @@ char *adl_range_indices(
     int start_whence = inclusive ? INDEX_AFTER_INCLUSIVE  : INDEX_AFTER_EXCLUSIVE;
     int end_whence   = inclusive ? INDEX_BEFORE_INCLUSIVE : INDEX_BEFORE_EXCLUSIVE;
 
-    // TODO: make sure the start time is before the end time
-
-    result = adl_locate_index(context, start_time, start_whence, start_index);
-    // Only proceed if the start record was successfully located
-    if (result == NULL) {
-        result = adl_locate_index(context, end_time, end_whence, end_index);
+    // make sure the start time is not after the end time
+    if (compare_dcc_times(start_time, end_time) > 0) {
+        sprintf(looperrstr, "adl_range_indices: start time is newer than end time");
+        result = looperrstr;
+    }
+    else {
+        result = adl_locate_index(context, start_time, start_whence, start_index);
+        // Only proceed if the start record was successfully located
+        if (result == NULL) {
+            result = adl_locate_index(context, end_time, end_whence, end_index);
+        }
     }
     return result;
 }

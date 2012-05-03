@@ -29,6 +29,12 @@ yyyy-mm-dd WHO - Changes
 #define PARSE_NO_ARCHIVE    2
 #define PARSE_NO_IDA        3
 
+#define INDEX_BEFORE_EXCLUSIVE -2
+#define INDEX_BEFORE_INCLUSIVE -1
+#define INDEX_WITHIN            0
+#define INDEX_AFTER_INCLUSIVE   1
+#define INDEX_AFTER_EXCLUSIVE   2
+
 typedef struct DISKLOOP_CONTEXT
 {
     char        key[20];        // key for this context
@@ -42,6 +48,8 @@ typedef struct DISKLOOP_CONTEXT
     int         size;           // how much space is already used by this diskloop
     int         index;          // index of the last record
 
+    int         has_written;    // this context has written data
+
     int      last_record_seqnum;  // sequence numer of last written record
     int      last_record_samples; // samples in last written record
     STDTIME2 last_record_start; // timestamp in last written record
@@ -49,6 +57,22 @@ typedef struct DISKLOOP_CONTEXT
     struct timeval last_index;  // last time the index file was written
 }
 diskloop_context_t;
+
+typedef struct RECORD_INFO
+{
+    // the record
+    char buffer[8192];
+
+    char station[8];
+    char location[4];
+    char channel[4];
+    STDTIME2 start_time;
+    STDTIME2 end_time;
+    int seqnum;
+    int samples;
+    int rate_factor;
+}
+record_info_t;
 
 // When diskloop.config is parsed, the channel buffersize data goes here
 struct s_bufconfig

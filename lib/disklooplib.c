@@ -70,8 +70,10 @@ yyyy-mm-dd WHO - Changes
 2010-04-01 FCS - Add NoIDA keyword supporting channels for archive only
 2010-09-14 FCS - Add RemapStationName routine
 2011-08-11 JDE - Add NoArchive keyword supporting channels for IDA diskloop only
+2012-05-02 JDE - Switched to new high-performance system for handling diskloops
 ******************************************************************************/
 
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -96,6 +98,7 @@ is localy stored in static variables.
 #define ALNUM(c) (((c > 47) && (c < 58)) || ((c > 64) && (c < 91)) || ((c > 96) && (c < 123)))
 // timeval to 64-bit time in microseconds
 #define TIME_MICRO(tv) ((tv.tv_sec * 1000000LL) + tv.tv_usec)
+
 
 // diskloop file flush frequency (1 min.)
 struct timeval flush_interval = {.tv_sec =  60, .tv_usec = 0};
@@ -230,6 +233,7 @@ char *adl_newest_index(
 char *adl_index_before(
         diskloop_context_t *context,
         STDTIME2  *time,
+        int inclusive,
         int *index
     );
 
@@ -237,6 +241,7 @@ char *adl_index_before(
 char *adl_index_after(
         diskloop_context_t *context,
         STDTIME2  *time,
+        int inclusive,
         int *index
     );
 
@@ -245,9 +250,19 @@ char *adl_range_indices(
         diskloop_context_t *context,
         STDTIME2  *start_time,
         STDTIME2  *end_time,
+        int inclusive,
         int *start_index,
         int *end_index
     );
+
+// Get the index of the record based on its relationship to the supplied time
+char *adl_locate_index(
+        diskloop_context_t *context,
+        STDTIME2 *time,
+        int whence,
+        int *index
+    );
+
 // Get the index of the oldest record
 char *adl_oldest_index(
         diskloop_context_t *context,
@@ -258,29 +273,6 @@ char *adl_oldest_index(
 char *adl_newest_index(
         diskloop_context_t *context,
         int *index
-    );
-
-// Get the index of the record starting on or before this time
-char *adl_index_before(
-        diskloop_context_t *context,
-        STDTIME2  *time,
-        int *index
-    );
-
-// Get the index of the record starting on or after this time
-char *adl_index_after(
-        diskloop_context_t *context,
-        STDTIME2  *time,
-        int *index
-    );
-
-// Get the index of records containing the sandwiched times
-char *adl_range_indices(
-        diskloop_context_t *context,
-        STDTIME2  *start_time,
-        STDTIME2  *end_time,
-        int *start_index,
-        int *end_index
     );
 
 
@@ -308,7 +300,7 @@ void MakeKey(
         )
 {
     char *p = key;
-    char *t;
+    const char *t;
 
     // For each component, add characters until we hit a non-alpha-numeric
     // character, or null termination
@@ -1612,7 +1604,7 @@ void DiskloopFileName(
         )
 {
     char *p = name;
-    char *t;
+    const char *t;
 
     t = loopDir;
     // diskloop directory
@@ -1874,6 +1866,26 @@ char *ParseIndexInfo(
 } // ParseIndexInfo()
 
 
+void min_time(STDTIME2 *time)
+{
+    time->year   = 1; 
+    time->day    = 1;
+    time->hour   = 0;
+    time->minute = 0;
+    time->second = 0;
+    time->tenth_msec = 1;
+}
+
+void max_time(STDTIME2 *time)
+{
+    time->year   = SHRT_MAX;
+    time->day    = 365; // SHRT_MAX (32767) is not a leap year
+    time->hour   = 23;
+    time->minute = 59;
+    time->second = 59;
+    time->tenth_msec = 9999;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // Opens a diskloop if it has not already been opened,
 // otherwise it just uses the existing context
@@ -1900,8 +1912,10 @@ char *adl_open(
             strcpy(looperrstr, "Could not allocate memory for diskloop context.");
             goto error;
         }
+        // Store a copy of the key in the context (needed by adl_close)
         MakeKey(station, location, channel, context->key);
 
+        // Store the loop and index file names in the context for reporting purposes
         DiskloopFileName(station, location, channel, ".buf", context->loop_name);
         DiskloopFileName(station, location, channel, ".idx", context->index_name);
 
@@ -1950,17 +1964,20 @@ char *adl_open(
             fclose(context->index_fp);
             goto error;
         } // error reading index and max record value
-        fclose(context->index_fp);
+        if (context->index_fp != NULL) {
+            fclose(context->index_fp);
+        }
 
-        // Open the buffer file for write access
+        // Open the buffer file for read/write access
         if ((context->loop_fp=fopen(context->loop_name, "r+")) == NULL)
         {
             // Buffer file does not exist so start a new set
-            sprintf(looperrstr, "adl_open: Failed to open %s for updating",
+            sprintf(looperrstr, "adl_open: Failed to open diskloop %s for updating",
                     context->loop_name);
             goto error;
         }
 
+        // Check the size of the diskloop file
         fseek(context->loop_fp, 0, SEEK_END);
         loop_size = ftell(context->loop_fp);
 
@@ -1970,9 +1987,10 @@ char *adl_open(
         if ((loop_size / context->record_size) < context->capacity) {
             // Integer arithmetic will jump us to the end of the last complete
             // record, overwriting any partial record
-            context->index = loop_size / context->record_size - 1;
-            context->size = context->index + 1;
-            fseek(context->loop_fp, context->index * context->record_size, SEEK_SET);
+            context->size = loop_size / context->record_size;
+            context->index = context->size - 1;
+            // Seek to the point at which the next record should be written
+            fseek(context->loop_fp, context->size * context->record_size, SEEK_SET);
         }
         // If the diskloop is full, we continue with the following logic
         else if (context->index >= 0)
@@ -2010,41 +2028,33 @@ char *adl_open(
 
             DELTA_T2  delta_t2;
             long      delta_ms;
-            int       iRateFactor;
-            seed_header *pheader;
 
-            size_t bytes_read;
-            int tmp_index = 0;
+            int tmp_index = context->index;
+
+            STDTIME2  temp_time;
             
-            // Read the candidate newest record.
-            if (context->index >= context->capacity) {
-                context->index = 0;
+            // Read and parse the last record indicated in the index file
+            if ((tmp_index) >= context->capacity) {
+                tmp_index = 0;
             }
-            fseek(context->loop_fp, context->index * context->record_size, SEEK_SET);
-            bytes_read = fread(temp_A, context->record_size, 1, context->loop_fp);
-            if (bytes_read < context->record_size) {
+            if (adl_read(context, tmp_index, temp_A) == NULL) {
                 sprintf(looperrstr, "adl_open: could not read newest record for %s", context->index_name);
                 fclose(context->index_fp);
                 goto error;
             }
+            ParseSeedHeader(temp_A, rec_A_station, rec_A_chan, rec_A_loc,
+                    &rec_A_start, &rec_A_end, &rec_A_seqnum, &rec_A_samples);
 
-            // Read the following record.
-            tmp_index = context->index + 1;
-            if (context->index >= context->capacity) {
+            // Read and parse the record following the last in the index file
+            tmp_index++;
+            if ((tmp_index) >= context->capacity) {
                 tmp_index = 0;
             }
-            fseek(context->loop_fp, tmp_index * context->record_size, SEEK_SET);
-            bytes_read = fread(temp_B, context->record_size, 1, context->loop_fp);
-            if (bytes_read < context->record_size) {
+            if (adl_read(context, tmp_index, temp_A) == NULL) {
                 sprintf(looperrstr, "adl_open: could read following record for %s", context->index_name);
                 fclose(context->index_fp);
                 goto error;
             }
-
-            // Read the last record as indicated in the index file
-            ParseSeedHeader(temp_A, rec_A_station, rec_A_chan, rec_A_loc,
-                    &rec_A_start, &rec_A_end, &rec_A_seqnum, &rec_A_samples);
-            // Read the record following the last in the index file
             ParseSeedHeader(temp_B, rec_B_station, rec_B_chan, rec_B_loc,
                     &rec_B_start, &rec_B_end, &rec_B_seqnum, &rec_B_samples);
 
@@ -2056,6 +2066,7 @@ char *adl_open(
             // If the next record is newer than the current, we need to
             // search for the newest record, update the index, and seek
             // to the correct position in the diskloop.
+            max_time(&temp_time);
             if (delta_ms < 0) {
                 adl_newest_index(context, &context->index);
             }
@@ -2173,6 +2184,7 @@ char *adl_write(
         goto error;
     } // Failed to write record
 
+    context->has_written = 1;
     // update context size if this is an append operation
     if ( (context->size < context->capacity) &&
          (context->size == new_index) ) {
@@ -2214,8 +2226,11 @@ char *adl_flush(
         diskloop_context_t *context // diskloop context
     )
 {
-    fflush(context->loop_fp);
-    gettimeofday(&context->last_flush, NULL);
+    // Only flush if we have performed a write operation
+    if (context->has_written) {
+        fflush(context->loop_fp);
+        gettimeofday(&context->last_flush, NULL);
+    }
 
     return NULL;
 }
@@ -2226,13 +2241,20 @@ char *adl_write_index(
 {
     char msg[2*MAXCONFIGLINELEN+2];
 
-    fseek(context->index_fp, 0, SEEK_SET);
-    sprintf(msg, "%d %d", context->index, context->capacity);
-    fprintf(context->index_fp, "%-30.30s\n", msg);
-    fprintf(context->index_fp, "%-30.30s\n", msg);
-    fprintf(context->index_fp, "%-30.30s\n", msg);
-    fflush(context->index_fp);
-    gettimeofday(&context->last_index, NULL);
+    // Only update the index if we have performed a write operation
+    if (context->has_written) {
+        fseek(context->index_fp, 0, SEEK_SET);
+        sprintf(msg, "%d %d", context->index, context->capacity);
+        fprintf(context->index_fp, "%-30.30s\n", msg);
+        fprintf(context->index_fp, "%-30.30s\n", msg);
+        fprintf(context->index_fp, "%-30.30s\n", msg);
+        fflush(context->index_fp);
+        gettimeofday(&context->last_index, NULL);
+
+        // Reset write tracker in case this should be used as read-only
+        // from here on.
+        context->has_written = 0;
+    }
 
     return NULL;
 }
@@ -2257,7 +2279,7 @@ char *adl_read(
     loop_seek = index * context->record_size;
     fseek(context->loop_fp, loop_seek, SEEK_SET);
     if (ftell(context->loop_fp) != loop_seek) {
-        sprintf(looperrstr, "adl_write: Could not seek to requested index [%d]", index);
+        sprintf(looperrstr, "adl_read: Could not seek to requested index [%d]", index);
         goto error;
     }
         
@@ -2306,12 +2328,306 @@ char *adl_close_all()
     return NULL;
 }
 
+void swap(void **ptr_a, void **ptr_b)
+{
+    void *swap_temp;
+    swap_temp = *ptr_a;
+    *ptr_b = *ptr_a;
+    *ptr_a = swap_temp;
+}
+
+int compare_dcc_times(STDTIME2 *time_a, STDTIME2 *time_b)
+{
+    return ST_DeltaToMS2(ST_DiffTimes2(*time_a, *time_b));
+}
+
+void prepare_record_info(record_info_t *info)
+{
+    ParseSeedHeader(info->buffer, info->station, info->channel, info->location,
+                    &info->start_time, &info->end_time, &info->seqnum, &info->samples);
+    info->rate_factor = (short)ntohs(((seed_header *)(&info->buffer))->sample_rate_factor);
+}
+
+char *adl_locate_index(
+        diskloop_context_t *context,
+        STDTIME2 *time,
+        int whence,
+        int *index
+    )
+{
+    int seek_store = 0;
+    int file_size = 0;
+
+    int last_index = 0;
+    int max_index = 0;
+    int min_index = 0;
+    int pivot_index = 0;
+
+    int index_before = 0;
+    int index_after = 0;
+
+    STDTIME2 file_first_start_time; // time of first record in the file (not oldest)
+    STDTIME2 file_first_end_time; // time of first record in the file (not oldest)
+    STDTIME2 file_last_start_time;  // time of the last record in the file (not youngest)
+    STDTIME2 file_last_end_time;  // time of the last record in the file (not youngest)
+
+    record_info_t record_before;
+    record_info_t this_record;
+    record_info_t record_after;
+
+    // Time comparisons
+    // C = current record start time
+    // T = target record start time
+    // F = first record start time
+    // L = last record start time
+    long tdiff_C_T;
+    long tdiff_C_F;
+    long tdiff_C_L;
+    long tdiff_T_F;
+    long tdiff_T_L;
+
+
+    // Save the original location to restore before returning
+    seek_store = ftell(context->loop_fp);
+
+    // Check the file size
+    fseek(context->loop_fp, 0, SEEK_END);
+    file_size = ftell(context->loop_fp);
+
+    // If the file is less than a single record in size,
+    // set the index to -1 indicating an empty diskloop
+    if (file_size < context->record_size) {
+        *index = -1;
+        goto success;
+    }
+
+    // If the file contains only one record, the index is 0
+    if (file_size < (context->record_size * 2)) {
+        *index = 0;
+        goto success;
+    }
+
+    // Determine the index of the last record
+    last_index = file_size / context->record_size - 1;
+
+    // Retrieve the first (start of file) record's times
+    if (adl_read(context, 0, this_record.buffer) != NULL) {
+        sprintf(looperrstr, "adl_locate_index: Could not read first (start of file) record from %s",
+                context->loop_name);
+        goto error;
+    }
+    prepare_record_info(&this_record);
+    memcpy((void *)&file_first_start_time, (void *)&this_record.start_time, sizeof(STDTIME2));
+    memcpy((void *)&file_first_end_time,   (void *)&this_record.end_time,   sizeof(STDTIME2));
+
+    // Retrieve the last (end of file) record's times
+    if (adl_read(context, last_index, this_record.buffer) != NULL)
+    {
+        sprintf(looperrstr, "adl_locate_index: Could not read last (end of file) record from %s",
+                context->loop_name);
+        goto error;
+    }
+    prepare_record_info(&this_record);
+    memcpy((void *)&file_last_start_time, (void *)&this_record.start_time, sizeof(STDTIME2));
+    memcpy((void *)&file_last_end_time,   (void *)&this_record.end_time,   sizeof(STDTIME2));
+
+    // Check if we are looped, and which direction to check
+    // SEARCH_LOOP_HIGH
+    // SEARCH_LOOP_LOW
+
+    min_index = 0;
+    max_index = last_index;
+    while (min_index < max_index) {
+        pivot_index = min_index + ((max_index - min_index) / 2);
+        // read record at the 
+        if (adl_read(context, pivot_index, this_record.buffer) != NULL) {
+            sprintf(looperrstr, "adl_locate_index: Could not read record at index %d from %s",
+                    pivot_index, context->loop_name);
+            goto error;
+        }
+        prepare_record_info(&this_record);
+
+        tdiff_C_T = compare_dcc_times(&this_record.start_time, time);
+        if (tdiff_C_T < 0) { // current < target
+            tdiff_C_F = compare_dcc_times(&this_record.start_time, &file_first_start_time);
+            if (tdiff_C_F < 0) { // current < first
+                tdiff_T_L = compare_dcc_times(time, &file_last_start_time);
+                if (tdiff_T_L > 0) { // target > last
+                    max_index = pivot_index;
+                }
+                else { // target <= last
+                    min_index = pivot_index;
+                }
+            }
+            else { // current >= first (requires that: target > first)
+                min_index = pivot_index;
+            }
+        }
+        else if (tdiff_C_T > 0) { // current > target
+            tdiff_T_F = compare_dcc_times(time, &file_first_start_time);
+            if (tdiff_T_F < 0) { // target < first
+                tdiff_C_L = compare_dcc_times(&this_record.start_time, &file_last_start_time);
+                if (tdiff_C_L > 0 ) { // current > last
+                    max_index = pivot_index;
+                }
+                else { // current <= last
+                    min_index = pivot_index;
+                }
+            }
+            else { // target >= first (requires that: current > first)
+                max_index = pivot_index;
+            }
+        }
+        else {
+            min_index = max_index = pivot_index;
+        }
+    }
+
+    index_before = (pivot_index > 0) ? (pivot_index - 1) : last_index;
+    if (adl_read(context, index_before, record_before.buffer) != NULL) {
+        sprintf(looperrstr, "adl_locate_index: Could not record before selected (%d - 1 = %d) from %s",
+                pivot_index, index_before, context->loop_name);
+        goto error;
+    }
+    prepare_record_info(&record_before);
+
+    index_after = (pivot_index < last_index) ? (pivot_index + 1) : 0;
+    if (adl_read(context, index_after, record_after.buffer) != NULL) {
+        sprintf(looperrstr, "adl_locate_index: Could not record after selected (%d + 1 = %d) from %s",
+                pivot_index, index_after, context->loop_name);
+        goto error;
+    }
+    prepare_record_info(&record_after);
+
+    switch (whence) {
+        case INDEX_BEFORE_EXCLUSIVE:
+            // the newest record with an end time earlier than the indicated time
+            if ( compare_dcc_times(&this_record.end_time, time) < 0) {
+                if ( (compare_dcc_times(&record_after.end_time, time) < 0) && 
+                     (compare_dcc_times(&this_record.start_time, &record_after.start_time) < 0) )
+                {
+                    *index = index_after;
+                }
+                else {
+                    *index = pivot_index;
+                }
+            }
+            else if (compare_dcc_times(&record_before.end_time, time) < 0) {
+                *index = index_before;
+            }
+            else {
+                *index = -1;
+            }
+            break;
+
+        case INDEX_BEFORE_INCLUSIVE:
+            // the newest record with an start time at or earlier than the indicated time
+            if ( compare_dcc_times(&this_record.start_time, time) <= 0) {
+                if ( (compare_dcc_times(&record_after.start_time, time) <= 0) && 
+                     (compare_dcc_times(&this_record.start_time, &record_after.start_time) < 0) )
+                {
+                    *index = index_after;
+                }
+                else {
+                    *index = pivot_index;
+                }
+            }
+            else if (compare_dcc_times(&record_before.start_time, time) <= 0) {
+                *index = index_before;
+            }
+            else {
+                *index = -1;
+            }
+            break;
+
+        case INDEX_WITHIN:
+            // the record that contains the indicated time (if any)
+            if ( (compare_dcc_times(&this_record.start_time, time) <= 0) &&
+                 (compare_dcc_times(&this_record.end_time,   time) >= 0) )
+            {
+                *index = pivot_index;
+            }
+            else if ( (compare_dcc_times(&record_before.start_time, time) <= 0) &&
+                      (compare_dcc_times(&record_before.end_time,   time) >= 0) )
+            {
+                *index = index_before;
+            }
+            else if ( (compare_dcc_times(&record_after.start_time, time) <= 0) &&
+                      (compare_dcc_times(&record_after.end_time,   time) >= 0) )
+            {
+                *index = index_after;
+            }
+            else {
+                *index = -1;
+            }
+            break;
+
+        case INDEX_AFTER_INCLUSIVE:
+            // the oldest record with an end time at or later than the indicated time
+            if ( compare_dcc_times(&this_record.end_time, time) >= 0) {
+                if ( (compare_dcc_times(&record_before.end_time, time) >= 0) &&
+                     (compare_dcc_times(&this_record.start_time, &record_before.start_time) > 0) )
+                {
+                    *index = index_before;
+                }
+                else {
+                    *index = pivot_index;
+                }
+            }
+            else if (compare_dcc_times(&record_after.end_time, time) >= 0) {
+                *index = index_after;
+            }
+            else {
+                *index = -1;
+            }
+            break;
+
+        case INDEX_AFTER_EXCLUSIVE:
+            // the oldest record with a start time later than the indicated time
+            if ( compare_dcc_times(&this_record.start_time, time) > 0) {
+                if ( (compare_dcc_times(&record_before.start_time, time) > 0) &&
+                     (compare_dcc_times(&this_record.start_time, &record_before.start_time) > 0) )
+                {
+                    *index = index_before;
+                }
+                else {
+                    *index = pivot_index;
+                }
+            }
+            else if (compare_dcc_times(&record_after.start_time, time) > 0) {
+                *index = index_after;
+            }
+            else {
+                *index = -1;
+            }
+            break;
+
+        default:
+            sprintf(looperrstr, "adl_locate_index: invalid value for 'whence' [%d]",
+                    whence);
+            goto error;
+    }
+
+    // if we made it here, no error was encountered
+    goto success;
+
+ error:
+    fseek(context->loop_fp, seek_store, SEEK_SET);
+    return looperrstr;
+
+ success:
+    fseek(context->loop_fp, seek_store, SEEK_SET);
+    return NULL;
+}
+
 char *adl_oldest_index(
         diskloop_context_t *context,
         int *index
     )
 {
-    return NULL;
+    STDTIME2 temp_time;
+    min_time(&temp_time);
+    return adl_locate_index(context, &temp_time, INDEX_BEFORE_INCLUSIVE, index);
 }
 
 char *adl_newest_index(
@@ -2319,36 +2635,54 @@ char *adl_newest_index(
         int *index
     )
 {
-    return NULL;
+    STDTIME2 temp_time;
+    max_time(&temp_time);
+    return adl_locate_index(context, &temp_time, INDEX_AFTER_INCLUSIVE, index);
 }
 
 char *adl_index_before(
         diskloop_context_t *context,
         STDTIME2  *time,
+        int inclusive,
         int *index
     )
 {
-    return NULL;
+    int whence = inclusive ? INDEX_BEFORE_INCLUSIVE : INDEX_BEFORE_EXCLUSIVE;
+    return adl_locate_index(context, time, whence, index);
 }
 
 char *adl_index_after(
         diskloop_context_t *context,
         STDTIME2  *time,
+        int inclusive,
         int *index
     )
 {
-    return NULL;
+    int whence = inclusive ? INDEX_AFTER_INCLUSIVE : INDEX_AFTER_EXCLUSIVE;
+    return adl_locate_index(context, time, whence, index);
 }
 
 char *adl_range_indices(
         diskloop_context_t *context,
         STDTIME2  *start_time,
         STDTIME2  *end_time,
+        int inclusive,
         int *start_index,
         int *end_index
     )
 {
-    return NULL;
+    char *result = NULL;
+    int start_whence = inclusive ? INDEX_AFTER_INCLUSIVE  : INDEX_AFTER_EXCLUSIVE;
+    int end_whence   = inclusive ? INDEX_BEFORE_INCLUSIVE : INDEX_BEFORE_EXCLUSIVE;
+
+    // TODO: make sure the start time is before the end time
+
+    result = adl_locate_index(context, start_time, start_whence, start_index);
+    // Only proceed if the start record was successfully located
+    if (result == NULL) {
+        result = adl_locate_index(context, end_time, end_whence, end_index);
+    }
+    return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////

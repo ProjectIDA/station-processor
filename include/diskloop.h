@@ -52,7 +52,8 @@ typedef struct DISKLOOP_CONTEXT
 
     int      last_record_seqnum;  // sequence numer of last written record
     int      last_record_samples; // samples in last written record
-    STDTIME2 last_record_start; // timestamp in last written record
+    STDTIME2 last_record_start; // start timestamp of last written record
+    STDTIME2 last_record_end;   // end timestamp of last written record
     struct timeval last_flush;  // last time writes were flushed
     struct timeval last_index;  // last time the index file was written
 }
@@ -71,6 +72,7 @@ typedef struct RECORD_INFO
     int seqnum;
     int samples;
     int rate_factor;
+    int index;
 }
 record_info_t;
 
@@ -324,6 +326,13 @@ char *RangeSpans(
 // Returns 1 on a remap, 0 on no remap
 int RemapStationName(
   char *str_header);       // seed record pointer
+
+
+char *adl_print_all();
+char *adl_flush_all();
+char *adl_write_all_indices();
+char *adl_close_all();
+void  adl_debug(int debug);
 
 #endif // _DISKLOOP_H_ defined
 

@@ -32,7 +32,7 @@ LIBIDA=../lib/$(PLATFORM)
 COPT = 
 LIBS = -L$(LIBIDA)
 DEFS    = -D$(OSNAME) -D$(OSTYPE) -D_REENTRANT
-CFLAGS = -I.. -I. -I ../ida_build/include $(DEFS)
+CFLAGS = -Wall -I.. -I. -I ../ida_build/include $(DEFS)
 LIBS += -lm -lpthread
 
 SRCS = archd.c daemonize.c logclient.c seedmsg.c idaapi.c

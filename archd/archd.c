@@ -90,7 +90,7 @@ static archd_context_t *g_archd=NULL;
 ////////////////////////////////////////////////////////////////////
 void mem_print(const char *key, const void *value, const void *obj)
 {
-    fprintf(stderr, "  %s: %lu\n", key, (size_t)value);
+    fprintf(stderr, "  %s: %lu\n", key, (unsigned long int)value);
 }
 
 void mem_show(Map *map)
@@ -151,6 +151,7 @@ static void sigterm_archd()
     // Set flat requesting a graceful program exit
     if ((g_archd != NULL) && (g_archd->pcomm != NULL)) {
         // Tell pcomm to finish processing all data
+        adl_close_all();
         pcomm_stop(g_archd->pcomm, 0/*not immediately*/);
     }
     else {
@@ -162,7 +163,7 @@ static void sigterm_archd()
 int ChannelControl(char *command, int *msgId)
 {
     int i, setResult = 0;
-    size_t base = 14;
+    //size_t base = 14;
     char station[6];
     char loc[3];
     char chan[4];
@@ -402,6 +403,7 @@ char *ArchiveSeed(char *record)
 //////////////////////////////////////////////////////////////////////////////
 int main (int argc, char **argv)
 {
+    int result = 1;
     archd_context_t *archd;
 
     char  station[8];
@@ -409,13 +411,6 @@ int main (int argc, char **argv)
     char  chan[4];
     char  network[4];
     char  *retmsg;
-    int   iClient;
-    int   iBuf;
-    int   i,j,k;
-
-    struct timeval now;
-    int   year, doy, hour, min, sec;
-    int   touched;
 
     char   *initMsg;
 
@@ -491,6 +486,9 @@ int main (int argc, char **argv)
     } // command line arguments request running server in debug mode
     archd->debug = g_bDebug;
 
+    // set ASL diskloop library debug state
+    adl_debug(archd->debug);
+
     // Run this program as a daemon unless requested otherwise by user
     if (!archd->debug) {
         daemonize();
@@ -535,7 +533,7 @@ int main (int argc, char **argv)
 
     // Start the server listening for clients in the background
     LogServerPort(&archd->server_port);
-    if (pcomm_result = pcomm_init(archd->pcomm))
+    if ((pcomm_result = pcomm_init(archd->pcomm)) != PCOMM_SUCCESS)
     {
         if (archd->debug) {
             fprintf(stderr, "%s:%d> pcomm_init(): %s\n",
@@ -545,7 +543,7 @@ int main (int argc, char **argv)
                     WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
         }
     }
-    else if (pcomm_result = pcomm_set_external_context(archd->pcomm, archd))
+    else if ((pcomm_result = pcomm_set_external_context(archd->pcomm, archd)) != PCOMM_SUCCESS)
     {
         if (archd->debug) {
             fprintf(stderr, "%s:%d> pcomm_set_external_context(): %s\n",
@@ -562,9 +560,9 @@ int main (int argc, char **argv)
             syslog(LOG_ERR, "%s:%d> init_server(): failed to start server", WHOAMI, __LINE__);
         }
     }
-    else if (pcomm_result = pcomm_monitor_read_fd(archd->pcomm,
+    else if ((pcomm_result = pcomm_monitor_read_fd(archd->pcomm,
                                                    archd->server_socket,
-                                                   callback_connect_request))
+                                                   callback_connect_request)) != PCOMM_SUCCESS)
     {
         if (archd->debug) {
             fprintf(stderr, "%s:%d> pcomm_monitor_read_fd(): %s\n",
@@ -574,7 +572,8 @@ int main (int argc, char **argv)
                     WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
         }
     }
-    else if (pcomm_result = pcomm_set_timeout(archd->pcomm, &archd->timeout)) {
+    else if ((pcomm_result = pcomm_set_timeout(archd->pcomm, &archd->timeout)) != PCOMM_SUCCESS)
+    {
         if (archd->debug) {
             fprintf(stderr, "%s:%d> pcomm_set_timeout(): %s\n",
                     WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
@@ -583,7 +582,8 @@ int main (int argc, char **argv)
                     WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
         }
     } 
-    else if (pcomm_result = pcomm_set_timeout_callback(archd->pcomm, callback_async_timeout)) {
+    else if ((pcomm_result = pcomm_set_timeout_callback(archd->pcomm, callback_async_timeout)) != PCOMM_SUCCESS)
+    {
         if (archd->debug) {
             fprintf(stderr, "%s:%d> pcomm_set_timeout_callback(): %s\n",
                     WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
@@ -593,7 +593,7 @@ int main (int argc, char **argv)
         }
     } 
     // archive all available records before receiving more
-    else if (pcomm_result = pcomm_set_prepare_callback(archd->pcomm, callback_archive)) {
+    else if ((pcomm_result = pcomm_set_prepare_callback(archd->pcomm, callback_archive)) != PCOMM_SUCCESS) {
         if (archd->debug) {
             fprintf(stderr, "%s:%d> pcomm_set_select_callback(): %s\n",
                     WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
@@ -607,17 +607,17 @@ int main (int argc, char **argv)
 
         if (archd->debug) {
             fprintf(stdout, "\n");
-            fprintf(stdout, "archd -> pcomm = 0x%0lx\n", archd->pcomm);
+            fprintf(stdout, "archd -> pcomm = 0x%0lx\n", (unsigned long)archd->pcomm);
             fprintf(stdout, "archd -> timeout\n");
-            fprintf(stdout, "           -> tv_sec = %0d\n", archd->timeout.tv_sec);
-            fprintf(stdout, "           -> tv_usec = %0d\n", archd->timeout.tv_usec);
-            fprintf(stdout, "archd -> status_map = 0x%0lx\n", archd->status_map);
+            fprintf(stdout, "           -> tv_sec = %0li\n", archd->timeout.tv_sec);
+            fprintf(stdout, "           -> tv_usec = %0li\n", archd->timeout.tv_usec);
+            fprintf(stdout, "archd -> status_map = 0x%0lx\n", (unsigned long)archd->status_map);
             fprintf(stdout, "archd -> write_index = %0d\n", archd->write_index);
-            fprintf(stdout, "archd -> log_message = 0x%0lx\n", archd->log_message);
+            fprintf(stdout, "archd -> log_message = 0x%0lx\n", (unsigned long)archd->log_message);
             fprintf(stdout, "archd -> server_port = %0d\n", archd->server_port);
-            fprintf(stdout, "archd -> server_socket = %0d\n", archd->server_socket);
-            fprintf(stdout, "archd -> client_count = %0lu\n", archd->client_count);
-            fprintf(stdout, "archd -> record_queue = 0x%0lx\n", archd->record_queue);
+            fprintf(stdout, "archd -> server_socket = %0li\n", (unsigned long)archd->server_socket);
+            fprintf(stdout, "archd -> client_count = %0lu\n", (unsigned long)archd->client_count);
+            fprintf(stdout, "archd -> record_queue = 0x%0lx\n", (unsigned long)(&archd->record_queue));
             fprintf(stdout, "archd -> debug = %0d\n", archd->debug);
             fprintf(stdout, "archd -> record_size = %0d\n", archd->record_size);
             fprintf(stdout, "archd -> ida_name = '%s'\n", archd->ida_name);
@@ -644,6 +644,7 @@ int main (int argc, char **argv)
 
         // RUN pcomm main loop
         pcomm_main(archd->pcomm);
+        result = 0;
     }
 
     // CLEAN up upon completion
@@ -656,13 +657,12 @@ int main (int argc, char **argv)
         g_archd = archd = NULL;
     }
 
+    return result;
 } // main()
 
 /* Creates the server socket, binds, and starts listening for new clients. */
 int init_server (archd_context_t *archd)
 {
-    //archd->server_socket = bind(archd->server_port);
-    int   i;
     char  *error_message;
     struct sockaddr_in listen_addr; /* Listen address setup */
 
@@ -733,7 +733,6 @@ void callback_archive (pcomm_context_t *pcomm)
 {
     archd_context_t *archd;
     data_record_t *record;
-    int control_id;
 
     int log_delta;
     struct timeval now;
@@ -754,12 +753,12 @@ void callback_archive (pcomm_context_t *pcomm)
         fprintf(stdout, "%s: callback_archive()\n", WHOAMI);
     }
 
-    while (record = (data_record_t *)prioqueue_pop_high(&archd->record_queue))
+    while ((record = (data_record_t *)prioqueue_pop_high(&archd->record_queue)) != NULL)
  // QUEUE ITERATOR LOOP
     {
         archd->records_archived++;
         // Immediately archive non LOG seed record
-        if (strncmp("LOG", record->data + 15, 3) != 0)
+        if (strncmp("LOG", (char *)(record->data + 15), 3) != 0)
         {
             if ((result_message = ArchiveSeed((char *)record->data)) != NULL)
             {
@@ -779,7 +778,8 @@ void callback_archive (pcomm_context_t *pcomm)
         if (archd->log_message != NULL)
         {
             // Try to combine the two records to save space
-            if (CombineSeed(archd->log_message->data, record->data, archd->record_size))
+            if (CombineSeed((char *)archd->log_message->data,
+                            (char *)record->data, archd->record_size))
             {
                 // Free up the record's resources
                 free(record->data);
@@ -792,10 +792,10 @@ void callback_archive (pcomm_context_t *pcomm)
             else
             {
                 // Send queued message since we can't combine the two
-                SeedRecordMsg(tempbuf, archd->log_message->data,
+                SeedRecordMsg(tempbuf, (char *)archd->log_message->data,
                               station, network, chan, loc,
                               &year, &doy, &hour, &min, &sec);
-                if ((result_message = ArchiveSeed(archd->log_message->data)) != NULL)
+                if ((result_message = ArchiveSeed((char *)archd->log_message->data)) != NULL)
                 {
                     fprintf(stderr, "%s: %s\n", WHOAMI, result_message);
                 }
@@ -816,10 +816,10 @@ void callback_archive (pcomm_context_t *pcomm)
         if (archd->log_message != NULL &&
             (log_delta < 0 || log_delta >= BUFFER_TIME_SEC))
         {
-            SeedRecordMsg(tempbuf, archd->log_message->data,
+            SeedRecordMsg(tempbuf, (char *)archd->log_message->data,
                           station, network, chan, loc,
                           &year, &doy, &hour, &min, &sec);
-            if ((result_message = ArchiveSeed(archd->log_message->data)) != NULL)
+            if ((result_message = ArchiveSeed((char *)archd->log_message->data)) != NULL)
             {
                 fprintf(stderr, "%s: %s\n", WHOAMI, result_message);
             }
@@ -927,9 +927,9 @@ void callback_connect_request (pcomm_context_t *pcomm, int fd)
         return;
     }
 
-    if (pcomm_result = pcomm_monitor_read_fd(archd->pcomm,
+    if ((pcomm_result = pcomm_monitor_read_fd(archd->pcomm,
                                              client_sock,
-                                             callback_client_can_recv))
+                                             callback_client_can_recv)) != PCOMM_SUCCESS)
     {
         if (archd->debug) {
             fprintf(stderr, "%s:%d> pcomm_monitor_read_fd(): %s\n",
@@ -940,10 +940,10 @@ void callback_connect_request (pcomm_context_t *pcomm, int fd)
         }
         return;
     }
-    if (pcomm_result = pcomm_set_external_fd_context(archd->pcomm,
+    if ((pcomm_result = pcomm_set_external_fd_context(archd->pcomm,
                                                      PCOMM_STREAM_READ,
                                                      client_sock,
-                                                     client))
+                                                     client)) != PCOMM_SUCCESS)
     {
         if (archd->debug) {
             fprintf(stderr, "%s:%d> pcomm_set_external_fd_context(): %s\n",
@@ -1045,7 +1045,7 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
     char c;
     int k;
     size_t read_size;
-    char *s_errno;
+    //char *s_errno;
 
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
     client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_READ, fd);
@@ -1166,9 +1166,9 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
         client->length = 0;
 
         // Handle channel control commands
-        if (strncmp("CHANNELCONTROL-", record->data, 15) == 0)
+        if (strncmp("CHANNELCONTROL-", (char *)record->data, 15) == 0)
         {
-            p_buf = record->data;
+            p_buf = (char *)record->data;
             p_msg = control;
             for (k=0; k < 127; k++, p_buf++, p_msg++) {
                 c = *p_buf;
@@ -1198,7 +1198,7 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
                     syslog(LOG_ERR, "%s: Channel control applied: '%s'", WHOAMI, control);
                 }
                 sprintf(response, "CHANNELCONTROL-%d-OKAY.", control_id);
-                reply = make_reply(response, strlen(response)+1);
+                reply = make_reply((uint8_t *)response, strlen(response)+1);
                 break;
 
          // Channel Control Command FAILED
@@ -1211,7 +1211,7 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
                            WHOAMI, control);
                 }
                 sprintf(response, "CHANNELCONTROL-%d-FAIL.", control_id);
-                reply = make_reply(response, strlen(response)+1);
+                reply = make_reply((uint8_t *)response, strlen(response)+1);
                 break;
 
          // Channel Control Command INVALID
@@ -1224,13 +1224,13 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
                            WHOAMI, control);
                 }
                 sprintf(response, "CHANNELCONTROL-INVALID.");
-                reply = make_reply(response, strlen(response)+1);
+                reply = make_reply((uint8_t *)response, strlen(response) + 1);
                 break;
 
          // Pass this record on to the archive mechanism
             default:
                 // Least significant digit of the sequence number
-                reply = make_reply(record->data + 5, 1);
+                reply = make_reply((uint8_t *)(record->data + 5), 1);
                 gettimeofday(&record->receive_time, &archd->tz_info);
                 client->received++;
                 prioqueue_add(&archd->record_queue, record, 0/*priority*/);
@@ -1277,9 +1277,8 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
         prioqueue_print_summary(&archd->record_queue, stderr, "archd->record_queue: ", "");
     }
 
-    if (prioqueue_peek_high(&client->reply_queue)) {
-        if (pcomm_result = pcomm_monitor_write_fd(pcomm, fd,
-                                                  callback_client_can_send))
+    if (prioqueue_peek_high(&client->reply_queue) != NULL) {
+        if ((pcomm_result = pcomm_monitor_write_fd(pcomm, fd, callback_client_can_send)) != PCOMM_SUCCESS)
         {
             if (archd->debug) {
                 fprintf(stderr, "%s:pcomm_monitor_write_fd(): %s\n",
@@ -1308,7 +1307,7 @@ void callback_client_can_send (pcomm_context_t *pcomm, int fd)
         fprintf(stdout, "%s: replying to client\n", WHOAMI);
     }
 
-    while (reply = (reply_message_t *)prioqueue_peek_high(&client->reply_queue))
+    while ((reply = (reply_message_t *)prioqueue_peek_high(&client->reply_queue)) != NULL)
     {
         bytes_sent = send(fd, reply->message, reply->length, MSG_DONTWAIT);
         if (bytes_sent < reply->length ) {
@@ -1400,7 +1399,7 @@ void callback_client_closed (pcomm_context_t *pcomm, int fd)
 
     if (client) {
         fprintf(stderr, "%s: removing un-sent reply messages for closed client %d\n", WHOAMI, fd);
-        while (reply = (reply_message_t *)prioqueue_peek_high(&client->reply_queue)) {
+        while ((reply = (reply_message_t *)prioqueue_peek_high(&client->reply_queue)) != NULL) {
             fprintf(stderr, "%s: removing un-sent reply message for closed client %d\n", WHOAMI, fd);
             prioqueue_pop_high(&client->reply_queue);
             free(reply->message);
@@ -1414,5 +1413,8 @@ void callback_client_closed (pcomm_context_t *pcomm, int fd)
     }
 
     archd->client_count--;
+
+    adl_print_all();
+    adl_write_all_indices();
 }
 

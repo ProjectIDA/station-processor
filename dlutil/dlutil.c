@@ -56,6 +56,9 @@ int main (int argc, char **argv)
     exit(1);
   }
 
+// XXX:
+  adl_debug(1);
+
   // Handle command line debug request to look up records
   if (argc == 6)
   {

@@ -111,6 +111,9 @@ struct timeval index_interval = {.tv_sec = 300, .tv_usec = 0};
 // -1 = parsed with errors
 static int parse_state=0;
 
+// Show debug messages
+static int bDebugADL=0;
+
 // Map which stores a context for each open ASL diskloop
 static Map *pDiskLoops=NULL;
 
@@ -214,9 +217,6 @@ char *adl_close(
         diskloop_context_t **context
     );
 
-// Close all open diskloops
-char *adl_close_all();
-
 // Get the index of the record based on its relationship to the supplied time
 char *adl_locate_index(
         diskloop_context_t *context,
@@ -263,6 +263,11 @@ char *adl_range_indices(
         int *end_index
     );
 
+void print_callback(
+        const char *key,
+        const void *value,
+        const void *obj
+    );
 
 //////////////////////////////////////////////////////////////////////////////
 // Converts a string to upper case
@@ -1875,6 +1880,13 @@ void max_time(STDTIME2 *time)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+// Enable/disable debug messages from adl_* operations
+void adl_debug(int debug)
+{
+    bDebugADL = debug;
+}
+
+//////////////////////////////////////////////////////////////////////////////
 // Opens a diskloop if it has not already been opened,
 // otherwise it just sets the existing context
 char *adl_open(
@@ -1884,24 +1896,42 @@ char *adl_open(
         const char *channel   // channel name
     )
 {
+    char *result = NULL;
+
     diskloop_context_t *context = NULL;
     char  key[20];
 
     int   loop_offset = 0;
     long  loop_size = 0;
 
+    // The configuration file must be parsed before this routine can work
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "adl_open: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
+
     // locate context for this 
     MakeKey(station, location, channel, key);
+    if (bDebugADL) {
+        fprintf(stderr, "  adl_open() locating diskloop context...\n");
+    }
     context = (diskloop_context_t *)map_get(pDiskLoops, key);
 
     // If there is no context for this channel, create it
     if (context == NULL) {
+        if (bDebugADL) {
+            fprintf(stderr, "  adl_open() diskloop context not found, opening...\n");
+        }
         if ((context = (diskloop_context_t *)calloc(sizeof(diskloop_context_t), 1)) == NULL) {
             strcpy(looperrstr, "Could not allocate memory for diskloop context.");
             goto error;
         }
         // Store a copy of the key in the context (needed by adl_close)
         MakeKey(station, location, channel, context->key);
+        if (LoopRecordSize(&context->record_size) != NULL) {
+            goto error;
+        }
 
         // Store the loop and index file names in the context for reporting purposes
         DiskloopFileName(station, location, channel, ".buf", context->loop_name);
@@ -1965,13 +1995,22 @@ char *adl_open(
             goto error;
         }
 
+        if (bDebugADL) {
+            fprintf(stderr, "  adl_open() checking the size of the diskloop...");
+        }
         // Check the size of the diskloop file
         fseek(context->loop_fp, 0, SEEK_END);
         loop_size = ftell(context->loop_fp);
+        if (bDebugADL) {
+            fprintf(stderr, "%li bytes\n", loop_size);
+        }
 
         context->size = context->capacity;
         // If the diskloop is not full, we have not yet looped around,
         // so start at the end.
+        if (bDebugADL) {
+            fprintf(stderr, "  adl_open() loop_size=%li  context->record_size=%d\n", loop_size, context->record_size);
+        }
         if ((loop_size / context->record_size) < context->capacity) {
             // Integer arithmetic will jump us to the end of the last complete
             // record, overwriting any partial record
@@ -2003,7 +2042,7 @@ char *adl_open(
             int       rec_B_samples;
 
             DELTA_T2  delta_t2;
-            long      delta_ms;
+            long      delta_tms;
 
             int tmp_index = context->index;
 
@@ -2013,9 +2052,11 @@ char *adl_open(
             if ((tmp_index) >= context->capacity) {
                 tmp_index = 0;
             }
-            if (adl_read(context, tmp_index, temp_A) == NULL) {
+            if (bDebugADL) {
+                fprintf(stderr, "tmp_index = %d\n", tmp_index);
+            }
+            if (adl_read(context, tmp_index, temp_A) != NULL) {
                 sprintf(looperrstr, "adl_open: could not read newest record for %s", context->index_name);
-                fclose(context->index_fp);
                 goto error;
             }
             ParseSeedHeader(temp_A, rec_A_station, rec_A_chan, rec_A_loc,
@@ -2026,9 +2067,8 @@ char *adl_open(
             if ((tmp_index) >= context->capacity) {
                 tmp_index = 0;
             }
-            if (adl_read(context, tmp_index, temp_A) == NULL) {
+            if (adl_read(context, tmp_index, temp_A) != NULL) {
                 sprintf(looperrstr, "adl_open: could read following record for %s", context->index_name);
-                fclose(context->index_fp);
                 goto error;
             }
             ParseSeedHeader(temp_B, rec_B_station, rec_B_chan, rec_B_loc,
@@ -2037,19 +2077,31 @@ char *adl_open(
             // Test to see if this record Starts before last record ended
             // Only test records with data in them
             delta_t2 = ST_DiffTimes2(rec_A_start, rec_B_start);
-            delta_ms = ST_DeltaToMS2(delta_t2);
+            delta_tms = ST_DeltaToMS2(delta_t2);
 
             // If the next record is newer than the current, we need to
             // search for the newest record, update the index, and seek
             // to the correct position in the diskloop.
             max_time(&temp_time);
-            if (delta_ms < 0) {
+            if (delta_tms < 0) {
                 adl_newest_index(context, &context->index);
             }
         } // previous record should exist
 
         // Go to desired position in the circular buffer file
         loop_offset = context->index * context->record_size;
+        if (context->index < 0) {
+            loop_offset = 0;
+        }
+        if (bDebugADL) {
+            fprintf(stderr, "  adl_open() loop_offset=%d\n", loop_offset);
+            fprintf(stderr, "  adl_open() context->capacity=%d\n", context->capacity);
+            fprintf(stderr, "  adl_open() context->size=%d\n", context->size);
+            fprintf(stderr, "  adl_open() context->index=%d\n", context->index);
+            fprintf(stderr, "  adl_open() context->record_size=%d\n", context->record_size);
+            fprintf(stderr, "  adl_open() context->loop_name='%s'\n", context->loop_name);
+            fprintf(stderr, "  adl_open() context->index_name='%s'\n", context->index_name);
+        }
         fseek(context->loop_fp, loop_offset, SEEK_SET);
         if (loop_offset != ftell(context->loop_fp))
         {
@@ -2078,11 +2130,15 @@ char *adl_open(
     if (context) {
         free(context);
     }
-    return looperrstr;
+    result = looperrstr;
+    goto done;
 
  success:
     *return_context = context;
-    return NULL;
+    goto done;
+
+ done:
+    return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2093,6 +2149,8 @@ char *adl_write(
         char *record // record buffer
     )
 {
+    char *result = NULL;
+
     int  new_index = 0;
     struct timeval now;
     uint64_t now_stamp;
@@ -2108,34 +2166,39 @@ char *adl_write(
     int       rec_seqnum;
     int       rec_samples;
     DELTA_T2  delta_time;
-    long      delta_ms;
+    long      delta_tms;
     int       rate_factor;
     char     *issue = NULL;
+
+    if (context == NULL) {
+        sprintf(looperrstr, "adl_write: received null context");
+        goto error;
+    }
 
     ParseSeedHeader(record, rec_station, rec_chan, rec_loc,
                     &rec_start, &rec_end,
                     &rec_seqnum, &rec_samples);
 
-    delta_time = ST_DiffTimes2(rec_start, context->last_record_start);
-    delta_ms = ST_DeltaToMS2(delta_time);
+    delta_time = ST_DiffTimes2(rec_start, context->last_record_end);
+    delta_tms = ST_DeltaToMS2(delta_time);
     pheader = (seed_header *)record;
     rate_factor = (short)ntohs(pheader->sample_rate_factor);
     if ( (rec_samples > 0) &&
          (context->last_record_samples > 0) &&
          (rate_factor != 0) )
     {
-        if (delta_ms < -1) {
+        if (delta_tms < -1) {
             issue = "overlap";
-        } else if (delta_ms > 1) {
+        } else if (delta_tms > 1) {
             issue = "gap";
         }
 
         if (issue) {
             printf("DEBUG detected %s (%ld) %s %s/%s new record %d vs %d.\n",
-                    issue, delta_ms, rec_station, rec_loc, rec_chan,
+                    issue, delta_tms, rec_station, rec_loc, rec_chan,
                     rec_seqnum, context->last_record_seqnum);
             printf("%s < ", ST_PrintDate2(rec_start, TRUE));
-            printf("%s\n", ST_PrintDate2(context->last_record_start, TRUE));
+            printf("%s\n", ST_PrintDate2(context->last_record_end, TRUE));
         }
     }
 
@@ -2143,7 +2206,6 @@ char *adl_write(
         new_index = context->index + 1;
         if (new_index >= context->capacity) {
             new_index = 0;
-            fseek(context->loop_fp, 0, SEEK_SET);
         }
     }
     else {
@@ -2154,6 +2216,12 @@ char *adl_write(
         new_index = index;
     }
 
+    fseek(context->loop_fp, new_index * context->record_size, SEEK_SET);
+
+    if (bDebugADL) {
+        fprintf(stderr, "  adl_write() index %d (offset %d) in %s\n",
+                new_index, new_index * context->record_size, context->loop_name);
+    }
     // Write the new record
     if (fwrite(record, context->record_size, 1, context->loop_fp) != 1)
     {
@@ -2171,7 +2239,8 @@ char *adl_write(
     context->index = new_index;
     context->last_record_seqnum = rec_seqnum;
     context->last_record_samples = rec_samples;
-    memcpy(&context->last_record_start, &rec_start, sizeof(STDTIME2));
+    context->last_record_start = rec_start;
+    context->last_record_end = rec_end;
 
     gettimeofday(&now, NULL);
     now_stamp   = (uint64_t)TIME_MICRO(now);
@@ -2182,6 +2251,9 @@ char *adl_write(
     // record the current index.
     if ((now_stamp - index_stamp) >= TIME_MICRO(index_interval)) {
         adl_flush(context);
+        if (bDebugADL) {
+            fprintf(stderr, "  timeout occured, writing index\n");
+        }
         adl_write_index(context);
     }
     // Otherwise, we just flush the diskloop if the flush interval
@@ -2194,10 +2266,14 @@ char *adl_write(
     goto success;
 
  error:
-    return looperrstr;
+    result = looperrstr;
+    goto done;
 
  success:
-    return NULL;
+    goto done;
+
+ done:
+    return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2206,6 +2282,11 @@ char *adl_flush(
         diskloop_context_t *context // diskloop context
     )
 {
+    if (context == NULL) {
+        sprintf(looperrstr, "adl_flush: received null context");
+        return looperrstr;
+    }
+
     // Only flush if we have performed a write operation
     if (context->has_written) {
         fflush(context->loop_fp);
@@ -2223,6 +2304,14 @@ char *adl_write_index(
 {
     char msg[2*MAXCONFIGLINELEN+2];
 
+    if (context == NULL) {
+        sprintf(looperrstr, "adl_write_index: received null context");
+        return looperrstr;
+    }
+    if (bDebugADL) {
+        fprintf(stderr, "updating index file for '%s'\n", context->key);
+        print_callback("UNKNOWN", (void *)context, NULL);
+    }
     // Only update the index if we have performed a write operation
     if (context->has_written) {
         fseek(context->index_fp, 0, SEEK_SET);
@@ -2249,7 +2338,14 @@ char *adl_read(
         char *databuf // record buffer
     )
 {
+    char *result = NULL;
+    int seek_store = -1;
     int loop_seek = 0;
+
+    if (context == NULL) {
+        sprintf(looperrstr, "adl_read: received null context");
+        goto error;
+    }
 
     if (index < 0) {
         index = context->index;
@@ -2260,6 +2356,7 @@ char *adl_read(
         goto error;
     }
 
+    seek_store = ftell(context->loop_fp);
     loop_seek = index * context->record_size;
     fseek(context->loop_fp, loop_seek, SEEK_SET);
     if (ftell(context->loop_fp) != loop_seek) {
@@ -2277,10 +2374,17 @@ char *adl_read(
     goto success;
 
  error:
-    return looperrstr;
+    result = looperrstr;
+    goto done;
 
  success:
-    return NULL;
+    goto done;
+
+ done:
+    if (seek_store > -1) {
+        fseek(context->loop_fp, seek_store, SEEK_SET);
+    }
+    return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2291,23 +2395,112 @@ char *adl_close(
 {
     diskloop_context_t *context = *close_context;
 
+    if (context == NULL) {
+        sprintf(looperrstr, "adl_close: received null context");
+        return looperrstr;
+    }
+
     map_remove(pDiskLoops, context->key);
     adl_flush(context);
-    fclose(context->loop_fp);
+    if (bDebugADL) {
+        fprintf(stderr, "  adl_close() called, writing index\n");
+    }
     adl_write_index(context);
+    fclose(context->loop_fp);
     fclose(context->index_fp);
+    context->loop_fp = NULL;
+    context->index_fp = NULL;
     free(context);
     *close_context = NULL;
 
     return NULL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Callback for adl_print_all
+void print_callback(const char *key, const void *value, const void *obj)
+{
+    diskloop_context_t *context = (diskloop_context_t *)value;
+    if (context == NULL) {
+        fprintf(stderr, "  Null diskloop context for key '%s'\n", key);
+    }
+    else {
+
+        fprintf(stderr, "  Diskloop context for key '%s'\n", key);
+        fprintf(stderr, "    context->key         = '%s'\n", context->key);
+        fprintf(stderr, "    context->loop_name   = '%s'\n", context->loop_name);
+        fprintf(stderr, "    context->index_name  = '%s'\n", context->index_name);
+        fprintf(stderr, "    context->loop_fp     = 0x%lx\n", (unsigned long)context->loop_fp);
+        fprintf(stderr, "    context->index_fp    = 0x%lx\n", (unsigned long)context->index_fp);
+        fprintf(stderr, "    context->record_size = %d\n", context->record_size);
+        fprintf(stderr, "    context->capacity    = %d\n", context->capacity);
+        fprintf(stderr, "    context->size        = %d\n", context->size);
+        fprintf(stderr, "    context->index       = %d\n", context->index);
+        fprintf(stderr, "    context->has_written = %d\n", context->has_written);
+        fprintf(stderr, "    context->last_record_seqnum  = %d\n", context->last_record_seqnum);
+
+        fprintf(stderr, "    context->last_record_samples = %d\n", context->last_record_samples);
+        fprintf(stderr, "    context->last_flush  = %li.%li\n",
+                context->last_flush.tv_sec,
+                context->last_flush.tv_usec);
+        fprintf(stderr, "    context->last_index  = %li.%li\n",
+                context->last_index.tv_sec,
+                context->last_index.tv_usec);
+    }
+    fprintf(stderr, "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Print summary for all open diskloops
+char *adl_print_all()
+{
+    fprintf(stderr, "===== START DISKLOOP MAP =====\n");
+    map_enum(pDiskLoops, print_callback, NULL);
+    fprintf(stderr, "===== STOP DISKLOOP MAP =====\n");
+    return NULL;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Callback for adl_flush_all to flush every open diskloop.
+void flush_callback(const char *key, const void *value, const void *obj)
+{
+    adl_flush((diskloop_context_t *)(value));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Flush all open diskloops.
+char *adl_flush_all()
+{
+    map_enum(pDiskLoops, flush_callback, NULL);
+    return NULL;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Callback for adl_write_all_indices to flush every open diskloop.
+void write_index_callback(const char *key, const void *value, const void *obj)
+{
+    if (bDebugADL) {
+        fprintf(stderr, "  write_index_callback() called for key '%s', writing index\n", key);
+        print_callback(key, value, obj);
+    }
+    adl_flush((diskloop_context_t *)(value));
+    adl_write_index((diskloop_context_t *)(value));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Write index files for all open diskloops. Used when a connection closes.
+char *adl_write_all_indices()
+{
+    map_enum(pDiskLoops, write_index_callback, NULL);
+    return NULL;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 // Callback for adl_close_all to close every open diskloop.
 void close_callback(const char *key, const void *value, const void *obj)
 {
-    adl_close((diskloop_context_t **)(&value));
+    diskloop_context_t *context = (diskloop_context_t *)(value);
+    adl_close(&context);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2329,7 +2522,7 @@ void swap(void **ptr_a, void **ptr_b)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// Simplified call to check STDTIME2 differences in milliseconds
+// Simplified call to check STDTIME2 differences in tenth-milliseconds
 int compare_dcc_times(STDTIME2 *time_a, STDTIME2 *time_b)
 {
     return ST_DeltaToMS2(ST_DiffTimes2(*time_a, *time_b));
@@ -2337,11 +2530,12 @@ int compare_dcc_times(STDTIME2 *time_a, STDTIME2 *time_b)
 
 //////////////////////////////////////////////////////////////////////////////
 // Wrapper for populating record_info_t with internal buffer contents
-void prepare_record_info(record_info_t *info)
+void prepare_record_info(record_info_t *info, int index)
 {
     ParseSeedHeader(info->buffer, info->station, info->channel, info->location,
                     &info->start_time, &info->end_time, &info->seqnum, &info->samples);
     info->rate_factor = (short)ntohs(((seed_header *)(&info->buffer))->sample_rate_factor);
+    info->index = index;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2356,7 +2550,9 @@ char *adl_locate_index(
         int *index
     )
 {
-    int seek_store = 0;
+    char *result = NULL;
+
+    int seek_store = -1;
     int file_size = 0;
 
     int last_index = 0;
@@ -2375,6 +2571,9 @@ char *adl_locate_index(
     record_info_t record_before;
     record_info_t this_record;
     record_info_t record_after;
+
+    int best_init;
+    STDTIME2 best_time;
 
     // Time comparisons
     // C = current record start time
@@ -2417,9 +2616,9 @@ char *adl_locate_index(
                 context->loop_name);
         goto error;
     }
-    prepare_record_info(&this_record);
-    memcpy((void *)&file_first_start_time, (void *)&this_record.start_time, sizeof(STDTIME2));
-    memcpy((void *)&file_first_end_time,   (void *)&this_record.end_time,   sizeof(STDTIME2));
+    prepare_record_info(&this_record, 0);
+    file_first_start_time = this_record.start_time;
+    file_first_end_time = this_record.end_time;
 
     // Retrieve the last (end of file) record's times
     if (adl_read(context, last_index, this_record.buffer) != NULL)
@@ -2428,9 +2627,9 @@ char *adl_locate_index(
                 context->loop_name);
         goto error;
     }
-    prepare_record_info(&this_record);
-    memcpy((void *)&file_last_start_time, (void *)&this_record.start_time, sizeof(STDTIME2));
-    memcpy((void *)&file_last_end_time,   (void *)&this_record.end_time,   sizeof(STDTIME2));
+    prepare_record_info(&this_record, last_index);
+    file_last_start_time = this_record.start_time;
+    file_last_end_time = this_record.end_time;
 
     // Check if we are looped, and which direction to check
     // SEARCH_LOOP_HIGH
@@ -2438,7 +2637,26 @@ char *adl_locate_index(
 
     min_index = 0;
     max_index = last_index;
-    while (min_index < max_index) {
+    if (bDebugADL) {
+        fprintf(stderr, "Starting binary search for record\n");
+        fprintf(stderr, "  time   : %s\n", ST_PrintDate2(*time, 1));
+        fprintf(stderr, "  whence : %d\n", whence);
+        fprintf(stderr, "  index  : %d\n", *index);
+        fprintf(stderr, "  last_index = %d\n", last_index);
+        fprintf(stderr, "  file_first_start_time = %s\n",
+                ST_PrintDate2(file_first_start_time, 1));
+        fprintf(stderr, "  file_first_end_time   = %s\n",
+                ST_PrintDate2(file_first_end_time, 1));
+        fprintf(stderr, "  file_last_start_time  = %s\n",
+                ST_PrintDate2(file_last_start_time, 1));
+        fprintf(stderr, "  file_last_end_time    = %s\n",
+                ST_PrintDate2(file_last_end_time, 1));
+    }
+
+    while ((max_index - min_index) > 1) {
+        if (bDebugADL) {
+            fprintf(stderr, "Loop Iteration Summary: \n");
+        }
         pivot_index = min_index + ((max_index - min_index) / 2);
         // read record at the 
         if (adl_read(context, pivot_index, this_record.buffer) != NULL) {
@@ -2446,41 +2664,62 @@ char *adl_locate_index(
                     pivot_index, context->loop_name);
             goto error;
         }
-        prepare_record_info(&this_record);
+        prepare_record_info(&this_record, pivot_index);
 
         tdiff_C_T = compare_dcc_times(&this_record.start_time, time);
-        if (tdiff_C_T < 0) { // current < target
+        if (bDebugADL) {
+            fprintf(stderr, "  tdiff_C_T = %li\n", tdiff_C_T);
+        }
+        if (tdiff_C_T < 0) {
             tdiff_C_F = compare_dcc_times(&this_record.start_time, &file_first_start_time);
-            if (tdiff_C_F < 0) { // current < first
-                tdiff_T_L = compare_dcc_times(time, &file_last_start_time);
-                if (tdiff_T_L > 0) { // target > last
-                    max_index = pivot_index;
-                }
-                else { // target <= last
-                    min_index = pivot_index;
-                }
+            tdiff_T_L = compare_dcc_times(time, &file_last_start_time);
+            if (bDebugADL) {
+                fprintf(stderr, "    tdiff_C_F = %li\n", tdiff_C_F);
+                fprintf(stderr, "    tdiff_T_L = %li\n", tdiff_T_L);
             }
-            else { // current >= first (requires that: target > first)
+            if ((tdiff_C_F < 0) && (tdiff_T_L > 0)) {
+                // ----T---| ----C---
+                max_index = pivot_index;
+            }
+            else {
+                // ----C-------T----|
+                // --C--T--| --------
+                // --------| --C--T--
                 min_index = pivot_index;
             }
         }
-        else if (tdiff_C_T > 0) { // current > target
+        else if (tdiff_C_T > 0) {
+            tdiff_C_L = compare_dcc_times(&this_record.start_time, &file_last_start_time);
             tdiff_T_F = compare_dcc_times(time, &file_first_start_time);
-            if (tdiff_T_F < 0) { // target < first
-                tdiff_C_L = compare_dcc_times(&this_record.start_time, &file_last_start_time);
-                if (tdiff_C_L > 0 ) { // current > last
-                    max_index = pivot_index;
-                }
-                else { // current <= last
-                    min_index = pivot_index;
-                }
+            if (bDebugADL) {
+                fprintf(stderr, "    tdiff_C_L = %li\n", tdiff_C_L);
+                fprintf(stderr, "    tdiff_T_F = %li\n", tdiff_T_F);
             }
-            else { // target >= first (requires that: current > first)
+            if ((tdiff_C_L > 0 ) && (tdiff_T_F < 0)) {
+                // ----C---| ----T---
+                min_index = pivot_index;
+            }
+            else {
+                // ----T-------C----|
+                // --T--C--| --------
+                // --------| --T--C--
                 max_index = pivot_index;
             }
         }
         else {
             min_index = max_index = pivot_index;
+        }
+        if (bDebugADL) {
+            fprintf(stderr, "  pivot_index     = %d\n", pivot_index);
+            fprintf(stderr, "  min_index       = %d\n", min_index);
+            fprintf(stderr, "  max_index       = %d\n", max_index);
+            fprintf(stderr, "  this_record.start_time = %s\n",
+                    ST_PrintDate2(this_record.start_time, 1));
+            fprintf(stderr, "  this_record.end_time   = %s\n",
+                    ST_PrintDate2(this_record.end_time, 1));
+            fprintf(stderr, "  target time            = %s\n",
+                    ST_PrintDate2(*time, 1));
+            fprintf(stderr, "\n");
         }
     }
 
@@ -2490,7 +2729,7 @@ char *adl_locate_index(
                 pivot_index, index_before, context->loop_name);
         goto error;
     }
-    prepare_record_info(&record_before);
+    prepare_record_info(&record_before, index_before);
 
     index_after = (pivot_index < last_index) ? (pivot_index + 1) : 0;
     if (adl_read(context, index_after, record_after.buffer) != NULL) {
@@ -2498,45 +2737,94 @@ char *adl_locate_index(
                 pivot_index, index_after, context->loop_name);
         goto error;
     }
-    prepare_record_info(&record_after);
+    prepare_record_info(&record_after, index_after);
 
+    if (bDebugADL) {
+        fprintf(stderr, "\n");
+        fprintf(stderr, "  record_before [%s - %s]\n",
+                ST_PrintDate2(record_before.start_time, 1),
+                ST_PrintDate2(record_before.end_time, 1));
+        fprintf(stderr, "    this_record [%s - %s]\n",
+                ST_PrintDate2(this_record.start_time, 1),
+                ST_PrintDate2(this_record.end_time, 1));
+        fprintf(stderr, "   record_after [%s - %s]\n",
+                ST_PrintDate2(record_after.start_time, 1),
+                ST_PrintDate2(record_after.end_time, 1));
+        fprintf(stderr, "\n");
+    }
     switch (whence) {
         case INDEX_BEFORE_EXCLUSIVE:
             // the newest record with an end time earlier than the indicated time
-            if ( compare_dcc_times(&this_record.end_time, time) < 0) {
-                if ( (compare_dcc_times(&record_after.end_time, time) < 0) && 
-                     (compare_dcc_times(&this_record.start_time, &record_after.start_time) < 0) )
+            best_init = 0;
+            if ( compare_dcc_times(&record_before.end_time, time) < 0) {
+                if ((!best_init) ||
+                    (compare_dcc_times(&record_before.end_time, &best_time) > 0))
                 {
-                    *index = index_after;
-                }
-                else {
-                    *index = pivot_index;
+                    best_time = record_before.end_time;
+                    best_init = 1;
+                    *index = record_before.index;
                 }
             }
-            else if (compare_dcc_times(&record_before.end_time, time) < 0) {
-                *index = index_before;
+
+            if ( compare_dcc_times(&this_record.end_time, time) < 0) {
+                if ((!best_init) ||
+                    (compare_dcc_times(&this_record.end_time, &best_time) > 0))
+                {
+                    best_time = this_record.end_time;
+                    best_init = 1;
+                    *index = this_record.index;
+                }
             }
-            else {
+
+            if ( compare_dcc_times(&record_after.end_time, time) < 0) {
+                if ((!best_init) ||
+                    (compare_dcc_times(&record_after.end_time, &best_time) > 0))
+                {
+                    best_time = record_after.end_time;
+                    best_init = 1;
+                    *index = record_after.index;
+                }
+            }
+
+            if (!best_init) {
                 *index = -1;
             }
             break;
 
         case INDEX_BEFORE_INCLUSIVE:
             // the newest record with an start time at or earlier than the indicated time
-            if ( compare_dcc_times(&this_record.start_time, time) <= 0) {
-                if ( (compare_dcc_times(&record_after.start_time, time) <= 0) && 
-                     (compare_dcc_times(&this_record.start_time, &record_after.start_time) < 0) )
+            best_init = 0;
+            if ( compare_dcc_times(&record_before.start_time, time) <= 0) {
+                if ((!best_init) ||
+                    (compare_dcc_times(&record_before.start_time, &best_time) > 0))
                 {
-                    *index = index_after;
-                }
-                else {
-                    *index = pivot_index;
+                    best_time = record_before.start_time;
+                    best_init = 1;
+                    *index = record_before.index;
                 }
             }
-            else if (compare_dcc_times(&record_before.start_time, time) <= 0) {
-                *index = index_before;
+
+            if ( compare_dcc_times(&this_record.start_time, time) <= 0) {
+                if ((!best_init) ||
+                    (compare_dcc_times(&this_record.start_time, &best_time) > 0))
+                {
+                    best_time = this_record.start_time;
+                    best_init = 1;
+                    *index = this_record.index;
+                }
             }
-            else {
+
+            if ( compare_dcc_times(&record_after.start_time, time) <= 0) {
+                if ((!best_init) ||
+                    (compare_dcc_times(&record_after.start_time, &best_time) > 0))
+                {
+                    best_time = record_after.start_time;
+                    best_init = 1;
+                    *index = record_after.index;
+                }
+            }
+
+            if (!best_init) {
                 *index = -1;
             }
             break;
@@ -2565,40 +2853,76 @@ char *adl_locate_index(
 
         case INDEX_AFTER_INCLUSIVE:
             // the oldest record with an end time at or later than the indicated time
-            if ( compare_dcc_times(&this_record.end_time, time) >= 0) {
-                if ( (compare_dcc_times(&record_before.end_time, time) >= 0) &&
-                     (compare_dcc_times(&this_record.start_time, &record_before.start_time) > 0) )
+            best_init = 0;
+            if ( compare_dcc_times(&record_before.end_time, time) >= 0) {
+                if ((!best_init) ||
+                    (compare_dcc_times(&record_before.end_time, &best_time) < 0))
                 {
-                    *index = index_before;
-                }
-                else {
-                    *index = pivot_index;
+                    best_time = record_before.end_time;
+                    best_init = 1;
+                    *index = record_before.index;
                 }
             }
-            else if (compare_dcc_times(&record_after.end_time, time) >= 0) {
-                *index = index_after;
+
+            if ( compare_dcc_times(&this_record.end_time, time) >= 0) {
+                if ((!best_init) ||
+                    (compare_dcc_times(&this_record.end_time, &best_time) < 0))
+                {
+                    best_time = this_record.end_time;
+                    best_init = 1;
+                    *index = this_record.index;
+                }
             }
-            else {
+
+            if ( compare_dcc_times(&record_after.end_time, time) >= 0) {
+                if ((!best_init) ||
+                    (compare_dcc_times(&record_after.end_time, &best_time) < 0))
+                {
+                    best_time = record_after.end_time;
+                    best_init = 1;
+                    *index = record_after.index;
+                }
+            }
+
+            if (!best_init) {
                 *index = -1;
             }
             break;
 
         case INDEX_AFTER_EXCLUSIVE:
             // the oldest record with a start time later than the indicated time
-            if ( compare_dcc_times(&this_record.start_time, time) > 0) {
-                if ( (compare_dcc_times(&record_before.start_time, time) > 0) &&
-                     (compare_dcc_times(&this_record.start_time, &record_before.start_time) > 0) )
+            best_init = 0;
+            if ( compare_dcc_times(&record_before.start_time, time) > 0) {
+                if ((!best_init) ||
+                    (compare_dcc_times(&record_before.start_time, &best_time) < 0))
                 {
-                    *index = index_before;
-                }
-                else {
-                    *index = pivot_index;
+                    best_time = record_before.start_time;
+                    best_init = 1;
+                    *index = record_before.index;
                 }
             }
-            else if (compare_dcc_times(&record_after.start_time, time) > 0) {
-                *index = index_after;
+
+            if ( compare_dcc_times(&this_record.start_time, time) > 0) {
+                if ((!best_init) ||
+                    (compare_dcc_times(&this_record.start_time, &best_time) < 0))
+                {
+                    best_time = this_record.start_time;
+                    best_init = 1;
+                    *index = this_record.index;
+                }
             }
-            else {
+
+            if ( compare_dcc_times(&record_after.start_time, time) > 0) {
+                if ((!best_init) ||
+                    (compare_dcc_times(&record_after.start_time, &best_time) < 0))
+                {
+                    best_time = record_after.start_time;
+                    best_init = 1;
+                    *index = record_after.index;
+                }
+            }
+
+            if (!best_init) {
                 *index = -1;
             }
             break;
@@ -2613,11 +2937,16 @@ char *adl_locate_index(
     goto success;
 
  error:
-    fseek(context->loop_fp, seek_store, SEEK_SET);
-    return looperrstr;
+    result = looperrstr;
+    goto done;
 
  success:
-    fseek(context->loop_fp, seek_store, SEEK_SET);
+    goto done;
+
+ done:
+    if (seek_store > -1) {
+        fseek(context->loop_fp, seek_store, SEEK_SET);
+    }
     return NULL;
 }
 
@@ -2630,7 +2959,7 @@ char *adl_oldest_index(
 {
     STDTIME2 temp_time;
     min_time(&temp_time);
-    return adl_locate_index(context, &temp_time, INDEX_BEFORE_INCLUSIVE, index);
+    return adl_locate_index(context, &temp_time, INDEX_AFTER_INCLUSIVE, index);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2642,7 +2971,7 @@ char *adl_newest_index(
 {
     STDTIME2 temp_time;
     max_time(&temp_time);
-    return adl_locate_index(context, &temp_time, INDEX_AFTER_INCLUSIVE, index);
+    return adl_locate_index(context, &temp_time, INDEX_BEFORE_INCLUSIVE, index);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2713,195 +3042,25 @@ char *WriteChan(
         char        *databuf    // Seed record pointer
         )                       // returns NULL or an error string pointer
 {
-    char  buf_filename[2*MAXCONFIGLINELEN+2];
-    char  idx_filename[2*MAXCONFIGLINELEN+2];
-    char  msg[2*MAXCONFIGLINELEN+2];
-    FILE  *fp_buf;
-    FILE  *fp_idx;
-    int   iRecord;
-    int   iMaxRecord;
-    int   iSeek;
-    //diskloop_context_t *context;
+    diskloop_context_t *context;
 
-    // The configuration file must be parsed before this routine can work
-    if (parse_state == 0)
-    {
-        sprintf(looperrstr, "WriteChan: ParseDiskLoopConfig not run yet");
+    if (bDebugADL) {
+        fprintf(stderr, "Opening diskloop for %s-%s-%s...\n", station, loc, chan);
+    }
+    if (adl_open(&context, station, loc, chan) != NULL) {
         return looperrstr;
     }
-
-    /* XXX
-    if (adl_open(station, loc, chan, &context) != NULL) {
-        return looperrstr;
-    }
-    */
-
-    // Get names of buffer and index files
-    DiskloopFileName(station, loc, chan, ".buf", buf_filename);
-    DiskloopFileName(station, loc, chan, ".idx", idx_filename);
-
-    // Make sure that buffer file exists
-    if ((fp_buf=fopen(buf_filename, "r")) == NULL)
-    {
-        // Buffer file does not exist so start a new set
-        if (NewBuffer(station, chan, loc) != NULL)
-            return looperrstr;
-    }
-    if (fp_buf != NULL) fclose(fp_buf);
-
-    // Make sure that index file exists
-    if ((fp_idx=fopen(idx_filename, "r")) == NULL)
-    {
-        // Index file does not exist so start fresh
-        if (NewBuffer(station, chan, loc) != NULL)
-            return looperrstr;
-        if ((fp_idx=fopen(idx_filename, "r")) == NULL)
-        {
-            sprintf(looperrstr, "WriteChan: failed to find %s",
-                    idx_filename);
-            return looperrstr;
-        }
-    } // unable to open index file
-
-    // Load index info
-    if (ParseIndexInfo(fp_idx, &iRecord, &iMaxRecord) != NULL)
-    {
-        sprintf(looperrstr, "WriteChan: Index file format error in %s",
-                idx_filename);
-        fclose(fp_idx);
-        return looperrstr;
-    } // error reading index and max record value
-
-    if (iRecord < -1 || iRecord >= iMaxRecord)
-    {
-        sprintf(looperrstr, "WriteChan: Invalid index -1 <= %d < %d in %s",
-                iRecord, iMaxRecord, idx_filename);
-        fclose(fp_idx);
-        return looperrstr;
-    } // error reading index and max record value
-    fclose(fp_idx);
-
-    // Get the header for the last record written
-    if (iRecord >= 0)
-    {
-        char      tempbuf[8192];
-        char      rec_station[6];
-        char      rec_chan[4];
-        char      rec_loc[4];
-        STDTIME2  rec_tStart;
-        STDTIME2  rec_tEnd;
-        STDTIME2  cur_tStart;
-        STDTIME2  cur_tEnd;
-        DELTA_T2  tDelta;
-        long      lMs;
-        int       rec_seqnum;
-        int       rec_samples;
-        int       cur_seqnum;
-        int       cur_samples;
-        int       iRateFactor;
-        seed_header *pheader;
-
-
-        // A previous record exists
-        if (ReadLast(station, chan, loc, tempbuf) == NULL)
-        {
-            // We successfully read last record so get timespan
-            ParseSeedHeader(tempbuf, rec_station, rec_chan, rec_loc,
-                    &rec_tStart, &rec_tEnd, &rec_seqnum, &rec_samples);
-            // Get timespan for current record
-            ParseSeedHeader(databuf, rec_station, rec_chan, rec_loc,
-                    &cur_tStart, &cur_tEnd, &cur_seqnum, &cur_samples);
-
-            // Test to see if this record Starts before last record ended
-            // Only test records with data in them
-            tDelta = ST_DiffTimes2(cur_tStart, rec_tEnd);
-            lMs = ST_DeltaToMS2(tDelta);
-            pheader = (seed_header *)databuf;
-            iRateFactor = (short)ntohs(pheader->sample_rate_factor);
-            if (cur_samples > 0 && rec_samples > 0 && iRateFactor != 0 &&
-                    lMs < -1)
-            {
-                printf("DEBUG detected overlap (%ld) %s %s/%s new record %d vs %d.\n",
-                        lMs, station, loc, chan, cur_seqnum, rec_seqnum);
-                printf("%s < ", ST_PrintDate2(cur_tStart, TRUE));
-                printf("%s\n", ST_PrintDate2(rec_tEnd, TRUE));
-            }
-            if (cur_samples > 0 && rec_samples > 0 && iRateFactor != 0 &&
-                    lMs > 1)
-            {
-                printf("DEBUG detected gap (%ld) %s %s/%s new record %d vs %d.\n",
-                        lMs, station, loc, chan, cur_seqnum, rec_seqnum);
-                printf("%s > ", ST_PrintDate2(cur_tStart, TRUE));
-                printf("%s\n", ST_PrintDate2(rec_tEnd, TRUE));
-            }
-
-            /* Remove former 4096 check for overwrite record
-            // Check for matching record number and a greater number of samples
-            if (rec_seqnum == cur_seqnum && rec_samples < cur_samples)
-            {
-            // overwrite older partial data
-            // Cause an overwrite by decrementing pointer
-            iRecord--;
-            fprintf(stdout, "Replacing duplicate data for %s %s/%s\n",
-            rec_station, rec_loc, rec_chan);
-            } // sequence numbers match, and additional data
-             */
-        } // Able to read previuos record
-    } // previous record should exist
-
-    // Increment index to point to next free record
-    iRecord = (iRecord + 1) % iMaxRecord;
-
-    // Open the buffer file for write access
-    if ((fp_buf=fopen(buf_filename, "r+")) == NULL)
-    {
-        // Buffer file does not exist so start a new set
-        sprintf(looperrstr, "WriteChan: Failed to open %s for updating",
-                buf_filename);
-        return looperrstr;
+    if (bDebugADL) {
+        fprintf(stderr, "Open.\n Writing record...\n");
     }
 
-    // Go to desired position in the circular buffer file
-    iSeek = iRecord * iLoopRecordSize;
-    fseek(fp_buf, iSeek, SEEK_SET);
-    if (iSeek != ftell(fp_buf))
-    {
-        sprintf(looperrstr, "WriteChan: Unable to seek to record %d in %s",
-                iRecord, buf_filename);
-        fclose(fp_buf);
+    if (adl_write(context, -1/*append*/, databuf) != NULL) {
         return looperrstr;
-    } // Failed to seek to required file buffer position
+    }
+    if (bDebugADL) {
+        fprintf(stderr, "Done.\n");
+    }
 
-    // Write the new record
-    if (fwrite(databuf, iLoopRecordSize, 1, fp_buf) != 1)
-    {
-        sprintf(looperrstr, "WriteChan: Unable to write record %d in %s",
-                iRecord, buf_filename);
-        databuf[0] = 0;
-        fclose(fp_buf);
-        return looperrstr;
-    } // Failed to write record
-    fclose(fp_buf);
-
-    // Write the new index values
-    if ((fp_idx=fopen(idx_filename, "r+")) == NULL)
-    {
-        // Index file does not exist so start fresh
-        sprintf(looperrstr, "WriteChan: failed to open %s for updating",
-                idx_filename);
-        return looperrstr;
-    } // unable to open index file
-
-    // Update the index file
-    // index is writen three times so reader can detect midstream update
-    sprintf(msg, "%d %d", iRecord, iMaxRecord);
-    fprintf(fp_idx, "%-30.30s\n", msg);
-    fprintf(fp_idx, "%-30.30s\n", msg);
-    fprintf(fp_idx, "%-30.30s\n", msg);
-    fclose(fp_idx);
-
-    //fprintf(stdout, "DEBUG WriteChan %s/%s to %d/%d\n",
-    //loc, chan, iRecord, iMaxRecord);
     return NULL;
 } // WriteChan()
 
@@ -2919,96 +3078,16 @@ char *ReadIndex(
         char        *databuf    // Seed record pointer
         )                       // returns NULL or an error string pointer
 {
-    char  buf_filename[2*MAXCONFIGLINELEN+2];
-    char  idx_filename[2*MAXCONFIGLINELEN+2];
-    FILE  *fp_buf;
-    FILE  *fp_idx;
-    int   iRecord;
-    int   iMaxRecord;
-    int   iSeek;
+    diskloop_context_t *context;
 
-    // The configuration file must be parsed before this routine can work
-    if (parse_state == 0)
-    {
-        sprintf(looperrstr, "ReadLast: ParseDiskLoopConfig not run yet");
+    if (adl_open(&context, station, loc, chan) != NULL) {
         return looperrstr;
     }
 
-    // Get names of buffer and index files
-    DiskloopFileName(station, loc, chan, ".buf", buf_filename);
-    DiskloopFileName(station, loc, chan, ".idx", idx_filename);
-
-    // Make sure that buffer file exists
-    if ((fp_buf=fopen(buf_filename, "r")) == NULL)
-    {
-        // Buffer file does not exist so no records to return
-        databuf[0] = 0;
-        return NULL;
+    if (adl_read(context, index, databuf) != NULL) {
+        return looperrstr;
     }
 
-    // Make sure that index file exists
-    if ((fp_idx=fopen(idx_filename, "r")) == NULL)
-    {
-        // Index file does not exist so no last record to return
-        fclose(fp_buf);
-        databuf[0] = 0;
-        return NULL;
-    }
-
-    // Load index info
-    if (ParseIndexInfo(fp_idx, &iRecord, &iMaxRecord) != NULL)
-    {
-        sprintf(looperrstr, "ReadLast: Data format error in %s",
-                idx_filename);
-        databuf[0] = 0;
-        fclose(fp_buf);
-        fclose(fp_idx);
-        return looperrstr;
-    } // error reading index and max record value
-
-    if (iRecord < 0 || iRecord >= iMaxRecord)
-    {
-        sprintf(looperrstr, "ReadLast: Invalid index 0 <= %d < %d in %s",
-                iRecord, iMaxRecord, idx_filename);
-        databuf[0] = 0;
-        fclose(fp_buf);
-        fclose(fp_idx);
-        return looperrstr;
-    } // error reading index and max record value
-
-    // Normalize user requested index
-    if (index < 0)
-        index += (1+index/iMaxRecord)*iMaxRecord;
-    if (index >= iMaxRecord)
-        index = index % iMaxRecord;
-
-    // Get data at the specified index
-    iSeek = index * iLoopRecordSize;
-    fseek(fp_buf, iSeek, SEEK_SET);
-    if (iSeek != ftell(fp_buf))
-    {
-        sprintf(looperrstr, "ReadLast: Unable to seek to record %d in %s",
-                index, buf_filename);
-        databuf[0] = 0;
-        fclose(fp_buf);
-        fclose(fp_idx);
-        return looperrstr;
-    } // Failed to seek to required file buffer position
-
-    if (fread(databuf, iLoopRecordSize, 1, fp_buf) != 1)
-    {
-        sprintf(looperrstr, "ReadLast: Unable to read record %d in %s",
-                iRecord, buf_filename);
-        databuf[0] = 0;
-        fclose(fp_buf);
-        fclose(fp_idx);
-        return looperrstr;
-    } // Failed to read record
-
-    //fprintf(stdout,"DEBUG ReadLast(%s,%s,%s) return %d/%d\n",
-    //station, chan, loc, iRecord, iMaxRecord);
-    fclose(fp_buf);
-    fclose(fp_idx);
     return NULL;
 } // ReadIndex()
 
@@ -3022,91 +3101,21 @@ char *ReadLast(
         char        *databuf    // Seed record pointer
         )                       // returns NULL or an error string pointer
 {
-    char  buf_filename[2*MAXCONFIGLINELEN+2];
-    char  idx_filename[2*MAXCONFIGLINELEN+2];
-    FILE  *fp_buf;
-    FILE  *fp_idx;
-    int   iRecord;
-    int   iMaxRecord;
-    int   iSeek;
+    diskloop_context_t *context;
+    int index;
 
-    // The configuration file must be parsed before this routine can work
-    if (parse_state == 0)
-    {
-        sprintf(looperrstr, "ReadLast: ParseDiskLoopConfig not run yet");
+    if (adl_open(&context, station, loc, chan) != NULL) {
         return looperrstr;
     }
 
-
-    // Get names of buffer and index files
-    DiskloopFileName(station, loc, chan, ".buf", buf_filename);
-    DiskloopFileName(station, loc, chan, ".idx", idx_filename);
-
-    // Make sure that buffer file exists
-    if ((fp_buf=fopen(buf_filename, "r")) == NULL)
-    {
-        // Buffer file does not exist so no last record to return
-        databuf[0] = 0;
-        return NULL;
+    if (adl_newest_index(context, &index) != NULL) {
+        return looperrstr;
     }
 
-    // Make sure that index file exists
-    if ((fp_idx=fopen(idx_filename, "r")) == NULL)
-    {
-        // Index file does not exist so no last record to return
-        fclose(fp_buf);
-        databuf[0] = 0;
-        return NULL;
+    if (adl_read(context, index, databuf) != NULL) {
+        return looperrstr;
     }
 
-    // Load index info
-    if (ParseIndexInfo(fp_idx, &iRecord, &iMaxRecord) != NULL)
-    {
-        sprintf(looperrstr, "ReadLast: Data format error in %s",
-                idx_filename);
-        databuf[0] = 0;
-        fclose(fp_buf);
-        fclose(fp_idx);
-        return looperrstr;
-    } // error reading index and max record value
-
-    if (iRecord < 0 || iRecord >= iMaxRecord)
-    {
-        sprintf(looperrstr, "ReadLast: Invalid index 0 <= %d < %d in %s",
-                iRecord, iMaxRecord, idx_filename);
-        databuf[0] = 0;
-        fclose(fp_buf);
-        fclose(fp_idx);
-        return looperrstr;
-    } // error reading index and max record value
-
-    // Get data at the specified index
-    iSeek = iRecord * iLoopRecordSize;
-    fseek(fp_buf, iSeek, SEEK_SET);
-    if (iSeek != ftell(fp_buf))
-    {
-        sprintf(looperrstr, "ReadLast: Unable to seek to record %d in %s",
-                iRecord, buf_filename);
-        databuf[0] = 0;
-        fclose(fp_buf);
-        fclose(fp_idx);
-        return looperrstr;
-    } // Failed to seek to required file buffer position
-
-    if (fread(databuf, iLoopRecordSize, 1, fp_buf) != 1)
-    {
-        sprintf(looperrstr, "ReadLast: Unable to read record %d in %s",
-                iRecord, buf_filename);
-        databuf[0] = 0;
-        fclose(fp_buf);
-        fclose(fp_idx);
-        return looperrstr;
-    } // Failed to read record
-
-    //fprintf(stdout,"DEBUG ReadLast(%s,%s,%s) return %d/%d\n",
-    //station, chan, loc, iRecord, iMaxRecord);
-    fclose(fp_buf);
-    fclose(fp_idx);
     return NULL;
 } // ReadLast()
 
@@ -3125,224 +3134,29 @@ char *GetRecordRange(
         )                       // returns NULL or an error string pointer
 // iFirst == -1 if no records were found
 {
-    char  buf_filename[2*MAXCONFIGLINELEN+2];
-    char  idx_filename[2*MAXCONFIGLINELEN+2];
-    char  str_header[FRAME_SIZE];
-    char    recStation[8];
-    char    recLoc[4];
-    char    recChan[4];
-    FILE  *fp_buf;
-    FILE  *fp_idx;
-    STDTIME2    tRecStart;
-    STDTIME2    tRecEnd;
-    int   iFlipRecord;
-    int   iMaxRecord;
-    int   iRecord;
-    int   iSeek;
-    int   iHigh;
-    int   iLow;
-    int   iMid;
-    int   iPre;
-    int   iPost;
-    int   iCmp;
-    int   iSeqNum;
-    int   iSamples;
+    diskloop_context_t *context;
+    int start_index;
+    int end_index;
 
-    *iFirst = *iLast = *iLoopSize = -1;
-    *iCount = 0;
-
-    // The configuration file must be parsed before this routine can work
-    if (parse_state == 0)
-    {
-        sprintf(looperrstr, "GetRecordRange: ParseDiskLoopConfig not run yet");
+    if (adl_open(&context, station, loc, chan) != NULL) {
         return looperrstr;
     }
 
-    // Get names of buffer and index files
-    DiskloopFileName(station, loc, chan, ".buf", buf_filename);
-    DiskloopFileName(station, loc, chan, ".idx", idx_filename);
-
-    // Make sure that buffer file exists
-    if ((fp_buf=fopen(buf_filename, "r")) == NULL)
+    if (adl_range_indices(context, &tBeginTime, &tEndTime, 1/*inclusive*/,
+                          &start_index, &end_index) != NULL)
     {
-        // Buffer file does not exist so no last record to return
-        return NULL;
-    }
-
-    // Make sure that index file exists
-    if ((fp_idx=fopen(idx_filename, "r")) == NULL)
-    {
-        // Index file does not exist so no last record to return
-        fclose(fp_buf);
-        return NULL;
-    }
-
-    // Load index info
-    if (ParseIndexInfo(fp_idx, &iFlipRecord, &iMaxRecord) != NULL)
-    {
-        sprintf(looperrstr, "GetRecordRange: Data format error in %s",
-                idx_filename);
-        fclose(fp_buf);
-        fclose(fp_idx);
         return looperrstr;
-    } // error reading index and max record value
-
-    // Skip records just ahead of write point as a safety buffer
-    iLow = LOOPDEADRECORDS+1;
-    iHigh = iMaxRecord;
-
-    // Check for special case of circular buffer has not yet been filled once
-    // If missing records would compose our dead space we don't care
-    fseek(fp_buf, 0, SEEK_END);
-    iSeek = ftell(fp_buf);
-    if ((iMaxRecord-LOOPDEADRECORDS) * iLoopRecordSize > iSeek)
-    {
-        iMaxRecord = iSeek/iLoopRecordSize;
-        iHigh = iMaxRecord;
-        iLow = 1;
     }
 
-    *iLoopSize = iMaxRecord;
-    if (iFlipRecord < 0 || iFlipRecord >= iMaxRecord)
-    {
-        sprintf(looperrstr, "GetRecordRange: Invalid index 0 <= %d < %d in %s",
-                iFlipRecord, iMaxRecord, idx_filename);
-        fclose(fp_buf);
-        fclose(fp_idx);
-        return looperrstr;
-    } // error reading index and max record value
-
-    //
-    // Binary search for last record with End time before tBeginTime
-    while (iLow <= iHigh)
-    {
-        // Get mid point for our binary search test
-        iMid = (iHigh+iLow)/2;
-
-        // Convert iMid to a record offset inside circular buffer
-        iRecord = (iFlipRecord+iMid) % iMaxRecord;
-
-        // Seek to the record position
-        iSeek = iRecord * iLoopRecordSize;
-        fseek(fp_buf, iSeek, SEEK_SET);
-        if (iSeek != ftell(fp_buf))
-        {
-            // Seek should never fail if we set up correctly
-            sprintf(looperrstr, "GetRecordRange: Unable to seek to record %d in %s",
-                    iRecord, buf_filename);
-            fclose(fp_buf);
-            fclose(fp_idx);
-            return looperrstr;
-        } // Failed to seek to required file buffer position
-
-        // Read in the header only
-        if (fread(str_header, FRAME_SIZE, 1, fp_buf) != 1)
-        {
-            // read should never fail if we set up correctly
-            sprintf(looperrstr, "GetRecordRange: Unable to read record %d in %s",
-                    iRecord, buf_filename);
-            fclose(fp_buf);
-            fclose(fp_idx);
-            return looperrstr;
-        } // Failed to read record
-
-        // parse out header string
-        if (ParseSeedHeader(str_header, recStation, recChan, recLoc,
-                    &tRecStart, &tRecEnd, &iSeqNum, &iSamples) != NULL)
-        {
-            fclose(fp_buf);
-            fclose(fp_idx);
-            return looperrstr;
-        } // error parsing header
-
-        // See if record End Time is after desired start time
-        if ((iCmp=ST_TimeComp2(tRecEnd, tBeginTime)) >= 0)
-        {
-            // Need to find an earlier record
-            iHigh = iMid-1;
-        }
-        else
-        {
-            // Need to find a later record
-            iLow = iMid+1;
-        }
-    } // Binary search while loop
-
-    // iHigh now points to first record completely before time span of interest
-    iPre = iHigh;
-
-    //
-    // Binary search for first record with Start time after tEndTime
-    iLow = iPre+1;
-    iHigh = iMaxRecord;
-    while (iLow <= iHigh)
-    {
-        // Get mid point for our binary search test
-        iMid = (iHigh+iLow)/2;
-
-        // Convert iMid to a record offset inside circular buffer
-        iRecord = (iFlipRecord+iMid) % iMaxRecord;
-
-        // Seek to the record position
-        iSeek = iRecord * iLoopRecordSize;
-        fseek(fp_buf, iSeek, SEEK_SET);
-        if (iSeek != ftell(fp_buf))
-        {
-            sprintf(looperrstr, "GetRecordRange: Unable to seek to record %d in %s",
-                    iRecord, buf_filename);
-            fclose(fp_buf);
-            fclose(fp_idx);
-            return looperrstr;
-        } // Failed to seek to required file buffer position
-
-        // Read in the header only
-        if (fread(str_header, FRAME_SIZE, 1, fp_buf) != 1)
-        {
-            // read should never fail if we set up correctly
-            sprintf(looperrstr, "GetRecordRange: Unable to read record %d in %s",
-                    iRecord, buf_filename);
-            fclose(fp_buf);
-            fclose(fp_idx);
-            return looperrstr;
-        } // Failed to read record
-
-        // parse out header string
-        if (ParseSeedHeader(str_header, recStation, recChan, recLoc,
-                    &tRecStart, &tRecEnd, &iSamples, &iSeqNum) != NULL)
-        {
-            fclose(fp_buf);
-            fclose(fp_idx);
-            return looperrstr;
-        } // error parsing header
-
-        // See if record Start time is after desired end time
-        if (ST_TimeComp2(tRecStart, tEndTime) > 0)
-        {
-            // Need to find an earlier record
-            iHigh = iMid-1;
-        }
-        else
-            iLow = iMid+1;
-    } // Binary search while loop
-
-    // iLow points to first record completely after time span of interest
-    iPost = iLow;
-
-    // Check for case of no records within desired time span
-    *iCount = iPost - iPre - 1;
-    if (*iCount < 1)
-    {
-        *iFirst = -1;
-        *iCount = 0;
+    // Set the requested values
+    *iFirst = start_index;
+    *iLast = end_index;
+    *iLoopSize = context->size;
+    if (*iFirst < *iLast) {
+        *iCount = *iLast - *iFirst;
+    } else {
+        *iCount = (*iLoopSize - *iFirst) + *iLast;
     }
-    else
-    {
-        *iFirst = (iPre + 1 + iFlipRecord) % iMaxRecord;
-        *iLast = (iPost - 1 + iFlipRecord) % iMaxRecord;
-    }
-
-    fclose(fp_buf);
-    fclose(fp_idx);
 
     return NULL;
 } // GetRecordRange()
@@ -3355,171 +3169,46 @@ char *DumpSpans(
         const char  *loc        // Location ID
         )                       // returns NULL or an error string pointer
 {
-    char  buf_filename[2*MAXCONFIGLINELEN+2];
-    char  idx_filename[2*MAXCONFIGLINELEN+2];
-    char  str_header[FRAME_SIZE];
-    char    recStation[8];
-    char    recLoc[4];
-    char    recChan[4];
-    FILE  *fp_buf;
-    FILE  *fp_idx;
-    STDTIME2    tRecStart;
-    STDTIME2    tRecEnd;
-    DELTA_T2    tDeltaT;
-    long        lDeltaTMS;
-    int   iFlipRecord;
-    int   iMaxRecord;
-    int   iRecord;
-    int   iSeek;
-    int   iMid;
-    int   iSpanIndex;
-    int   bFirst=1;
-    int   iCount;
-    int   iSeqNum;
-    int   iSamples;
-    STDTIME2    tSpanStart;
-    STDTIME2    tSpanEnd;
+    char *result = NULL;
 
+    diskloop_context_t *context;
+    int start_index = 0;
+    int end_index = 0;
 
-    // The configuration file must be parsed before this routine can work
-    if (parse_state == 0)
-    {
-        sprintf(looperrstr, "DumpSpans: ParseDiskLoopConfig not run yet");
-        return looperrstr;
+    if (bDebugADL) {
+        fprintf(stderr, "  DumpSpans: open diskloop for %s-%s-%s...\n", station, loc, chan);
+    }
+    if (adl_open(&context, station, loc, chan) != NULL) {
+        goto error;
     }
 
-    // Get names of buffer and index files
-    DiskloopFileName(station, loc, chan, ".buf", buf_filename);
-    DiskloopFileName(station, loc, chan, ".idx", idx_filename);
+    if (bDebugADL) {
+        fprintf(stderr, "  DumpSpans: finding oldest index...\n");
+    }
+    if (adl_oldest_index(context, &start_index) != NULL) {
+        goto error;
+    }
+    end_index = start_index;
 
-    // Make sure that buffer file exists
-    if ((fp_buf=fopen(buf_filename, "r")) == NULL)
-    {
-        // Buffer file does not exist so no last record to return
-        return NULL;
+    if (bDebugADL) {
+        fprintf(stderr, "  DumpSpans: passing off to RangeSpans (%d - %d)...\n",
+                start_index, end_index);
+    }
+    if (RangeSpans(station, chan, loc, start_index, end_index) != NULL) {
+        goto error;
     }
 
-    // Make sure that index file exists
-    if ((fp_idx=fopen(idx_filename, "r")) == NULL)
-    {
-        // Index file does not exist so no last record to return
-        fclose(fp_buf);
-        return NULL;
-    }
+    goto success;
 
-    // Load index info
-    if (ParseIndexInfo(fp_idx, &iFlipRecord, &iMaxRecord) != NULL)
-    {
-        sprintf(looperrstr, "DumpSpans: Data format error in %s",
-                idx_filename);
-        fclose(fp_buf);
-        fclose(fp_idx);
-        return looperrstr;
-    } // error reading index and max record value
+ error:
+    result = looperrstr;
+    goto done;
 
-    if (iFlipRecord < 0 || iFlipRecord >= iMaxRecord)
-    {
-        sprintf(looperrstr, "DumpSpans: Invalid index 0 <= %d < %d in %s",
-                iFlipRecord, iMaxRecord, idx_filename);
-        fclose(fp_buf);
-        fclose(fp_idx);
-        return looperrstr;
-    } // error reading index and max record value
+ success:
+    goto done;
 
-    // Verify what the last record is in case buffer has never been filled
-    iMid = LOOPDEADRECORDS+1;
-    fseek(fp_buf, 0, SEEK_END);
-    iSeek = ftell(fp_buf);
-    if ((iMaxRecord-LOOPDEADRECORDS) * iLoopRecordSize > iSeek)
-    {
-        printf("Circular buffer filling, %d of %d records total filled.\n",
-                iSeek/iLoopRecordSize, iMaxRecord);
-        iMaxRecord = iSeek/iLoopRecordSize;
-        iMid = 1;
-    }
-
-    // Loop through all records in file
-    bFirst = 1;
-    iCount = 0;
-    for (; iMid <= iMaxRecord; iMid++)
-    {
-        // Convert iMid to a record offset inside circular buffer
-        iRecord = (iFlipRecord+iMid) % iMaxRecord;
-        if (bFirst)
-            iSpanIndex = iRecord;
-
-        // Seek to the record position
-        iSeek = iRecord * iLoopRecordSize;
-        fseek(fp_buf, iSeek, SEEK_SET);
-        if (iSeek != ftell(fp_buf))
-        {
-            // If seek failed, assume we hit the end of file
-            sprintf(looperrstr, "DumpSpans: Unable to seek to header %d in %s",
-                    iRecord, buf_filename);
-            fclose(fp_buf);
-            fclose(fp_idx);
-            return looperrstr;
-        } // Failed to seek to required file buffer position
-
-        // Read in the header only
-        if (fread(str_header, FRAME_SIZE, 1, fp_buf) != 1)
-        {
-
-            sprintf(looperrstr, "DumpSpans: Unable to read header %d in %s",
-                    iRecord, buf_filename);
-            fclose(fp_buf);
-            fclose(fp_idx);
-            return looperrstr;
-        } // Failed to read record
-
-        // parse out header info
-        if (ParseSeedHeader(str_header, recStation, recChan, recLoc,
-                    &tRecStart, &tRecEnd, &iSeqNum, &iSamples) != NULL)
-        {
-            fclose(fp_buf);
-            fclose(fp_idx);
-            return looperrstr;
-        } // error parsing header
-
-        // If not first record, check for gap
-        if (!bFirst)
-        {
-            tDeltaT = ST_DiffTimes2(tRecStart, tSpanEnd);
-            lDeltaTMS = ST_DeltaToMS2(tDeltaT);
-
-            if (lDeltaTMS > 10 || lDeltaTMS < -10)
-            {
-                printf("%s %s/%s Span %s",
-                        station, loc, chan, ST_PrintDate2(tSpanStart, 1));
-                printf(" to %s %d records, start index %d, %ld tms gap\n",
-                        ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex, lDeltaTMS);
-
-                // Remember new span start time
-                tSpanStart = tRecStart;
-                iSpanIndex = iRecord;
-                iCount=0;
-            }  // found a gap or overlap
-        } // Not the first record
-        else
-        {
-            tSpanStart = tRecStart;
-            bFirst = 0;
-        } // first record
-
-        tSpanEnd = tRecEnd;
-        iCount++;
-    } // loop through all records
-
-    // Print out last remaining span
-    printf("%s %s/%s Span %s",
-            station, loc, chan, ST_PrintDate2(tSpanStart, 1));
-    printf(" to %s %d records, start index %d\n",
-            ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex);
-
-    fclose(fp_buf);
-    fclose(fp_idx);
-
-    return NULL;
+ done:
+    return result;
 } // DumpSpans()
 
 //////////////////////////////////////////////////////////////////////////////
@@ -3532,159 +3221,120 @@ char *RangeSpans(
         int         lastRecord   // Last record in range
         )                        // returns NULL or an error string pointer
 {
-    char  buf_filename[2*MAXCONFIGLINELEN+2];
-    char  idx_filename[2*MAXCONFIGLINELEN+2];
-    char  str_header[FRAME_SIZE];
-    char    recStation[8];
-    char    recLoc[4];
-    char    recChan[4];
-    FILE  *fp_buf;
-    FILE  *fp_idx;
-    STDTIME2    tRecStart;
-    STDTIME2    tRecEnd;
-    DELTA_T2    tDeltaT;
-    long        lDeltaTMS;
-    int   iFlipRecord;
-    int   iMaxRecord;
-    int   iRecord;
-    int   iSeek;
-    int   iMid;
-    int   iSpanIndex;
-    int   bFirst=1;
-    int   iCount;
-    int   iSeqNum;
-    int   iSamples;
-    STDTIME2    tSpanStart;
-    STDTIME2    tSpanEnd;
+    char *result = NULL;
+
+    diskloop_context_t *context;
+    record_info_t info;
+
+    int first = 1;
+    int seek_store = -1;
+    int seek_loop = 0;
+    int start_index = firstRecord;
+    int end_index = lastRecord;
+    int index= 0;
+    int complete = 0;
+
+    int span_start_index = 0;
+    int span_count = 0;
+    
+    long delta_tms = 0;
+    STDTIME2 span_start_time;
+    STDTIME2 span_end_time;
 
 
-    // The configuration file must be parsed before this routine can work
-    if (parse_state == 0)
-    {
-        sprintf(looperrstr, "RangeSpans: ParseDiskLoopConfig not run yet");
-        return looperrstr;
+    if (adl_open(&context, station, loc, chan) != NULL) {
+        goto error;
     }
 
-    // Get names of buffer and index files
-    DiskloopFileName(station, loc, chan, ".buf", buf_filename);
-    DiskloopFileName(station, loc, chan, ".idx", idx_filename);
-
-    // Make sure that buffer file exists
-    if ((fp_buf=fopen(buf_filename, "r")) == NULL)
-    {
-        // Buffer file does not exist so no last record to return
-        return NULL;
+    // Unless we are processing every record, we need to add one to ensure
+    // that the last requested record is also evaluated.
+    if (start_index != end_index) {
+        end_index++;
+        if (end_index >= context->size) {
+            end_index = 0;
+        }
     }
 
-    // Make sure that index file exists
-    if ((fp_idx=fopen(idx_filename, "r")) == NULL)
-    {
-        // Index file does not exist so no last record to return
-        fclose(fp_buf);
-        return NULL;
+    // Save the position of the file pointer so we can restore it
+    // when returning from the function.
+    seek_store = ftell(context->loop_fp);
+
+    index = start_index;
+    if (bDebugADL) {
+        fprintf(stderr, "RangeSpans: Starting at index %d\n", index);
     }
-
-    // Load index info
-    if (ParseIndexInfo(fp_idx, &iFlipRecord, &iMaxRecord) != NULL)
-    {
-        sprintf(looperrstr, "RangeSpans: Data format error in %s",
-                idx_filename);
-        fclose(fp_buf);
-        fclose(fp_idx);
-        return looperrstr;
-    } // error reading index and max record value
-
-    if (iFlipRecord < 0 || iFlipRecord >= iMaxRecord)
-    {
-        sprintf(looperrstr, "RangeSpans: Invalid index 0 <= %d < %d in %s",
-                iFlipRecord, iMaxRecord, idx_filename);
-        fclose(fp_buf);
-        fclose(fp_idx);
-        return looperrstr;
-    } // error reading index and max record value
-
-    // Loop through all records in file
-    bFirst = 1;
-    iCount = 0;
-    for (iMid=firstRecord; (iMid%iMaxRecord) != ((lastRecord+1)%iMaxRecord);
-            iMid++)
-    {
-        // Convert iMid to a record offset inside circular buffer
-        iRecord = iMid % iMaxRecord;
-        if (bFirst)
-            iSpanIndex = iRecord;
-
-        // Seek to the record position
-        iSeek = iRecord * iLoopRecordSize;
-        fseek(fp_buf, iSeek, SEEK_SET);
-        if (iSeek != ftell(fp_buf))
-        {
-            // If seek failed, assume we hit the end of file
-            sprintf(looperrstr, "RangeSpans: Unable to seek to header %d in %s",
-                    iRecord, buf_filename);
-            fclose(fp_buf);
-            fclose(fp_idx);
-            return looperrstr;
-        } // Failed to seek to required file buffer position
-
-        // Read in the header only
-        if (fread(str_header, FRAME_SIZE, 1, fp_buf) != 1)
-        {
-
+    while (!complete) {
+        // Seek to the header location
+        seek_loop = index * context->record_size;
+        fseek(context->loop_fp, seek_loop, SEEK_SET);
+        if (seek_loop != ftell(context->loop_fp)) {
+            sprintf(looperrstr, "RangeSpans: Unable seek to header %d in %s",
+                    index, context->loop_name);
+            goto error;
+        }
+        // Read only the header
+        if (fread(info.buffer, FRAME_SIZE, 1, context->loop_fp) != 1) {
             sprintf(looperrstr, "RangeSpans: Unable to read header %d in %s",
-                    iRecord, buf_filename);
-            fclose(fp_buf);
-            fclose(fp_idx);
-            return looperrstr;
-        } // Failed to read record
+                    index, context->loop_name);
+            goto error;
+        }
+        // Populate info with the resulting data
+        prepare_record_info(&info, index);
 
-        // parse out header info
-        if (ParseSeedHeader(str_header, recStation, recChan, recLoc,
-                    &tRecStart, &tRecEnd, &iSeqNum, &iSamples) != NULL)
-        {
-            fclose(fp_buf);
-            fclose(fp_idx);
-            return looperrstr;
-        } // error parsing header
+        if (first) {
+            first = 0;
+            span_start_time = info.start_time;
+        } // first record
+        else {
+            delta_tms = compare_dcc_times(&info.start_time, &span_end_time);
 
-        // If not first record, check for gap
-        if (!bFirst)
-        {
-            tDeltaT = ST_DiffTimes2(tRecStart, tSpanEnd);
-            lDeltaTMS = ST_DeltaToMS2(tDeltaT);
-
-            if (lDeltaTMS > 10 || lDeltaTMS < -10)
+            if (delta_tms > 10 || delta_tms < -10)
             {
                 printf("%s %s/%s Span %s",
-                        station, loc, chan, ST_PrintDate2(tSpanStart, 1));
+                        station, loc, chan, ST_PrintDate2(span_start_time, 1));
                 printf(" to %s %d records, start index %d, %ld tms gap\n",
-                        ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex, lDeltaTMS);
+                        ST_PrintDate2(span_end_time, 1), span_count,
+                        span_start_index, delta_tms);
 
                 // Remember new span start time
-                tSpanStart = tRecStart;
-                iSpanIndex = iRecord;
-                iCount=0;
+                span_start_time = info.start_time;
+                span_start_index = index;
+                span_count=0;
             }  // found a gap or overlap
         } // Not the first record
-        else
-        {
-            tSpanStart = tRecStart;
-            bFirst = 0;
-        } // first record
 
-        tSpanEnd = tRecEnd;
-        iCount++;
-    } // loop through all records
+        span_end_time = info.end_time;
+        index++;
+        span_count++;
+        if (index >= context->size) {
+            // Loop back around if we reached the end
+            index = 0;
+        }
+        if (index == end_index) {
+            // Once we hit the start index again, we are done
+            complete = 1;
+        }
+    }
 
     // Print out last remaining span
     printf("%s %s/%s Span %s",
-            station, loc, chan, ST_PrintDate2(tSpanStart, 1));
+            station, loc, chan, ST_PrintDate2(span_start_time, 1));
     printf(" to %s %d records, start index %d\n",
-            ST_PrintDate2(tSpanEnd, 1), iCount, iSpanIndex);
+            ST_PrintDate2(span_end_time, 1), span_count, span_start_index);
 
-    fclose(fp_buf);
-    fclose(fp_idx);
+    goto success;
 
-    return NULL;
+ error:
+    result = looperrstr;
+    goto done;
+
+ success:
+    goto done;
+
+ done:
+    if (seek_store > -1) {
+        fseek(context->loop_fp, seek_store, SEEK_SET);
+    }
+    return result;
 } // RangeSpans()
 

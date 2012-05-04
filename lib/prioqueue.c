@@ -118,7 +118,7 @@ void *prioqueue_pop_low(queue_t *queue)
     return _fetch_queue_item(queue, 0/*high*/, 1/*remove*/);
 }
 
-void prioqueue_print_summary(queue_t *queue, int fd, const char *prefix, const char *suffix)
+void prioqueue_print_summary(queue_t *queue, FILE *fp, const char *prefix, const char *suffix)
 {
     struct avltree_node *node;
     queue_element_t *highest;
@@ -135,14 +135,14 @@ void prioqueue_print_summary(queue_t *queue, int fd, const char *prefix, const c
         highest = (queue_element_t *)avltree_container_of(node, queue_element_t, node);
         node  = avltree_first(&queue->tree);
         lowest = (queue_element_t *)avltree_container_of(node, queue_element_t, node);
-        fprintf(fd, "%sprioqueue, %d elements, highest [%d:%d.%d], lowest [%d:%d.%d]%s\n",
+        fprintf(fp, "%sprioqueue, %d elements, highest [%d:%li.%li], lowest [%d:%li.%li]%s\n",
                 prefix, queue->size,
                 highest->priority, highest->time_received.tv_sec, highest->time_received.tv_usec,
                 lowest->priority, lowest->time_received.tv_sec, lowest->time_received.tv_usec,
                 suffix);
     }
     else {
-        fprintf(fd, "%sprioqueue, NULL%s\n",
+        fprintf(fp, "%sprioqueue, NULL%s\n",
                 prefix, suffix);
     }
 }

@@ -12,7 +12,7 @@
 #include <jio.h>
 #include <format_data.h>
 
-#include <include/q330arch.h>
+#include <include/archd.h>
 
 /*
  * Alarm record(s) internal format

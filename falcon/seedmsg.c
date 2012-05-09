@@ -19,7 +19,7 @@ yyyy-mm-dd WHO - Changes
 #include <time.h>
 #include <arpa/inet.h>
 #include "include/netreq.h"
-#include "include/q330arch.h"
+#include "include/archd.h"
 
 #define WHOAMI "seedmsg"
 

@@ -39,7 +39,7 @@ const char *VersionIdentString = "Release 2.0";
 
 #include "include/netreq.h"
 #include "include/diskloop.h"
-#include "include/q330arch.h"
+#include "include/archd.h"
 
 // Global debug mode flag
 int gDebug=0;
@@ -76,11 +76,11 @@ void FlushOpaque()
   int  i;
   char *retmsg;
 
-  // Send any opaque seed records to q330arch daemon
+  // Send any opaque seed records to archd daemon
   for (i=0; i < numRecords; i++)
   {
     if (gDebug)
-      fprintf(stdout, "Sending seed record %d to q330arch\n", seqno);
+      fprintf(stdout, "Sending seed record %d to archd\n", seqno);
     if ((retmsg=q330SeedSend(&seedRecordBuf[i*iSeedRecordSize])))
     {
       if (gDebug)

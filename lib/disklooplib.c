@@ -2249,7 +2249,9 @@ char *adl_write(
 
     // If the index interval has been met, we need to flush and 
     // record the current index.
-    if ((now_stamp - index_stamp) >= TIME_MICRO(index_interval)) {
+    if ( ((now_stamp - index_stamp) >= TIME_MICRO(index_interval)) ||
+         ((now_stamp - index_stamp) < 0) /*overflow check*/ )
+    {
         adl_flush(context);
         if (bDebugADL) {
             fprintf(stderr, "  timeout occured, writing index\n");
@@ -2258,7 +2260,9 @@ char *adl_write(
     }
     // Otherwise, we just flush the diskloop if the flush interval
     // has been met.
-    else if ((now_stamp - flush_stamp) >= TIME_MICRO(flush_interval)) {
+    else if ( ((now_stamp - flush_stamp) >= TIME_MICRO(flush_interval)) ||
+              ((now_stamp - flush_stamp) < 0) /*overflow check*/ )
+    {
         adl_flush(context);
     }
 

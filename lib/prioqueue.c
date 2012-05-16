@@ -29,36 +29,113 @@ int _queue_element_compare(const struct avltree_node *nodeA, const struct avltre
     return b->time_received.tv_usec - a->time_received.tv_usec;
 }
 
-int prioqueue_init(queue_t *queue) {
+int prioqueue_init(queue_t *queue, int capacity,
+                   prioqueue_duplicate duplicate,
+                   prioqueue_deallocate deallocate)
+{
     int result = -1;
     if (queue) {
+        queue->capacity = capacity;
         queue->size = 0;
+        queue->callback_duplicate = duplicate;
+        queue->callback_deallocate = deallocate;
         result = avltree_init(&queue->tree, _queue_element_compare, 0);
     }
     return result;
 }
 
+int prioqueue_clone(queue_t *target, queue_t *source)
+{
+    int result = -1;
+    struct avltree_node *node;
+    queue_element_t *element = NULL;
+
+    if (target && source) {
+        target->capacity = source->capacity;
+        target->size = 0;
+        target->callback_duplicate = source->callback_duplicate;
+        target->callback_deallocate = source->callback_deallocate;
+        if (!(result = avltree_init(&target->tree, _queue_element_compare, 0))) {
+            // Duplicate the source's data to the target
+            node = avltree_first(&source->tree);
+            while (node != NULL) {
+                element = (queue_element_t *)avltree_container_of(node, queue_element_t, node);
+                prioqueue_add(target, element->data, element->priority);
+                node = avltree_next(node);
+            }
+            result = 0;
+        }
+    }
+
+    return result;
+}
+
+int prioqueue_full(queue_t *queue)
+{
+    if (queue == NULL)
+        return -1;
+    if ((queue->capacity > -1) && (queue->size >= queue->capacity))
+        return 1;
+    return 0;
+}
+
+int prioqueue_empty(queue_t *queue)
+{
+    if (queue == NULL)
+        return -1;
+    return (queue->size == 0);
+}
+
+int prioqueue_size(queue_t *queue)
+{
+    if (queue == NULL)
+        return -1;
+    return queue->size;
+}
+
 // Adds arbitrary data to the queue.
 int prioqueue_add(queue_t *queue, void *data, int priority)
 {
-    int result = 0;
-    queue_element_t *element;
+    struct avltree_node *node = NULL;
+    queue_element_t *element = NULL;
     struct timezone tz_info;
 
-    if ((element = (queue_element_t *)malloc(sizeof(queue_element_t))) == NULL) {
-        result = -1;
+    // We can never store a record if our capacity is zero
+    if (queue->capacity == 0) {
+        return -1;
+    }
+
+    while (queue->capacity > 0 && queue->size >= queue->capacity) {
+        // Remove the lowest priority item, and re-use it's queue element
+        node = avltree_first(&queue->tree);
+        avltree_remove(node, &queue->tree);
+        queue->size--;
+        element = (queue_element_t *)avltree_container_of(node, queue_element_t, node);
+        if (queue->callback_deallocate != NULL) {
+            queue->callback_deallocate(element->data);
+        }
+        element->data = NULL;
+        node = NULL;
+    }
+
+    if ( (element == NULL) &&
+         (element = (queue_element_t *)malloc(sizeof(queue_element_t))) == NULL)
+    {
+        return -1;
     }
     else {
-        element->data = data;
         tz_info.tz_minuteswest = 0;
         tz_info.tz_dsttime = 0;
         gettimeofday(&element->time_received, &tz_info);
         element->priority = priority;
         element->data = data;
+        if (queue->callback_duplicate != NULL) {
+            queue->callback_duplicate(data, &element->data);
+        }
         avltree_insert(&element->node, &queue->tree);
         queue->size++;
     }
-    return result;
+    return 0;
 }
 
 // helper function for peek/pop operations
@@ -135,8 +212,8 @@ void prioqueue_print_summary(queue_t *queue, FILE *fp, const char *prefix, const
         highest = (queue_element_t *)avltree_container_of(node, queue_element_t, node);
         node  = avltree_first(&queue->tree);
         lowest = (queue_element_t *)avltree_container_of(node, queue_element_t, node);
-        fprintf(fp, "%sprioqueue, %d elements, highest [%d:%li.%li], lowest [%d:%li.%li]%s\n",
-                prefix, queue->size,
+        fprintf(fp, "%sprioqueue, capacity=%d, count=%d, highest [%d:%li.%li], lowest [%d:%li.%li]%s\n",
+                prefix, queue->capacity, queue->size,
                 highest->priority, highest->time_received.tv_sec, highest->time_received.tv_usec,
                 lowest->priority, lowest->time_received.tv_sec, lowest->time_received.tv_usec,
                 suffix);

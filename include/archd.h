@@ -21,13 +21,22 @@ yyyy-mm-dd WHO - Changes
 #include "include/prioqueue.h"
 #include "libpcomm/pcomm.h"
 
-// server will hold onto message for up to this amount of time in an
+// server will hold onto messages for up to this amount of time in an
 // attempt to combine messages to save on disk space
 #define BUFFER_TIME_SEC 60
 
-// Each client will have 8200 bytes reserved for buffering
-#define MAX_CLIENTS 128
+#define ASYNC_TIMEOUT_SECONDS       5
+#define ASYNC_TIMEOUT_MICROSECONDS  0
+#define BIND_RETRY_INTERVAL         15
+
+#define MAX_SERVERS 128
+#define MAX_CLIENTS 16
 #define MAX_RECORD_SIZE 8192
+
+#define SOCKET_KEY_SIZE 32
+#define CLIENT_FULL_TIMEOUT     15
+#define CLIENT_PARTIAL_TIMEOUT  60
+#define CLIENT_EMPTY_TIMEOUT    300
 
 // Message result
 #define RESULT_RECORD_SENT      0
@@ -42,43 +51,65 @@ struct s_mapshm
     int     bQuit;
     int     iPort;
     pthread_t listen_tid;
-    time_t  timetag[MAX_CLIENTS];
-    pthread_t client_tid[MAX_CLIENTS];
-    int     read_index[MAX_CLIENTS];
-    int     write_index[MAX_CLIENTS];
-    int     result[MAX_CLIENTS][2];
-    char    buffer[MAX_CLIENTS][2][MAX_RECORD_SIZE];
+    time_t  timetag[MAX_SERVERS];
+    pthread_t client_tid[MAX_SERVERS];
+    int     read_index[MAX_SERVERS];
+    int     write_index[MAX_SERVERS];
+    int     result[MAX_SERVERS][2];
+    char    buffer[MAX_SERVERS][2][MAX_RECORD_SIZE];
 };
-
-// structure for tracking the context of each client connected to archd
-typedef struct CLIENT_CONTEXT
-{
-    struct timeval connect_time;
-
-    uint8_t buffer[MAX_RECORD_SIZE];
-    size_t length;
-
-    size_t received;
-    size_t confirmed;
-
-    queue_t reply_queue;
-}
-client_context_t;
 
 // data record wrapper
 typedef struct DATA_RECORD
 {
     struct timeval receive_time;
     uint8_t *data;
+
+    int priority;
+    int ref_count;
 }
 data_record_t;
 
-// structure containing reply messages for clients
+// structure for tracking the context of each server connected to archd
+typedef struct SERVER_CONTEXT
+{
+    struct timeval connect_time;
+    char key[SOCKET_KEY_SIZE];
+    int socket;
+
+    uint8_t buffer[MAX_RECORD_SIZE];
+    size_t length;
+
+    uint64_t received;
+    uint64_t confirmed;
+
+    queue_t reply_queue;
+}
+server_context_t;
+
+// structure for tracking the context of each telemetry client connected to archd
+typedef struct CLIENT_CONTEXT
+{
+    struct timeval connect_time;
+    struct timeval last_write;
+    char key[SOCKET_KEY_SIZE];
+    int socket;
+
+    data_record_t *partial;
+    size_t offset;
+
+    uint64_t sent;
+    queue_t telemetry_queue;
+}
+client_context_t;
+
+// structure containing reply messages for servers
 typedef struct REPLY_MESSAGE
 {
     uint8_t *message;
     size_t   length;
 
+    int priority;
     int sent;
 }
 reply_message_t;
@@ -103,18 +134,29 @@ typedef struct ARCHD_CONTEXT
     // keep the queued log message here
     data_record_t *log_message;
 
-    // connection server
+    // server socket management
     int server_port;
     int server_socket;
+    size_t max_servers;
+    size_t server_count;
+    Map *server_map;
 
-    // number of connected clients
+    // client socket management
+    int client_port;
+    int client_socket;
+    size_t max_clients;
     size_t client_count;
+    Map *client_map;
 
     // priority queue of records to be archived
     queue_t record_queue;
     int64_t records_received;
     int64_t records_archived;
     int64_t log_record_count;
+
+    // priority queue of record to be telemetered
+    queue_t telemetry_queue;
+    int     telemetry_depth;
 
     int debug;
     int record_size;

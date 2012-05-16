@@ -156,6 +156,19 @@ char *LogServerPort(
   int *port               // returns port number
   );                      // returns NULL or an error string pointer
 
+//////////////////////////////////////////////////////////////////////////////
+// Returns the TCP port to which telemetry clients will connect
+char *TelemetryPort(
+  int *port // returns port number
+  );        // returns NULL or an error string pointer
+
+//////////////////////////////////////////////////////////////////////////////
+// Returns the maximum number of records for the in-memory telemetry buffer
+char *TelemetryBufferDepth(
+  int *depth // returns port number
+  );         // returns NULL or an error string pointer
+
+
 char *WriteChan(
   const char  *station,   // station name
   const char  *chan,      // Channel ID

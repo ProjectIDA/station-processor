@@ -151,6 +151,12 @@ static int iChannelSetPort=9999;
 // What port to send update messages to
 static int iLogServerPort=8888;
 
+// What port to which telemetry clients will connect
+static int iTelemetryPort=4000;
+
+// What port to which telemetry clients will connect
+static int iTelemetryBufferDepth=4096;
+
 // How many bytes the netserver buffer should have
 static int iNetBufferSize=401408;
 
@@ -826,6 +832,20 @@ char *ParseDiskLoopConfig(
         continue;
     }
 
+    if ((iArgs=sscanf(linestr, "Telemetry Port: %d", &count)) == 1)
+    {
+        iTelemetryPort = count;
+        bParsed = 1;
+        continue;
+    }
+
+    if ((iArgs=sscanf(linestr, "Telemetry Buffer Depth: %d", &count)) == 1)
+    {
+        iTelemetryBufferDepth = count;
+        bParsed = 1;
+        continue;
+    }
+
     if ((iArgs=sscanf(linestr, "Falcon Username: %s", argstr)) == 1)
     {
         falcon_username = malloc(sizeof(argstr)+1);
@@ -1404,13 +1424,45 @@ char *LogServerPort(
 {
     if (parse_state == 0)
     {
-        sprintf(looperrstr, "LoopServerPort: ParseDiskLoopConfig not run yet");
+        sprintf(looperrstr, "LogServerPort: ParseDiskLoopConfig not run yet");
         return looperrstr;
     }
 
     *port = iLogServerPort;
     return NULL;
-} // LoopServerPort()
+} // LogServerPort()
+
+//////////////////////////////////////////////////////////////////////////////
+// Returns the TCP port to which telemetry clients will connect
+char *TelemetryPort(
+    int *port // returns port number
+    )         // returns NULL or an error string pointer
+{
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "TelemetryPort: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
+
+    *port = iTelemetryPort;
+    return NULL;
+} // TelemetryPort()
+
+//////////////////////////////////////////////////////////////////////////////
+// Returns the maximum number of records for the in-memory telemetry buffer
+char *TelemetryBufferDepth(
+  int *depth // returns port number
+  )          // returns NULL or an error string pointer
+{
+    if (parse_state == 0)
+    {
+        sprintf(looperrstr, "TelemetryBufferDepth: ParseDiskLoopConfig not run yet");
+        return looperrstr;
+    }
+
+    *depth = iTelemetryBufferDepth;
+    return NULL;
+} // TelemetryBufferDepth()
 
 //////////////////////////////////////////////////////////////////////////////
 // Returns username to log into falcon, NULL means use station name

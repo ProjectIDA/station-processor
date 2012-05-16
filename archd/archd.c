@@ -57,22 +57,28 @@ const char *VersionIdentString = "Release 2.0";
 #include "include/netreq.h"
 #include "include/dcc_time_proto2.h"
 
-#define ASYNC_TIMEOUT_SECONDS       5
-#define ASYNC_TIMEOUT_MICROSECONDS  0
-#define BIND_RETRY_INTERVAL         15
+#define TIME_MICRO(tv) ((tv.tv_sec * 1000000LL) + tv.tv_usec)
+#define TIME_DIFF(t1, t2) (TIME_MICRO(t1) - TIME_MICRO(t2))
 
 void daemonize();
 
 //////////////////////////////////////////////////////////////////////////////
 
-int init_server (archd_context_t *archd);
+int init_sockets (archd_context_t *archd);
 void callback_archive (pcomm_context_t *pcomm);
 void callback_async_timeout (pcomm_context_t *pcomm);
-void callback_connect_request (pcomm_context_t *pcomm, int fd);
-void callback_server_closed (pcomm_context_t *pcomm, int fd);
+
+void callback_client_connect (pcomm_context_t *pcomm, int fd);
 void callback_client_can_recv (pcomm_context_t *pcomm, int fd);
 void callback_client_can_send (pcomm_context_t *pcomm, int fd);
 void callback_client_closed (pcomm_context_t *pcomm, int fd);
+
+void callback_server_connect (pcomm_context_t *pcomm, int fd);
+void callback_server_can_recv (pcomm_context_t *pcomm, int fd);
+void callback_server_can_send (pcomm_context_t *pcomm, int fd);
+void callback_server_closed (pcomm_context_t *pcomm, int fd);
+
+void callback_listener_closed (pcomm_context_t *pcomm, int fd);
 
 // Make the server_pid global so it can be killed when program is shut down
 // This is required by daemonize()
@@ -84,6 +90,7 @@ int   g_bDebug=0;
 static struct s_mapstatus *mapstatus=NULL;
 static archd_context_t *g_archd=NULL;
 //static int iSeedRecordSize;
+
 
 ////////////////////////////////////////////////////////////////////
 //// MEMORY TRACKING FUNCTIONS
@@ -120,6 +127,33 @@ void mem_free(Map *map, const char *key)
     objects--;
     map_put(map, key, (void *)objects);
     mem_show(map);
+}
+
+////////////////////////////////////////////////////////////////////
+//// DATA RECORD CALLBACKS FOR PRIORITY QUEUES
+////////////////////////////////////////////////////////////////////
+void record_duplicate(void *item, void **duplicate)
+{
+    data_record_t *record;
+    if (item != NULL) {
+        record = (data_record_t *)item;
+        record->ref_count++;
+    }
+    *duplicate = item;
+}
+
+void record_deallocate(void *item)
+{
+    data_record_t *record = (data_record_t *)item;
+    if (record->ref_count > 0) {
+        record->ref_count--;
+        if (record->ref_count == 0) {
+            free(record->data);
+            mem_free(g_archd->memory, "seed-data");
+            free(record);
+            mem_free(g_archd->memory, "data-record");
+        }
+    }
 }
 
 
@@ -432,6 +466,16 @@ int main (int argc, char **argv)
         exit(1);
     }
 
+    if ((archd->server_map = map_new(100, NULL, NULL)) == NULL) {
+        fprintf(stderr, "%s: could not initialize server map\n", WHOAMI);
+        exit(1);
+    }
+
+    if ((archd->client_map = map_new(100, NULL, NULL)) == NULL) {
+        fprintf(stderr, "%s: could not initialize client map\n", WHOAMI);
+        exit(1);
+    }
+
     // archd->pcomm has been set already
     // archd->memory has been set already
     archd->tz_info.tz_minuteswest = 0;
@@ -441,12 +485,20 @@ int main (int argc, char **argv)
     archd->status_map = NULL;
     archd->write_index = 0;
     archd->log_message = NULL;
+
     archd->server_port = -1;
     archd->server_socket = -1;
+    archd->max_servers = MAX_SERVERS;
+    archd->server_count = 0;
+
+    archd->client_port = -1;
+    archd->client_socket = -1;
+    archd->max_clients = MAX_CLIENTS;
     archd->client_count = 0;
+
     archd->debug = 0;
     archd->record_size = 512;
-    prioqueue_init(&archd->record_queue);
+    prioqueue_init(&archd->record_queue, -1, record_duplicate, record_deallocate);
     archd->records_received = 0LL;
     archd->records_archived = 0LL;
     archd->log_record_count = 0LL;
@@ -533,6 +585,11 @@ int main (int argc, char **argv)
 
     // Start the server listening for clients in the background
     LogServerPort(&archd->server_port);
+    TelemetryPort(&archd->client_port);
+    TelemetryBufferDepth(&archd->telemetry_depth);
+    prioqueue_init(&archd->telemetry_queue, archd->telemetry_depth,
+                   record_duplicate, record_deallocate);
+
     if ((pcomm_result = pcomm_init(archd->pcomm)) != PCOMM_SUCCESS)
     {
         if (archd->debug) {
@@ -553,16 +610,28 @@ int main (int argc, char **argv)
                     WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
         }
     }
-    else if (!init_server(archd)) { // if successful, sets archd->server_socket
+    else if (!init_sockets(archd)) { // if successful, sets archd->server_socket
         if (archd->debug) {
-            fprintf(stderr, "%s:%d> init_server(): failed to start server\n", WHOAMI, __LINE__);
+            fprintf(stderr, "%s:%d> init_sockets(): failed to start server\n", WHOAMI, __LINE__);
         } else {
-            syslog(LOG_ERR, "%s:%d> init_server(): failed to start server", WHOAMI, __LINE__);
+            syslog(LOG_ERR, "%s:%d> init_sockets(): failed to start server", WHOAMI, __LINE__);
         }
     }
     else if ((pcomm_result = pcomm_monitor_read_fd(archd->pcomm,
                                                    archd->server_socket,
-                                                   callback_connect_request)) != PCOMM_SUCCESS)
+                                                   callback_server_connect)) != PCOMM_SUCCESS)
+    {
+        if (archd->debug) {
+            fprintf(stderr, "%s:%d> pcomm_monitor_read_fd(): %s\n",
+                    WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
+        } else {
+            syslog(LOG_ERR, "%s:%d> pcomm_monitor_read_fd(): %s",
+                    WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
+        }
+    }
+    else if ((pcomm_result = pcomm_monitor_read_fd(archd->pcomm,
+                                                   archd->client_socket,
+                                                   callback_client_connect)) != PCOMM_SUCCESS)
     {
         if (archd->debug) {
             fprintf(stderr, "%s:%d> pcomm_monitor_read_fd(): %s\n",
@@ -614,10 +683,32 @@ int main (int argc, char **argv)
             fprintf(stdout, "archd -> status_map = 0x%0lx\n", (unsigned long)archd->status_map);
             fprintf(stdout, "archd -> write_index = %0d\n", archd->write_index);
             fprintf(stdout, "archd -> log_message = 0x%0lx\n", (unsigned long)archd->log_message);
+
             fprintf(stdout, "archd -> server_port = %0d\n", archd->server_port);
             fprintf(stdout, "archd -> server_socket = %0li\n", (unsigned long)archd->server_socket);
+            fprintf(stdout, "archd -> max_servers = %0lu\n", (unsigned long)archd->max_servers);
+            fprintf(stdout, "archd -> server_count = %0lu\n", (unsigned long)archd->server_count);
+            fprintf(stdout, "archd -> server_map = 0x%0lx\n", (unsigned long)archd->server_map);
+
+            fprintf(stdout, "archd -> client_port = %0d\n", archd->client_port);
+            fprintf(stdout, "archd -> client_socket = %0li\n", (unsigned long)archd->client_socket);
+            fprintf(stdout, "archd -> max_clients = %0lu\n", (unsigned long)archd->max_clients);
             fprintf(stdout, "archd -> client_count = %0lu\n", (unsigned long)archd->client_count);
-            fprintf(stdout, "archd -> record_queue = 0x%0lx\n", (unsigned long)(&archd->record_queue));
+            fprintf(stdout, "archd -> client_map = 0x%0lx\n", (unsigned long)archd->client_map);
+
+            fprintf(stdout, "archd -> record_queue = 0x%0lx\n",
+                    (unsigned long)(&archd->record_queue));
+            fprintf(stdout, "archd -> records_received = %0lli\n",
+                    (long long)archd->records_received);
+            fprintf(stdout, "archd -> records_archived = %0lli\n",
+                    (long long)archd->records_archived);
+            fprintf(stdout, "archd -> log_record_count = %0lli\n",
+                    (long long)archd->log_record_count);
+
+            fprintf(stdout, "archd -> telemetry_queue = 0x%0lx\n",
+                    (unsigned long)(&archd->telemetry_queue));
+            fprintf(stdout, "archd -> telemetry_depth = %0lu\n",
+                    (unsigned long)archd->telemetry_depth);
             fprintf(stdout, "archd -> debug = %0d\n", archd->debug);
             fprintf(stdout, "archd -> record_size = %0d\n", archd->record_size);
             fprintf(stdout, "archd -> ida_name = '%s'\n", archd->ida_name);
@@ -660,71 +751,96 @@ int main (int argc, char **argv)
     return result;
 } // main()
 
-/* Creates the server socket, binds, and starts listening for new clients. */
-int init_server (archd_context_t *archd)
+/* Creates the server socket, binds, and starts listening for new servers/clients. */
+int init_socket (int port, int *new_socket, size_t max_connections,
+                 int debug, int loopback)
 {
-    char  *error_message;
     struct sockaddr_in listen_addr; /* Listen address setup */
 
-    if ((error_message = LoopRecordSize(&archd->record_size)) != NULL)
-    {
-        fprintf(stderr, "%s\n", error_message);
-        return 0;
-    }
-
-    if (archd->debug) {
-        printf("init_server(): port=%d recLen=%d\n", archd->server_port, archd->record_size);
+    if (debug) {
+        printf("init_socket(): port=%d max_connections=%u\n", port, max_connections);
     }
 
     /* Create the socket we will listen on error */
-    archd->server_socket = socket(AF_INET, SOCK_STREAM, 0); /* TCP */
-    if (archd->server_socket<0)
+    *new_socket = socket(AF_INET, SOCK_STREAM, 0); /* TCP */
+    if (*new_socket<0)
     {
-        fprintf(stderr,"init_server: Cannot open socket (err %d,%d)\n",
-                errno,archd->server_socket);
+        fprintf(stderr,"init_socket: Cannot open socket (err %d,%d)\n",
+                errno, *new_socket);
         return 0;
     }
 
     /* Set up structure and bind to port number */
-    // Only local programs can connect via loopback address
-    listen_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (loopback) {
+        listen_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    }
+    else {
+        listen_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    }
     listen_addr.sin_family = AF_INET;
-    listen_addr.sin_port = htons(archd->server_port);
+    listen_addr.sin_port = htons(port);
 
     // Loop forever waiting for bind to succeed
     while (1)
     {
 
-        if (bind( archd->server_socket,
+        if (bind( *new_socket,
                   (struct sockaddr *) &listen_addr, 
                   sizeof(listen_addr) ) < 0)
         {
             if (errno==EADDRINUSE)
             {
-                if (archd->debug)
+                if (debug)
                     fprintf(stderr,"Port %d in use? Trying again in %d sec\n",
-                            archd->server_port, (int)BIND_RETRY_INTERVAL);
+                            port, (int)BIND_RETRY_INTERVAL);
                 else
                     syslog(LOG_INFO,"Port %d in use? Trying again in %d sec",
-                            archd->server_port, (int)BIND_RETRY_INTERVAL);
+                            port, (int)BIND_RETRY_INTERVAL);
                 sleep(BIND_RETRY_INTERVAL);
                 continue;
             }
             fprintf(stderr,"Cannot bind (err %d - %s)\n",errno,strerror(errno));
             return 0;
         }
-        else if (archd->debug) {
-            printf("init_server(): bind succeeded for port %d\n", archd->server_port);
+        else if (debug) {
+            printf("init_socket(): bind succeeded for port %d\n", port);
         }
         break;
     } // infinite loop
 
     // Set up listener
-    if (listen(archd->server_socket, MAX_CLIENTS) < 0) {
+    if (listen(*new_socket, max_connections) < 0) {
         fprintf(stderr,"dnetport: cannot set listen depth to %d (%d)\n",
-                MAX_CLIENTS, errno);
+                max_connections, errno);
         return 0;
     }
+    return 1;
+}
+
+int init_sockets (archd_context_t *archd)
+{
+    char *error_message;
+
+    // Set the record size
+    if ((error_message = LoopRecordSize(&archd->record_size)) != NULL)
+    {
+        fprintf(stderr, "%s\n", error_message);
+        return 0;
+    }
+
+    // Opening the server socket for q330serv, shake, uFors, etc.
+    if (!init_socket(archd->server_port, &archd->server_socket,
+                     archd->max_servers, archd->debug, 1/*loopback*/))
+    {
+        return 0;
+    }
+
+    // Opening the client socket for telemetry
+    if (!init_socket(archd->client_port, &archd->client_socket,
+                     archd->max_clients, archd->debug, 0/*loopback*/)) {
+        return 0;
+    }
+
     return 1;
 }
 
@@ -765,10 +881,7 @@ void callback_archive (pcomm_context_t *pcomm)
                 fprintf(stderr, "%s: %s\n", WHOAMI, result_message);
             }
             // free up record resources
-            free(record->data);
-            mem_free(archd->memory, "seed-data");
-            free(record);
-            mem_free(archd->memory, "data-record");
+            record_deallocate(record);
             record = NULL;
             continue;
         } // Not a LOG record
@@ -782,10 +895,7 @@ void callback_archive (pcomm_context_t *pcomm)
                             (char *)record->data, archd->record_size))
             {
                 // Free up the record's resources
-                free(record->data);
-                mem_free(archd->memory, "seed-data");
-                free(record);
-                mem_free(archd->memory, "data-record");
+                record_deallocate(record);
                 record = NULL;
                 continue;
             }
@@ -799,10 +909,7 @@ void callback_archive (pcomm_context_t *pcomm)
                 {
                     fprintf(stderr, "%s: %s\n", WHOAMI, result_message);
                 }
-                free(archd->log_message->data);
-                mem_free(archd->memory, "seed-data");
-                free(archd->log_message);
-                mem_free(archd->memory, "data-record");
+                record_deallocate(archd->log_message);
                 archd->log_message = NULL;
             } // combine failed
         } // we have a waiting message to possibly combine with
@@ -823,10 +930,7 @@ void callback_archive (pcomm_context_t *pcomm)
             {
                 fprintf(stderr, "%s: %s\n", WHOAMI, result_message);
             }
-            free(archd->log_message->data);
-            mem_free(archd->memory, "seed-data");
-            free(archd->log_message);
-            mem_free(archd->memory, "data-record");
+            record_deallocate(archd->log_message);
             archd->log_message = NULL;
         } // timeout elapsed
 
@@ -838,6 +942,55 @@ void callback_archive (pcomm_context_t *pcomm)
         fprintf(stdout, "%s:   start - %lli log events processed\n", WHOAMI, archd->log_record_count);
         fprintf(stdout, "%s:   start - %lli records processed\n", WHOAMI, archd->records_archived);
     }
+}
+
+/* Callback for removing expired client connections.
+ */
+void retire_old_client(const char *key, const void *value, const void *obj)
+{
+    struct timeval now;
+    client_context_t *client = NULL;
+    data_record_t *record = NULL;
+    int64_t delay = 0;
+
+    client = (client_context_t *)value;
+    gettimeofday(&now, &g_archd->tz_info);
+
+    // If the buffer is full, and the client hasn't read from it recently, close the socket
+    delay = TIME_DIFF(now, client->last_write);
+    if ( (delay >= CLIENT_EMPTY_TIMEOUT) ||
+         ( (delay >= CLIENT_PARTIAL_TIMEOUT) &&
+           (!prioqueue_empty(&client->telemetry_queue)) ) ||
+         ( (delay >= CLIENT_FULL_TIMEOUT) &&
+           (prioqueue_full(&client->telemetry_queue)) ) )
+    {
+        fprintf(stderr, "%s: removing expired client connection {socket %d}",
+                WHOAMI, client->socket);
+        callback_client_closed(g_archd->pcomm, client->socket);
+    }
+}
+
+/* Callback for adding a record to the telemetry queues for all 
+ * client connections.
+ */
+void add_client_record(const char *key, const void *value, const void *obj)
+{
+    char prefix[128];
+    char suffix[128];
+    client_context_t *client = NULL;
+    data_record_t *record = NULL;
+
+    client = (client_context_t *)value;
+
+    record = (data_record_t *)obj;
+    prioqueue_add(&client->telemetry_queue, record, record->priority);
+    pcomm_monitor_write_fd(g_archd->pcomm, client->socket, callback_client_can_send);
+
+    snprintf(prefix, 128, "  client{%d}->telemetry_queue: ", client->socket);
+    suffix[0] = '\0';
+    prioqueue_print_summary(&client->telemetry_queue, stderr, prefix, suffix);
+
+    retire_old_client(key, value, obj);
 }
 
 /* May eventually do something special for timeouts.
@@ -852,135 +1005,30 @@ void callback_async_timeout (pcomm_context_t *pcomm)
     gettimeofday(&now, &tz);
 
     //fprintf(stderr, "%s: pcomm timed out (%d.%d)", WHOAMI, now.tv_sec, now.tv_usec);
+    map_enum(g_archd->client_map, retire_old_client, NULL);
     callback_archive(pcomm);
 }
 
-/* Handles new connection requests, adding new file descriptors to pcomm
- * for new clients.
- */
-void callback_connect_request (pcomm_context_t *pcomm, int fd)
-{
-    struct sockaddr_in address;
-    archd_context_t *archd;
-    client_context_t *client = NULL;
-    int client_sock;
-
-    pcomm_result_t pcomm_result;
-    unsigned int addr_len = sizeof(struct sockaddr_in);
-
-    archd = (archd_context_t *)pcomm_get_external_context(pcomm);
-
-    if (archd->debug) {
-        fprintf(stderr, "callback_connect_request()\n");
-    }
-
-    if (archd->client_count >= MAX_CLIENTS) {
-        if (archd->debug) {
-            fprintf(stderr, "%s: Maximum number of client reached, rejecting\n", WHOAMI);
-        } else {
-            syslog(LOG_ERR, "%s: Maximum number of client reached, rejecting", WHOAMI);
-        }
-        return;
-    }
-
-    if ((client = (client_context_t *)calloc(sizeof(client_context_t), 1)) == NULL) {
-        if (archd->debug) {
-            fprintf(stderr, "%s: failed to allocate memory for client context\n", WHOAMI);
-        } else {
-            syslog(LOG_ERR, "%s: failed to allocate memory for client context", WHOAMI);
-        }
-        return;
-    }
-    mem_add(archd->memory, "client");
-
-    gettimeofday(&client->connect_time, &archd->tz_info);
-    client->length = 0;
-    client->received = 0;
-    client->confirmed = 0;
-    prioqueue_init(&client->reply_queue);
-
-    // Accept a new connection request
-    if (archd->debug)
-    {
-        printf("Accepting connect request (port %d)\n", archd->server_port);
-    }
-
-    client_sock = accept(archd->server_socket, (struct sockaddr *)(&address), &addr_len);
-    if (client_sock < 0)
-    {
-        if (archd->debug) {
-            fprintf(stderr,"accept failed (%d,%d)\n", errno, client_sock);
-        } else {
-            syslog(LOG_ERR,"accept failed (%d,%d)", errno, client_sock);
-        }
-        return;
-    }
-
-    if (getpeername(client_sock, (struct sockaddr *)(&address), &addr_len) < 0)
-    {
-        if (archd->debug) {
-            fprintf(stderr,"BAD ERROR encountered - error %d - %s\n", errno, strerror(errno));
-        } else {
-            syslog(LOG_ERR,"BAD ERROR encountered - error %d - %s", errno, strerror(errno));
-        }
-        close(client_sock);
-        return;
-    }
-
-    if ((pcomm_result = pcomm_monitor_read_fd(archd->pcomm,
-                                             client_sock,
-                                             callback_client_can_recv)) != PCOMM_SUCCESS)
-    {
-        if (archd->debug) {
-            fprintf(stderr, "%s:%d> pcomm_monitor_read_fd(): %s\n",
-                    WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
-        } else {
-            syslog(LOG_ERR, "%s:%d> pcomm_monitor_read_fd(): %s",
-                    WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
-        }
-        return;
-    }
-    if ((pcomm_result = pcomm_set_external_fd_context(archd->pcomm,
-                                                     PCOMM_STREAM_READ,
-                                                     client_sock,
-                                                     client)) != PCOMM_SUCCESS)
-    {
-        if (archd->debug) {
-            fprintf(stderr, "%s:%d> pcomm_set_external_fd_context(): %s\n",
-                    WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
-        } else {
-            syslog(LOG_ERR, "%s:%d> pcomm_set_external_fd_context(): %s",
-                    WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
-        }
-        return;
-    }
-    archd->client_count++;
-
-    if (archd->debug) {
-        printf("New client at socket %d (%d of %d available)\n",
-               client_sock, archd->client_count, MAX_CLIENTS);
-    } else {
-        syslog(LOG_INFO, "New client at socket %d (%d of %d available)",
-               client_sock, archd->client_count, MAX_CLIENTS);
-    }
-}
-
-/* Stubb for handling server disconnects.
+/* Stubb for handling disconnects.
  * This is not being used since detecting closes has not yet been worked out.
  */
-void callback_server_closed (pcomm_context_t *pcomm, int fd)
+void callback_listener_closed (pcomm_context_t *pcomm, int fd)
 {
+    char server_key[SOCKET_KEY_SIZE];
     archd_context_t *archd = NULL;
-    client_context_t *client = NULL;
+    server_context_t *server = NULL;
     pcomm_result_t pcomm_result = 0;
 
+
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
-    client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_READ, fd);
+    snprintf(server_key, SOCKET_KEY_SIZE, "%d", fd);
+    server = (server_context_t *)map_get(archd->server_map, server_key);
+
     if (archd->debug) {
-        fprintf(stderr, "%s:callback_server_closed(): server socket closed\n", WHOAMI); 
+        fprintf(stderr, "%s:callback_listener_closed(): server socket closed\n", WHOAMI); 
     }
     else {
-        syslog(LOG_ERR, "%s:callback_server_closed(): server socket closed", WHOAMI); 
+        syslog(LOG_ERR, "%s:callback_listener_closed(): server socket closed", WHOAMI); 
     }
 
     pcomm_result = pcomm_stop(pcomm, 1/*immediately*/);
@@ -999,7 +1047,7 @@ long bytes_on_socket(int socket)
 }
 
 /* allocates a new reply message structure containing the passed message */
-reply_message_t *make_reply(uint8_t *message, size_t length)
+reply_message_t *make_reply(uint8_t *message, size_t length, int priority)
 {
     reply_message_t *reply = NULL;
 
@@ -1013,6 +1061,7 @@ reply_message_t *make_reply(uint8_t *message, size_t length)
         else {
             memcpy(reply->message, message, length);
             reply->length = length;
+            reply->priority = priority;
             reply->sent = 0;
             mem_add(g_archd->memory, "reply-message");
         }
@@ -1021,13 +1070,118 @@ reply_message_t *make_reply(uint8_t *message, size_t length)
     return reply;
 }
 
-/* Handles new data from the client, adding to the archive
+
+///////////////////////////////////////////////////////////
+// SERVER LOGIC
+///////////////////////////////////////////////////////////
+
+/* Handles new connection requests, adding new file descriptors to pcomm
+ * for new servers.
+ */
+void callback_server_connect (pcomm_context_t *pcomm, int fd)
+{
+    struct sockaddr_in address;
+    archd_context_t *archd;
+    server_context_t *server = NULL;
+
+    pcomm_result_t pcomm_result;
+    unsigned int addr_len = sizeof(struct sockaddr_in);
+
+    archd = (archd_context_t *)pcomm_get_external_context(pcomm);
+
+    if (archd->debug) {
+        fprintf(stderr, "callback_connect_request()\n");
+    }
+
+    if (archd->server_count >= archd->max_servers) {
+        if (archd->debug) {
+            fprintf(stderr, "%s: Maximum number of servers reached, rejecting\n", WHOAMI);
+        } else {
+            syslog(LOG_ERR, "%s: Maximum number of servers reached, rejecting", WHOAMI);
+        }
+        return;
+    }
+
+    if ((server = (server_context_t *)calloc(sizeof(server_context_t), 1)) == NULL) {
+        if (archd->debug) {
+            fprintf(stderr, "%s: failed to allocate memory for server context\n", WHOAMI);
+        } else {
+            syslog(LOG_ERR, "%s: failed to allocate memory for server context", WHOAMI);
+        }
+        return;
+    }
+    mem_add(archd->memory, "server");
+
+    // initialize the server context
+    gettimeofday(&server->connect_time, &archd->tz_info);
+    server->length = 0;
+    server->received = 0;
+    server->confirmed = 0;
+    prioqueue_init(&server->reply_queue, -1, NULL, NULL);
+
+    // Accept a new connection request
+    if (archd->debug)
+    {
+        printf("Accepting connect request (port %d)\n", archd->server_port);
+    }
+
+    server->socket = accept(archd->server_socket, (struct sockaddr *)(&address), &addr_len);
+    if (server->socket < 0)
+    {
+        if (archd->debug) {
+            fprintf(stderr,"accept failed (%d,%d)\n", errno, server->socket);
+        } else {
+            syslog(LOG_ERR,"accept failed (%d,%d)", errno, server->socket);
+        }
+        return;
+    }
+
+    if (getpeername(server->socket, (struct sockaddr *)(&address), &addr_len) < 0)
+    {
+        if (archd->debug) {
+            fprintf(stderr,"BAD ERROR encountered - error %d - %s\n", errno, strerror(errno));
+        } else {
+            syslog(LOG_ERR,"BAD ERROR encountered - error %d - %s", errno, strerror(errno));
+        }
+        close(server->socket);
+        return;
+    }
+
+    if ((pcomm_result = pcomm_monitor_read_fd(archd->pcomm,
+                                             server->socket,
+                                             callback_server_can_recv)) != PCOMM_SUCCESS)
+    {
+        if (archd->debug) {
+            fprintf(stderr, "%s:%d> pcomm_monitor_read_fd(): %s\n",
+                    WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
+        } else {
+            syslog(LOG_ERR, "%s:%d> pcomm_monitor_read_fd(): %s",
+                    WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
+        }
+        return;
+    }
+
+    snprintf(server->key, SOCKET_KEY_SIZE, "%d", server->socket);
+    map_put(archd->server_map, server->key, server);
+    archd->server_count++;
+
+    if (archd->debug) {
+        printf("New server at socket %d (%d/%d)\n",
+               server->socket, archd->server_count, archd->max_servers);
+    } else {
+        syslog(LOG_INFO, "New server at socket %d (%d/%d)",
+               server->socket, archd->server_count, archd->max_servers);
+    }
+}
+
+/* Handles new data from the server, adding to the archive
  * queue once a complete record is available on the socket.
  */
-void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
+void callback_server_can_recv (pcomm_context_t *pcomm, int fd)
 {
+    char server_key[SOCKET_KEY_SIZE];
     archd_context_t *archd = NULL;
-    client_context_t *client = NULL;
+    server_context_t *server = NULL;
     reply_message_t *reply = NULL;
     data_record_t *record = NULL;
 
@@ -1047,21 +1201,23 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
     size_t read_size;
     //char *s_errno;
 
+
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
-    client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_READ, fd);
+    snprintf(server_key, SOCKET_KEY_SIZE, "%d", fd);
+    server = (server_context_t *)map_get(archd->server_map, server_key);
     bytes_waiting = bytes_on_socket(fd);
 
     if (archd->debug) {
-        fprintf(stderr, "%s: %d bytes waiting for client %d\n", WHOAMI, bytes_waiting, fd);
+        fprintf(stderr, "%s: %d bytes waiting for server %d\n", WHOAMI, bytes_waiting, fd);
     }
     while (bytes_waiting >= 0)
     {
         read_size = archd->record_size;
-        if (client->length > 0) {
-            read_size -= client->length;
+        if (server->length > 0) {
+            read_size -= server->length;
         }
 
-        bytes_received = recv(fd, client->buffer + client->length, read_size, MSG_DONTWAIT);
+        bytes_received = recv(fd, server->buffer + server->length, read_size, MSG_DONTWAIT);
 
         /*
         if (archd->debug) {
@@ -1089,20 +1245,26 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
                 case ENOTSOCK:
                 case EPIPE:
                     if (archd->debug) {
-                        fprintf(stderr, "%s:%d> connection closed by client %d\n",
+                        fprintf(stderr, "%s:%d> connection closed by server %d\n",
                                 WHOAMI, __LINE__, fd);
                     } else {
-                        syslog(LOG_ERR, "%s:%d> connection closed by client %d",
+                        syslog(LOG_ERR, "%s:%d> connection closed by server %d",
                                 WHOAMI, __LINE__, fd);
                     }
-                    callback_client_closed(pcomm, fd);
+                    callback_server_closed(pcomm, fd);
                     return;
-                case EAGAIN: // may be the same as EWOULDBLOCK
+// EAGAIN and EWOULDBLOCK are defined as the same value
+// on the build system, but we don't necessarily want either
+// triggering the default behavior if it changes.
+#if EAGAIN != EWOULDBLOCK
+                case EWOULDBLOCK:
+#endif
+                case EAGAIN:
                 case EINTR:
                 case ENOBUFS:
                 case ENOMEM:
                     if (archd->debug) {
-                        fprintf(stderr, "%s:%d> read failed for client %d, \n",
+                        fprintf(stderr, "%s:%d> read failed for server %d, \n",
                                 WHOAMI, __LINE__, fd);
                     } 
                 default:
@@ -1113,22 +1275,22 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
         }
         
 
-        client->length += bytes_received;
+        server->length += bytes_received;
         bytes_waiting -= bytes_received;
 
         /*
         if (archd->debug) {
-            fprintf(stderr, "%s: %d bytes buffered for %d\n", WHOAMI, client->length, fd);
+            fprintf(stderr, "%s: %d bytes buffered for %d\n", WHOAMI, server->length, fd);
         }
         */
 
         // If we don't have a full record's worth, bail for now
-        if (client->length < archd->record_size) {
+        if (server->length < archd->record_size) {
             if (archd->debug) {
-                fprintf(stderr, "%s: %d bytes buffered for %d, waiting for more\n", WHOAMI, client->length, fd);
+                fprintf(stderr, "%s: %d bytes buffered for %d, waiting for more\n", WHOAMI, server->length, fd);
             }
             if (bytes_received == 0) {
-                callback_client_closed(pcomm, fd);
+                callback_server_closed(pcomm, fd);
                 return;
             }
             break;
@@ -1158,12 +1320,16 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
                 syslog(LOG_ERR, "%s:malloc(): could not allocate memory for record buffer", WHOAMI);
             }
             // Wait for the memory to be freed by the process
+            free(record);
+            mem_free(archd->memory, "data-record");
             break;
         }
         mem_add(archd->memory, "seed-data");
 
-        memcpy(record->data, client->buffer, archd->record_size);
-        client->length = 0;
+        memcpy(record->data, server->buffer, archd->record_size);
+        record->ref_count = 0;
+        record->priority = 0;
+        server->length = 0;
 
         // Handle channel control commands
         if (strncmp("CHANNELCONTROL-", (char *)record->data, 15) == 0)
@@ -1198,7 +1364,7 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
                     syslog(LOG_ERR, "%s: Channel control applied: '%s'", WHOAMI, control);
                 }
                 sprintf(response, "CHANNELCONTROL-%d-OKAY.", control_id);
-                reply = make_reply((uint8_t *)response, strlen(response)+1);
+                reply = make_reply((uint8_t *)response, strlen(response)+1, 0/*priority*/);
                 break;
 
          // Channel Control Command FAILED
@@ -1211,7 +1377,7 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
                            WHOAMI, control);
                 }
                 sprintf(response, "CHANNELCONTROL-%d-FAIL.", control_id);
-                reply = make_reply((uint8_t *)response, strlen(response)+1);
+                reply = make_reply((uint8_t *)response, strlen(response)+1, 0/*priority*/);
                 break;
 
          // Channel Control Command INVALID
@@ -1224,16 +1390,27 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
                            WHOAMI, control);
                 }
                 sprintf(response, "CHANNELCONTROL-INVALID.");
-                reply = make_reply((uint8_t *)response, strlen(response) + 1);
+                reply = make_reply((uint8_t *)response, strlen(response) + 1, 0/*priority*/);
                 break;
 
          // Pass this record on to the archive mechanism
             default:
                 // Least significant digit of the sequence number
-                reply = make_reply((uint8_t *)(record->data + 5), 1);
+                reply = make_reply((uint8_t *)(record->data + 5), 1, 0/*priority*/);
                 gettimeofday(&record->receive_time, &archd->tz_info);
-                client->received++;
-                prioqueue_add(&archd->record_queue, record, 0/*priority*/);
+                server->received++;
+                prioqueue_add(&archd->record_queue, record, record->priority/*priority*/);
+                if (archd->debug) {
+                    fprintf(stderr, "Adding record to queue for archive...\n");
+                }
+                // Add this record to the telemetry queues
+                if (archd->telemetry_depth > 0) {
+                    prioqueue_add(&archd->telemetry_queue, record, record->priority/*priority*/);
+                    if (archd->debug) {
+                        prioqueue_print_summary(&archd->telemetry_queue, stderr, "archd->telemetry_queue: ", "");
+                    }
+                    map_enum(archd->client_map, add_client_record, record);
+                }
                 archd->records_received++;
         } 
 
@@ -1251,7 +1428,7 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
         }
         if ((bytes_sent = send(fd, reply->message, reply->length, MSG_DONTWAIT)) < reply->length) {
             // Queue the message if it could not be sent
-            prioqueue_add(&client->reply_queue, reply, 0/*priority*/);
+            prioqueue_add(&server->reply_queue, reply, reply->priority/*priority*/);
             if (archd->debug) {
                 fprintf(stderr, "%s: queueing reply because send() blocked\n",
                         WHOAMI);
@@ -1277,8 +1454,8 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
         prioqueue_print_summary(&archd->record_queue, stderr, "archd->record_queue: ", "");
     }
 
-    if (prioqueue_peek_high(&client->reply_queue) != NULL) {
-        if ((pcomm_result = pcomm_monitor_write_fd(pcomm, fd, callback_client_can_send)) != PCOMM_SUCCESS)
+    if (prioqueue_peek_high(&server->reply_queue) != NULL) {
+        if ((pcomm_result = pcomm_monitor_write_fd(pcomm, fd, callback_server_can_send)) != PCOMM_SUCCESS)
         {
             if (archd->debug) {
                 fprintf(stderr, "%s:pcomm_monitor_write_fd(): %s\n",
@@ -1292,25 +1469,303 @@ void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
     }
 }
 
-/* Handles sending of confirmations to the client. */
-void callback_client_can_send (pcomm_context_t *pcomm, int fd)
+/* Handles sending of confirmations to the server. */
+void callback_server_can_send (pcomm_context_t *pcomm, int fd)
 {
+    char server_key[SOCKET_KEY_SIZE];
     archd_context_t *archd = NULL;
-    client_context_t *client = NULL;
+    server_context_t *server = NULL;
     reply_message_t *reply = NULL;
     ssize_t bytes_sent = 0;
 
+
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
-    client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_READ, fd);
+    snprintf(server_key, SOCKET_KEY_SIZE, "%d", fd);
+    server = (server_context_t *)map_get(archd->server_map, server_key);
 
     if (archd->debug) {
-        fprintf(stdout, "%s: replying to client\n", WHOAMI);
+        fprintf(stdout, "%s: replying to server\n", WHOAMI);
     }
 
-    while ((reply = (reply_message_t *)prioqueue_peek_high(&client->reply_queue)) != NULL)
+    while ((reply = (reply_message_t *)prioqueue_peek_high(&server->reply_queue)) != NULL)
     {
         bytes_sent = send(fd, reply->message, reply->length, MSG_DONTWAIT);
         if (bytes_sent < reply->length ) {
+            if (bytes_sent < 0) {
+                switch (errno) {
+                    case EOPNOTSUPP:
+                        if (archd->debug) {
+                            fprintf(stderr, "%s:%d> bad socket option\n",
+                                    WHOAMI, __LINE__);
+                        } else {
+                            syslog(LOG_ERR, "%s:%d> bad socket option",
+                                    WHOAMI, __LINE__);
+                        }
+                        exit(1);
+                    case EBADF:
+                    case ECONNRESET:
+                    case EDESTADDRREQ:
+                    case EFAULT:
+                    case EMSGSIZE:
+                    case ENOTCONN:
+                    case ENOTSOCK:
+                    case EPIPE:
+                        if (archd->debug) {
+                            fprintf(stderr, "%s:%d> connection closed by server %d\n",
+                                    WHOAMI, __LINE__, fd);
+                        } else {
+                            syslog(LOG_ERR, "%s:%d> connection closed by server %d",
+                                    WHOAMI, __LINE__, fd);
+                        }
+                        callback_server_closed(pcomm, fd);
+                        return;
+                    case EAGAIN: // may be the same as EWOULDBLOCK
+                    case EINTR:
+                    case ENOBUFS:
+                    case ENOMEM:
+                        if (archd->debug) {
+                            fprintf(stderr, "%s:%d> reply failed to server %d, \n",
+                                    WHOAMI, __LINE__, fd);
+                        } 
+                    default:
+                        break;
+                }
+            }
+            if (archd->debug) {
+                fprintf(stderr, "%s:%d> WARNING: reply to server %d only sent %d of %d bytes",
+                        WHOAMI, __LINE__, fd, bytes_sent, reply->length);
+            }
+            // break out of the loop
+            break;
+        } else {
+            // Remove this reply if it was sent succesfully
+            prioqueue_pop_high(&server->reply_queue);
+            free(reply->message);
+            mem_free(archd->memory, "reply-message");
+            free(reply);
+            mem_free(archd->memory, "reply");
+            reply = NULL;
+
+            server->confirmed++;
+        }
+    }
+
+    if (!prioqueue_peek_high(&server->reply_queue)) {
+        // Don't monitor this descriptor if there are not replies waiting
+        pcomm_remove_write_fd(pcomm, fd);
+    }
+}
+
+/* Frees up the server context resource. */
+void callback_server_closed (pcomm_context_t *pcomm, int fd)
+{
+    char server_key[SOCKET_KEY_SIZE];
+    archd_context_t *archd = NULL;
+    server_context_t *server = NULL;
+    reply_message_t *reply = NULL;
+
+    archd = (archd_context_t *)pcomm_get_external_context(pcomm);
+
+    if (archd->debug) {
+        fprintf(stderr, "%s: server closed socket %d\n", WHOAMI, fd);
+    } else {
+        syslog(LOG_ERR, "%s: server closed socket %d", WHOAMI, fd);
+    }
+
+    snprintf(server_key, SOCKET_KEY_SIZE, "%d", fd);
+    server = (server_context_t *)map_get(archd->server_map, server_key);
+
+    pcomm_remove_read_fd(pcomm, fd);
+    pcomm_remove_write_fd(pcomm, fd);
+    close(fd);
+
+    if (server) {
+        fprintf(stderr, "%s: removing un-sent reply messages for closed server %d\n", WHOAMI, fd);
+        while ((reply = (reply_message_t *)prioqueue_peek_high(&server->reply_queue)) != NULL) {
+            fprintf(stderr, "%s: removing un-sent reply message for closed server %d\n", WHOAMI, fd);
+            prioqueue_pop_high(&server->reply_queue);
+            free(reply->message);
+            mem_free(archd->memory, "reply-message");
+            free(reply);
+            mem_free(archd->memory, "reply");
+            reply = NULL;
+        }
+        free(server);
+        mem_free(archd->memory, "server");
+    }
+
+    if (map_get(archd->server_map, server->key)) {
+        map_remove(archd->server_map, server->key);
+    }
+    archd->server_count--;
+
+    adl_print_all();
+    adl_write_all_indices();
+}
+
+
+///////////////////////////////////////////////////////////
+// CLIENT LOGIC
+///////////////////////////////////////////////////////////
+
+/* Handles new connection requests, adding new file descriptors to pcomm
+ * for new telemetry clients.
+ */
+void callback_client_connect (pcomm_context_t *pcomm, int fd)
+{
+    struct sockaddr_in address;
+    archd_context_t *archd;
+    client_context_t *client = NULL;
+
+    pcomm_result_t pcomm_result;
+    unsigned int addr_len = sizeof(struct sockaddr_in);
+
+    archd = (archd_context_t *)pcomm_get_external_context(pcomm);
+
+    if (archd->debug) {
+        fprintf(stderr, "callback_connect_request()\n");
+    }
+
+    if (archd->client_count >= archd->max_clients) {
+        if (archd->debug) {
+            fprintf(stderr, "%s: Maximum number of clients reached, rejecting\n", WHOAMI);
+        } else {
+            syslog(LOG_ERR, "%s: Maximum number of clients reached, rejecting", WHOAMI);
+        }
+        return;
+    }
+
+    if ((client = (client_context_t *)calloc(sizeof(client_context_t), 1)) == NULL) {
+        if (archd->debug) {
+            fprintf(stderr, "%s: failed to allocate memory for client context\n", WHOAMI);
+        } else {
+            syslog(LOG_ERR, "%s: failed to allocate memory for client context", WHOAMI);
+        }
+        return;
+    }
+    mem_add(archd->memory, "client");
+
+    // initialize the client context
+    gettimeofday(&client->connect_time, &archd->tz_info);
+    gettimeofday(&client->last_write, &archd->tz_info);
+    client->partial = NULL;
+    client->offset = 0;
+    client->sent = 0;
+    prioqueue_clone(&client->telemetry_queue, &archd->telemetry_queue);
+
+    // Accept a new connection request
+    if (archd->debug)
+    {
+        printf("Accepting connect request (port %d)\n", archd->client_port);
+    }
+
+    client->socket = accept(archd->client_socket, (struct sockaddr *)(&address), &addr_len);
+    if (client->socket < 0)
+    {
+        if (archd->debug) {
+            fprintf(stderr,"accept failed (%d,%d)\n", errno, client->socket);
+        } else {
+            syslog(LOG_ERR,"accept failed (%d,%d)", errno, client->socket);
+        }
+        return;
+    }
+
+    if (getpeername(client->socket, (struct sockaddr *)(&address), &addr_len) < 0)
+    {
+        if (archd->debug) {
+            fprintf(stderr,"BAD ERROR encountered - error %d - %s\n", errno, strerror(errno));
+        } else {
+            syslog(LOG_ERR,"BAD ERROR encountered - error %d - %s", errno, strerror(errno));
+        }
+        close(client->socket);
+        return;
+    }
+
+    if ((pcomm_result = pcomm_monitor_write_fd(archd->pcomm,
+                                               client->socket,
+                                               callback_client_can_send)) != PCOMM_SUCCESS)
+    {
+        if (archd->debug) {
+            fprintf(stderr, "%s:%d> pcomm_monitor_read_fd(): %s\n",
+                    WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
+        } else {
+            syslog(LOG_ERR, "%s:%d> pcomm_monitor_read_fd(): %s",
+                    WHOAMI, __LINE__, pcomm_strresult(pcomm_result));
+        }
+        return;
+    }
+    archd->client_count++;
+    snprintf(client->key, SOCKET_KEY_SIZE, "%d", client->socket);
+    map_put(archd->client_map, client->key, client);
+
+    if (archd->debug) {
+        printf("New client at socket %d (%d/%d)\n",
+               client->socket, archd->client_count, archd->max_clients);
+    } else {
+        syslog(LOG_INFO, "New client at socket %d (%d/%d)",
+               client->socket, archd->client_count, archd->max_clients);
+    }
+}
+
+
+/* Handles new data from the client, adding to the archive
+ * queue once a complete record is available on the socket.
+ */
+void callback_client_can_recv (pcomm_context_t *pcomm, int fd)
+{
+    char client_key[SOCKET_KEY_SIZE];
+    archd_context_t *archd = NULL;
+    client_context_t *client = NULL;
+
+    archd = (archd_context_t *)pcomm_get_external_context(pcomm);
+
+    snprintf(client_key, SOCKET_KEY_SIZE, "%d", fd);
+    client = (client_context_t *)map_get(archd->client_map, client_key);
+}
+
+/* Handles sending of confirmations to the client. */
+void callback_client_can_send (pcomm_context_t *pcomm, int fd)
+{
+    char client_key[SOCKET_KEY_SIZE];
+    archd_context_t *archd = NULL;
+    client_context_t *client = NULL;
+    data_record_t *record = NULL;
+    size_t bytes_ready = 0;
+    size_t offset = 0;
+    ssize_t bytes_sent = 0;
+
+    archd = (archd_context_t *)pcomm_get_external_context(pcomm);
+    snprintf(client_key, SOCKET_KEY_SIZE, "%d", fd);
+    client = (client_context_t *)map_get(archd->client_map, client_key);
+
+    if (client == NULL) {
+        fprintf(stderr, "%s: Null context for client %d\n", WHOAMI, fd);
+        pcomm_stop(pcomm, 1/*immediately*/);
+        return;
+    }
+
+    if (archd->debug) {
+        fprintf(stdout, "%s: sending record to client\n", WHOAMI);
+    }
+
+    while ( (client->partial != NULL) ||
+            ((record = (data_record_t *)prioqueue_pop_high(&client->telemetry_queue)) != NULL) )
+    {
+        // Continue transmission of a previous record if we didn't
+        // finish transmission the last time
+        if (client->partial) {
+            record = client->partial;
+            offset = client->offset;
+            bytes_ready = archd->record_size - offset;
+            client->partial = NULL;
+            client->offset = 0;
+        } else {
+            bytes_ready = archd->record_size;
+            offset = 0;
+        }
+
+        bytes_sent = send(fd, record->data + offset, bytes_ready, MSG_DONTWAIT);
+        if (bytes_sent < bytes_ready) {
             if (bytes_sent < 0) {
                 switch (errno) {
                     case EOPNOTSUPP:
@@ -1351,26 +1806,28 @@ void callback_client_can_send (pcomm_context_t *pcomm, int fd)
                         break;
                 }
             }
-            if (archd->debug) {
-                fprintf(stderr, "%s:%d> WARNING: reply to client %d only sent %d of %d bytes",
-                        WHOAMI, __LINE__, fd, bytes_sent, reply->length);
+            else {
+                if (archd->debug) {
+                    fprintf(stderr, "%s:%d> WARNING: telemetry to client %d only sent %d of %d bytes",
+                            WHOAMI, __LINE__, fd, bytes_sent, bytes_ready);
+                }
+                client->partial = record;
+                client->offset = offset + bytes_sent;
+                gettimeofday(&client->last_write, &archd->tz_info);
             }
             // break out of the loop
             break;
-        } else {
-            // Remove this reply if it was sent succesfully
-            prioqueue_pop_high(&client->reply_queue);
-            free(reply->message);
-            mem_free(archd->memory, "reply-message");
-            free(reply);
-            mem_free(archd->memory, "reply");
-            reply = NULL;
-
-            client->confirmed++;
-        }
+        } // Partial record sent
+        else {
+            // Remove this record if it was sent succesfully
+            record_deallocate(record);
+            record = NULL;
+            client->sent++;
+            gettimeofday(&client->last_write, &archd->tz_info);
+        } // All or remainder of record sent
     }
 
-    if (!prioqueue_peek_high(&client->reply_queue)) {
+    if (!client->partial && !prioqueue_peek_high(&client->telemetry_queue)) {
         // Don't monitor this descriptor if there are not replies waiting
         pcomm_remove_write_fd(pcomm, fd);
     }
@@ -1379,9 +1836,10 @@ void callback_client_can_send (pcomm_context_t *pcomm, int fd)
 /* Frees up the client context resource. */
 void callback_client_closed (pcomm_context_t *pcomm, int fd)
 {
+    char client_key[SOCKET_KEY_SIZE];
     archd_context_t *archd = NULL;
     client_context_t *client = NULL;
-    reply_message_t *reply = NULL;
+    data_record_t *record = NULL;
 
     archd = (archd_context_t *)pcomm_get_external_context(pcomm);
 
@@ -1391,30 +1849,27 @@ void callback_client_closed (pcomm_context_t *pcomm, int fd)
         syslog(LOG_ERR, "%s: client closed socket %d", WHOAMI, fd);
     }
 
-    client = (client_context_t *)pcomm_get_external_fd_context(pcomm, PCOMM_STREAM_READ, fd);
+    snprintf(client_key, SOCKET_KEY_SIZE, "%d", fd);
+    client = (client_context_t *)map_get(archd->client_map, client_key);
 
-    pcomm_remove_read_fd(pcomm, fd);
     pcomm_remove_write_fd(pcomm, fd);
     close(fd);
 
     if (client) {
-        fprintf(stderr, "%s: removing un-sent reply messages for closed client %d\n", WHOAMI, fd);
-        while ((reply = (reply_message_t *)prioqueue_peek_high(&client->reply_queue)) != NULL) {
-            fprintf(stderr, "%s: removing un-sent reply message for closed client %d\n", WHOAMI, fd);
-            prioqueue_pop_high(&client->reply_queue);
-            free(reply->message);
-            mem_free(archd->memory, "reply-message");
-            free(reply);
-            mem_free(archd->memory, "reply");
-            reply = NULL;
+        fprintf(stderr, "%s: removing un-sent data records for closed client %d\n", WHOAMI, fd);
+        while ((record = (data_record_t *)prioqueue_peek_high(&client->telemetry_queue)) != NULL) {
+            fprintf(stderr, "%s: removing un-sent data record for closed client %d\n", WHOAMI, fd);
+            prioqueue_pop_high(&client->telemetry_queue);
+            record_deallocate(record);
+            record = NULL;
         }
         free(client);
         mem_free(archd->memory, "client");
     }
 
     archd->client_count--;
-
-    adl_print_all();
-    adl_write_all_indices();
+    if (map_get(archd->client_map, client->key)) {
+        map_remove(archd->client_map, client->key);
+    }
 }
 

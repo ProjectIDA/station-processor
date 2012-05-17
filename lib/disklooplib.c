@@ -3101,7 +3101,7 @@ char *WriteChan(
     diskloop_context_t *context;
 
     if (bDebugADL) {
-        fprintf(stderr, "Opening diskloop for %s-%s-%s...\n", station, loc, chan);
+        fprintf(stderr, "Getting diskloop for %s-%s-%s...\n", station, loc, chan);
     }
     if (adl_open(&context, station, loc, chan) != NULL) {
         return looperrstr;

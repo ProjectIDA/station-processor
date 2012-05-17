@@ -34,9 +34,11 @@ yyyy-mm-dd WHO - Changes
 #define MAX_RECORD_SIZE 8192
 
 #define SOCKET_KEY_SIZE 32
-#define CLIENT_FULL_TIMEOUT     15
-#define CLIENT_PARTIAL_TIMEOUT  60
-#define CLIENT_EMPTY_TIMEOUT    300
+
+// Client timeouts are in microseconds
+#define CLIENT_FULL_TIMEOUT      15 * 1000000
+#define CLIENT_PARTIAL_TIMEOUT   60 * 1000000
+#define CLIENT_EMPTY_TIMEOUT    300 * 1000000
 
 // Message result
 #define RESULT_RECORD_SENT      0

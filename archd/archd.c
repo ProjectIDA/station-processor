@@ -950,7 +950,6 @@ void retire_old_client(const char *key, const void *value, const void *obj)
 {
     struct timeval now;
     client_context_t *client = NULL;
-    data_record_t *record = NULL;
     int64_t delay = 0;
 
     client = (client_context_t *)value;
@@ -1005,6 +1004,8 @@ void callback_async_timeout (pcomm_context_t *pcomm)
     gettimeofday(&now, &tz);
 
     //fprintf(stderr, "%s: pcomm timed out (%d.%d)", WHOAMI, now.tv_sec, now.tv_usec);
+
+    // check for and remove expired telemetry client connections
     map_enum(g_archd->client_map, retire_old_client, NULL);
     callback_archive(pcomm);
 }
@@ -1813,7 +1814,10 @@ void callback_client_can_send (pcomm_context_t *pcomm, int fd)
                 }
                 client->partial = record;
                 client->offset = offset + bytes_sent;
-                gettimeofday(&client->last_write, &archd->tz_info);
+                // Don't update the last write time if we didn't actually send anything
+                if (bytes_sent > 0) {
+                    gettimeofday(&client->last_write, &archd->tz_info);
+                }
             }
             // break out of the loop
             break;

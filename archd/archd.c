@@ -765,8 +765,13 @@ int init_socket (int port, int *new_socket, size_t max_connections,
     *new_socket = socket(AF_INET, SOCK_STREAM, 0); /* TCP */
     if (*new_socket<0)
     {
-        fprintf(stderr,"init_socket: Cannot open socket (err %d,%d)\n",
-                errno, *new_socket);
+        if (debug) {
+            fprintf(stderr,"init_socket: Cannot open socket (err %d,%d)\n",
+                    errno, *new_socket);
+        } else {
+            syslog(LOG_ERR,"init_socket: Cannot open socket (err %d,%d)",
+                    errno, *new_socket);
+        }
         return 0;
     }
 
@@ -799,7 +804,9 @@ int init_socket (int port, int *new_socket, size_t max_connections,
                 sleep(BIND_RETRY_INTERVAL);
                 continue;
             }
-            fprintf(stderr,"Cannot bind (err %d - %s)\n",errno,strerror(errno));
+            if (debug) {
+                fprintf(stderr,"Cannot bind (err %d - %s)\n",errno,strerror(errno));
+            }
             return 0;
         }
         else if (debug) {
@@ -963,8 +970,10 @@ void retire_old_client(const char *key, const void *value, const void *obj)
          ( (delay >= CLIENT_FULL_TIMEOUT) &&
            (prioqueue_full(&client->telemetry_queue)) ) )
     {
-        fprintf(stderr, "%s: removing expired client connection {socket %d}",
-                WHOAMI, client->socket);
+        if (g_archd->debug) {
+            fprintf(stderr, "%s: removing expired client connection {socket %d}",
+                    WHOAMI, client->socket);
+        }
         callback_client_closed(g_archd->pcomm, client->socket);
     }
 }
@@ -1581,9 +1590,15 @@ void callback_server_closed (pcomm_context_t *pcomm, int fd)
     close(fd);
 
     if (server) {
-        fprintf(stderr, "%s: removing un-sent reply messages for closed server %d\n", WHOAMI, fd);
+        if (archd->debug) {
+            fprintf(stderr, "%s: removing un-sent reply messages for closed server %d\n",
+                    WHOAMI, fd);
+        }
         while ((reply = (reply_message_t *)prioqueue_peek_high(&server->reply_queue)) != NULL) {
-            fprintf(stderr, "%s: removing un-sent reply message for closed server %d\n", WHOAMI, fd);
+            if (archd->debug) {
+                fprintf(stderr, "%s: removing un-sent reply message for closed server %d\n",
+                        WHOAMI, fd);
+            }
             prioqueue_pop_high(&server->reply_queue);
             free(reply->message);
             mem_free(archd->memory, "reply-message");
@@ -1860,9 +1875,13 @@ void callback_client_closed (pcomm_context_t *pcomm, int fd)
     close(fd);
 
     if (client) {
-        fprintf(stderr, "%s: removing un-sent data records for closed client %d\n", WHOAMI, fd);
+        if (archd->debug) {
+            fprintf(stderr, "%s: removing un-sent data records for closed client %d\n", WHOAMI, fd);
+        }
         while ((record = (data_record_t *)prioqueue_peek_high(&client->telemetry_queue)) != NULL) {
-            fprintf(stderr, "%s: removing un-sent data record for closed client %d\n", WHOAMI, fd);
+            if (archd->debug) {
+                fprintf(stderr, "%s: removing un-sent data record for closed client %d\n", WHOAMI, fd);
+            }
             prioqueue_pop_high(&client->telemetry_queue);
             record_deallocate(record);
             record = NULL;

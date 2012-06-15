@@ -476,6 +476,11 @@ int main (int argc, char **argv)
         exit(1);
     }
 
+    if ((archd->client_resume_map = map_new(100, NULL, NULL)) == NULL) {
+        fprintf(stderr, "%s: could not initialize client resume map\n", WHOAMI);
+        exit(1);
+    }
+
     // archd->pcomm has been set already
     // archd->memory has been set already
     archd->tz_info.tz_minuteswest = 0;
@@ -568,7 +573,9 @@ int main (int argc, char **argv)
         else
             syslog (LOG_ERR, "Error loading dispstatus shared memory: %s",
                     retmsg);
-        exit(1);
+        archd->status_map = NULL;
+        mapstatus = NULL;
+        //exit(1);
     }
 
     // IDA initialization
@@ -680,7 +687,11 @@ int main (int argc, char **argv)
             fprintf(stdout, "archd -> timeout\n");
             fprintf(stdout, "           -> tv_sec = %0li\n", archd->timeout.tv_sec);
             fprintf(stdout, "           -> tv_usec = %0li\n", archd->timeout.tv_usec);
-            fprintf(stdout, "archd -> status_map = 0x%0lx\n", (unsigned long)archd->status_map);
+            if (archd->status_map == NULL) {
+                fprintf(stdout, "archd -> status_map = 0x%0lx\n", (unsigned long)archd->status_map);
+            } else {
+                fprintf(stdout, "archd -> status_map = NULL\n");
+            }
             fprintf(stdout, "archd -> write_index = %0d\n", archd->write_index);
             fprintf(stdout, "archd -> log_message = 0x%0lx\n", (unsigned long)archd->log_message);
 
@@ -695,6 +706,7 @@ int main (int argc, char **argv)
             fprintf(stdout, "archd -> max_clients = %0lu\n", (unsigned long)archd->max_clients);
             fprintf(stdout, "archd -> client_count = %0lu\n", (unsigned long)archd->client_count);
             fprintf(stdout, "archd -> client_map = 0x%0lx\n", (unsigned long)archd->client_map);
+            fprintf(stdout, "archd -> client_resume_map = 0x%0lx\n", (unsigned long)archd->client_resume_map);
 
             fprintf(stdout, "archd -> record_queue = 0x%0lx\n",
                     (unsigned long)(&archd->record_queue));
@@ -720,12 +732,16 @@ int main (int argc, char **argv)
             syslog(LOG_ERR, "archd -> timeout");
             syslog(LOG_ERR, "           -> tv_sec = %0d", archd->timeout.tv_sec);
             syslog(LOG_ERR, "           -> tv_usec = %0d", archd->timeout.tv_usec);
-            syslog(LOG_ERR, "archd -> status_map = 0x%0lx", archd->status_map);
+            if (archd->status_map == NULL) {
+                syslog(LOG_ERR, "archd -> status_map = 0x%0lx", (unsigned long)archd->status_map);
+            } else {
+                syslog(LOG_ERR, "archd -> status_map = NULL");
+            }
             syslog(LOG_ERR, "archd -> write_index = %0d", archd->write_index);
-            syslog(LOG_ERR, "archd -> log_message = 0x%0lx", archd->log_message);
+            syslog(LOG_ERR, "archd -> log_message = 0x%0lx", (unsigned long)archd->log_message);
             syslog(LOG_ERR, "archd -> server_port = %0d", archd->server_port);
-            syslog(LOG_ERR, "archd -> server_socket = %0d", archd->server_socket);
-            syslog(LOG_ERR, "archd -> client_count = %0lu", archd->client_count);
+            syslog(LOG_ERR, "archd -> server_socket = %0d", (unsigned long)archd->server_socket);
+            syslog(LOG_ERR, "archd -> client_count = %0lu", (unsigned long)archd->client_count);
             syslog(LOG_ERR, "archd -> record_queue = 0x%0lx", archd->record_queue);
             syslog(LOG_ERR, "archd -> debug = %0d", archd->debug);
             syslog(LOG_ERR, "archd -> record_size = %0d", archd->record_size);
@@ -951,6 +967,15 @@ void callback_archive (pcomm_context_t *pcomm)
     }
 }
 
+
+
+/* Callback for removing resume clients with full buffers.
+ */
+void retire_resume_client(const char *key, const void *value, const void *obj)
+{
+    // TODO: Populate
+}
+
 /* Callback for removing expired client connections.
  */
 void retire_old_client(const char *key, const void *value, const void *obj)
@@ -975,6 +1000,7 @@ void retire_old_client(const char *key, const void *value, const void *obj)
                     WHOAMI, client->socket);
         }
         callback_client_closed(g_archd->pcomm, client->socket);
+        // TODO: Move to resume-map instead of deleting
     }
 }
 
@@ -1001,8 +1027,8 @@ void add_client_record(const char *key, const void *value, const void *obj)
     retire_old_client(key, value, obj);
 }
 
-/* May eventually do something special for timeouts.
- * For now, just call the archive function.
+/* Archive data, move disconnected clients to the resume map,
+ * and remove resume map clients with full telemetry buffers.
  */
 void callback_async_timeout (pcomm_context_t *pcomm)
 {
@@ -1016,6 +1042,7 @@ void callback_async_timeout (pcomm_context_t *pcomm)
 
     // check for and remove expired telemetry client connections
     map_enum(g_archd->client_map, retire_old_client, NULL);
+    //map_enum(g_archd->client_resume_map, retire_resume_client, NULL);
     callback_archive(pcomm);
 }
 
@@ -1083,6 +1110,9 @@ reply_message_t *make_reply(uint8_t *message, size_t length, int priority)
 
 ///////////////////////////////////////////////////////////
 // SERVER LOGIC
+//
+// - Servers are those processes which feed MiniSEED
+//   records to archd. Examples are q330serv and ufors
 ///////////////////////////////////////////////////////////
 
 /* Handles new connection requests, adding new file descriptors to pcomm
@@ -1227,6 +1257,8 @@ void callback_server_can_recv (pcomm_context_t *pcomm, int fd)
             read_size -= server->length;
         }
 
+        // Read only data that is immediately available.  This ensures that pcomm
+        // remains responsive to I/O operations.
         bytes_received = recv(fd, server->buffer + server->length, read_size, MSG_DONTWAIT);
 
         /*
@@ -1280,11 +1312,10 @@ void callback_server_can_recv (pcomm_context_t *pcomm, int fd)
                 default:
                     break;
             }
-            // break out of the loop
+            // break out of the loop after any comm error
             break;
         }
         
-
         server->length += bytes_received;
         bytes_waiting -= bytes_received;
 
@@ -1294,7 +1325,8 @@ void callback_server_can_recv (pcomm_context_t *pcomm, int fd)
         }
         */
 
-        // If we don't have a full record's worth, bail for now
+        // If we don't have a full record's worth of data, bail and hand control
+        // back to pcomm.
         if (server->length < archd->record_size) {
             if (archd->debug) {
                 fprintf(stderr, "%s: %d bytes buffered for %d, waiting for more\n", WHOAMI, server->length, fd);
@@ -1306,12 +1338,17 @@ void callback_server_can_recv (pcomm_context_t *pcomm, int fd)
             break;
         }
 
+    /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+     * Generate a new record once we enough data
+     */
         // Update the Watchdog for the status display
         // Save the current time, let others know where updated time is stored
         // TODO: Keep an eye on this. We may need to fix this logic if the 
         //       watchdog doesn't work as I expect it should.
-        archd->status_map->archWatchdog[0] = ST_GetCurrentTime2();
-        archd->status_map->ixWriteArch = 0;
+        if (archd->status_map != NULL) {
+            archd->status_map->archWatchdog[0] = ST_GetCurrentTime2();
+            archd->status_map->ixWriteArch = 0;
+        }
 
         if ((record = (data_record_t *)malloc(sizeof(data_record_t))) == NULL) {
             if (archd->debug) {
@@ -1341,6 +1378,9 @@ void callback_server_can_recv (pcomm_context_t *pcomm, int fd)
         record->priority = 0;
         server->length = 0;
 
+    /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+     * Handle ChannelControl commands
+     */
         // Handle channel control commands
         if (strncmp("CHANNELCONTROL-", (char *)record->data, 15) == 0)
         {
@@ -1420,6 +1460,7 @@ void callback_server_can_recv (pcomm_context_t *pcomm, int fd)
                         prioqueue_print_summary(&archd->telemetry_queue, stderr, "archd->telemetry_queue: ", "");
                     }
                     map_enum(archd->client_map, add_client_record, record);
+                    //map_enum(archd->client_resume_map, add_client_record, record);
                 }
                 archd->records_received++;
         } 

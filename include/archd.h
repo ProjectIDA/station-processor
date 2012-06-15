@@ -149,6 +149,7 @@ typedef struct ARCHD_CONTEXT
     size_t max_clients;
     size_t client_count;
     Map *client_map;
+    Map *client_resume_map;
 
     // priority queue of records to be archived
     queue_t record_queue;

@@ -1956,6 +1956,20 @@ char *adl_open(
     int   loop_offset = 0;
     long  loop_size = 0;
 
+    // for populating context with last record's information
+    char      temp[8192];
+    char      rec_station[6];
+    char      rec_chan[4];
+    char      rec_loc[4];
+    STDTIME2  rec_start;
+    STDTIME2  rec_end;
+    int       rec_seqnum;
+    int       rec_samples;
+    DELTA_T2  delta_t2;
+    long      delta_tms;
+    int       tmp_index = context->index;
+    STDTIME2  temp_time;
+
     // The configuration file must be parsed before this routine can work
     if (parse_state == 0)
     {
@@ -2154,6 +2168,27 @@ char *adl_open(
             fprintf(stderr, "  adl_open() context->loop_name='%s'\n", context->loop_name);
             fprintf(stderr, "  adl_open() context->index_name='%s'\n", context->index_name);
         }
+
+        // prepare diskloop context with information from the last record
+        // in the diskloop, otherwise records can get out of order
+        if (adl_read(context, context->index, temp) != NULL) {
+            sprintf(looperrstr, "adl_open: could not read newest record for %s", context->index_name);
+            goto error;
+        }
+        ParseSeedHeader(temp, rec_station, rec_chan, rec_loc,
+                &rec_start, &rec_end, &rec_seqnum, &rec_samples);
+
+        context->last_record_seqnum = rec_seqnum;
+        context->last_record_samples = rec_samples;
+        context->last_record_start = rec_start;
+        context->last_record_end = rec_end;
+
+        fseek(context->loop_fp, loop_offset, SEEK_SET);
+        ParseSeedHeader(temp_A, rec_A_station, rec_A_chan, rec_A_loc,
+                &rec_A_start, &rec_A_end, &rec_A_seqnum, &rec_A_samples);
+
+
+        // jump to the starting index in the diskloop
         fseek(context->loop_fp, loop_offset, SEEK_SET);
         if (loop_offset != ftell(context->loop_fp))
         {
@@ -2203,6 +2238,7 @@ char *adl_write(
 {
     char *result = NULL;
 
+    int  overlap = 0;
     int  new_index = 0;
     struct timeval now;
     uint64_t now_stamp;
@@ -2241,6 +2277,7 @@ char *adl_write(
     {
         if (delta_tms < -1) {
             issue = "overlap";
+            overlap = 1;
         } else if (delta_tms > 1) {
             issue = "gap";
         }
@@ -2251,6 +2288,12 @@ char *adl_write(
                     rec_seqnum, context->last_record_seqnum);
             printf("%s < ", ST_PrintDate2(rec_start, TRUE));
             printf("%s\n", ST_PrintDate2(context->last_record_end, TRUE));
+
+            if (overlap) {
+                // skip this record if it overlaps others, it will mess up
+                // the ordering in our diskloop
+                goto success;
+            }
         }
     }
 

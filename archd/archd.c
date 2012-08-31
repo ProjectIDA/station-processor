@@ -1108,12 +1108,12 @@ reply_message_t *make_reply(uint8_t *message, size_t length, int priority)
 }
 
 
-///////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
 // SERVER LOGIC
 //
 // - Servers are those processes which feed MiniSEED
-//   records to archd. Examples are q330serv and ufors
-///////////////////////////////////////////////////////////
+//   records to archd. Examples are q330serv, falcon, and ufors
+////////////////////////////////////////////////////////////////
 
 /* Handles new connection requests, adding new file descriptors to pcomm
  * for new servers.
@@ -1331,6 +1331,7 @@ void callback_server_can_recv (pcomm_context_t *pcomm, int fd)
             if (archd->debug) {
                 fprintf(stderr, "%s: %d bytes buffered for %d, waiting for more\n", WHOAMI, server->length, fd);
             }
+            // An empty write means the server disconnected
             if (bytes_received == 0) {
                 callback_server_closed(pcomm, fd);
                 return;
@@ -1339,7 +1340,7 @@ void callback_server_can_recv (pcomm_context_t *pcomm, int fd)
         }
 
     /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-     * Generate a new record once we enough data
+     * Generate a new record once we have enough data
      */
         // Update the Watchdog for the status display
         // Save the current time, let others know where updated time is stored

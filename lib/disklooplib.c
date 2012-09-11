@@ -2184,8 +2184,8 @@ char *adl_open(
         context->last_record_end = rec_end;
 
         fseek(context->loop_fp, loop_offset, SEEK_SET);
-        ParseSeedHeader(temp_A, rec_A_station, rec_A_chan, rec_A_loc,
-                &rec_A_start, &rec_A_end, &rec_A_seqnum, &rec_A_samples);
+        ParseSeedHeader(temp, rec_station, rec_chan, rec_loc,
+                &rec_start, &rec_end, &rec_seqnum, &rec_samples);
 
 
         // jump to the starting index in the diskloop

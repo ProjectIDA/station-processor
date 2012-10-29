@@ -68,7 +68,7 @@ begin
 
   repeat
     printf ("Command: ") ;
-    getline(line) ;
+    get_line(line) ;
     sscanf (line, "%s", s) ;
     if (strlen(s) >= 1)
       then
@@ -463,7 +463,7 @@ begin
           case 'U' :
             screen_busy = TRUE ;
             printf ("Message: ") ;
-            getline(line) ;
+            get_line(line) ;
             lib_send_usermessage (context, addr(line)) ;
             screen_busy = FALSE ;
             break ;

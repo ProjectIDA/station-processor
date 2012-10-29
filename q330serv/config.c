@@ -40,7 +40,7 @@ Edit History:
 #include "libsupport.h"
 #endif
 
-void getline (string *s)
+void get_line (string *s)
 begin
 #ifndef X86_WIN32
   integer i ;
@@ -281,7 +281,7 @@ begin
 
   repeat
     printf ("%s", prompt) ;
-    getline(line) ;
+    get_line(line) ;
     if (parse_t64 (addr(line), addr(sn)))
       then
         begin
@@ -300,7 +300,7 @@ begin
 
   repeat
     printf ("%s", prompt) ;
-    getline(line) ;
+    get_line(line) ;
     good = sscanf (line, "%u", addr(i)) ;
     if (good == 1)
       then
@@ -317,7 +317,7 @@ begin
 
   repeat
     printf ("%s", prompt) ;
-    getline(line) ;
+    get_line(line) ;
     good = sscanf (line, "%d", addr(i)) ;
     if (good == 1)
       then
@@ -335,7 +335,7 @@ begin
 
   repeat
     printf ("%s", prompt) ;
-    getline(line) ;
+    get_line(line) ;
     sscanf (line, "%s", s) ;
     ip = getip (addr(s), addr(isd)) ;
     if (ip != 0xFFFFFFFF)
@@ -352,7 +352,7 @@ begin
 
   repeat
     printf ("%s", prompt) ;
-    getline(s) ;
+    get_line(s) ;
     if ((integer)strlen(s) <= maxlth)
       then
         begin
@@ -403,7 +403,7 @@ begin
     printf (" SD, CR, RM, VB, SM, and PD which represent Status-Dump, Command-Retries,\n") ;
     printf ("Registration-Msgs, Verbose, Server-Msgs, and Packet-Debug\n") ;
     printf ("Values: ") ;
-    getline(s) ;
+    get_line(s) ;
     badval = FALSE ;
     w = 0 ;
     for (i = 1 ; i <= 6 ; i++)
@@ -448,7 +448,7 @@ boolean get_yesno (string *prompt, boolean default_yes)
 begin
 
   printf (prompt) ;
-  getline(line) ;
+  get_line(line) ;
   return yes(default_yes) ;
 end
 
@@ -459,7 +459,7 @@ begin
 
   repeat
     printf (prompt) ;
-    getline(line) ;
+    get_line(line) ;
     good = sscanf(line, "%f", addr(r)) ;
     if (good == 1)
       then
@@ -493,7 +493,7 @@ begin
 
   repeat
     printf ("Host Mode (ETH or SER): ") ;
-    getline(line) ;
+    get_line(line) ;
     sscanf (line, "%s", s) ;
     uppercase(s) ;
     if (strcmp(s, "ETH") == 0)
@@ -522,7 +522,7 @@ begin
 
   repeat
     printf (prompt) ;
-    getline(line) ;
+    get_line(line) ;
     good = sscanf(line, "%f", addr(r)) ;
     if (good == 1)
       then
@@ -563,7 +563,7 @@ begin
   repeat
     printf ("Separate values to include with spaces, valid values are:\n") ;
     printf ("ALL, DATA, and 1HZ : ") ;
-    getline(s) ;
+    get_line(s) ;
     badval = FALSE ;
     w = 0 ;
     for (i = 1 ; i <= 3 ; i++)
@@ -632,7 +632,7 @@ begin
     printf ("Separate values to include with spaces, valid values are:\n") ;
     printf ("ALL, NETSRV, CFG, TIM, and MSG\n") ;
     printf (prompt) ;
-    getline(s) ;
+    get_line(s) ;
     badval = FALSE ;
     w = 0 ;
     for (i = 1 ; i <= 5 ; i++)

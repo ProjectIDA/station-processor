@@ -33,7 +33,7 @@ Edit History:
 #include "libclient.h"
 #endif
 
-extern void getline (string *s) ;
+extern void get_line (string *s) ;
 extern void load_configuration (const char *) ;
 extern void save_configuration (void) ;
 extern void show_create_pars (void) ;

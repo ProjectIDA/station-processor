@@ -1,0 +1,59 @@
+# $Id$
+#
+# IDA/IRIS station locations
+#
+# Latitude and longitude are in decimal degrees.
+# Elevation and depth are in meters.
+# NRTS sites are denoted by a `+'
+#
+# Code   Latitude   Longitude   Elev  Depth  Location
+# ----   --------   ---------   ----  -----  -----------------------------
+   AAK    42.6390     74.4940   1645      0    Ala Archa, Kyrghyzstan
+   ABKT   37.9304     58.1189    678      7  + Alibek, Turkmenistan
+   ALE    82.5033    -62.3500     60      0    Alert, N.W.T., Canada
+   ARU    56.4302     58.5625    250      0  + Arti, Russia
+   ASCN   -7.9327    -14.3601    173    100  + Ascension Island, UK
+   BFO    48.3319      8.3311    589      0    Black Forest Observatory, Schiltach, Germany
+   BORG   64.7474    -21.3268    110    100  + Borgarfjordur, Asbjarnarstadir, Iceland
+   BRVK   53.0581     70.2828    330     15    Borovoye, Kazakhstan
+   COCO  -12.1901     96.8349      3     70  + West Island, Cocos Keeling Islands
+   CMLA   37.7637    -25.5243    429     97  + Cha de Macela, Sao Miguel Island, Azores
+   EFI   -51.6753    -58.0637    110     80  + Mount Kent, East Falkland Island
+
+   ERM    42.0150    143.1572     40      0    Erimo, Hokkaido Island, Japan
+   ESK    55.3167     -3.2050    242      0  + Eskdalemuir, Scotland, UK
+   FFC    54.7250   -101.9783    338      5  + Flin Flon, Canada
+   GAR    39.0000     70.3167   1300      0    Garm, Tadjikistan (closed)
+   HOPE  -54.2833    -36.4833      0      0  + Hope Point, South Georgia Island
+   JTS    10.2908    -84.9525    340      0  + Las Juntas de Abangares, Costa Rica
+   KAPI   -5.0142    119.7517     30    100 +  Kappang, Sulawesi, Indonesia
+   KDAK   57.7828   -152.5835    152     88  + Kodiak Island, Alaska, USA
+   KIV    43.8663     42.4393   1054     20  + Kislovodsk, Russia
+   KIVMA  43.9557     42.6952   1196      0  + Kislovodsk micro-array, Russia
+   KVAR   43.9557     42.6952   1196      0  + Kislovodsk micro-array, Russia
+   KURK   50.7154     78.6202    184     25    Kurchatov, Kazakhstan
+   KWAJ    8.8019    167.6130    0        0  + Kwajalein Atoll, Pacific Ocean
+   LVZ    67.8979     34.6514    630    200    Lavozero, Russia
+   MBAR   -0.583      30.733       0      0    Mbarara, Uganda
+   MSEY   -4.6001     55.4834    270    100  + Mahe, Seychelle Islands
+   MSVF  -17.7333    178.0500    783    100    Monasavu, Fiji
+   NIL    33.6500     73.2512    536     68  + Nilore, Pakistan
+   NNA   -11.9875    -76.8422    575      0  + Nana, Peru
+   NVS    54.8404     83.2346    150      0    Novosibirsk, Russia (closed)
+   NRIL   69.5049     88.4414     92    506    Norilsk, Russia
+   OBN    55.1138     36.5687    160     30  + Obninsk, Russia
+   PFO    33.6092   -116.4553   1280      0  + Pinon Flat, California, USA
+   RAYN   23.5225     45.5032    631      0  + Ar-Rayn, Saudi Arabia
+   RPN   -27.1267   -109.3344    110      0  + Rapa Nui, Easter Island, Chile
+   SHEL  -15.9588     -5.7457    537     60  + St. Helena, Atlantic Ocean
+   SUR   -32.3797     20.8117   1770      0  + Sutherland, South Africa
+   TAU   -42.9099    147.3204    132      0  + Hobart, Tasmania, Australia
+   TLY    51.6807    103.6438    579      0    Talya, Russia
+   WRAB  -19.9336    134.3600    366    100  + Tennant Creek, NT, Australia
+   XPF    33.6092   -116.4553   1280      0  + Experimental PFO
+   KIP    21.4233   -158.0150     70     36  + Kipapa, Hawaii, USA
+   ANMO   34.9462   -106.4567   1740    100  + Albuquerque, New Mexico, USA
+   COLA   64.8738   -147.8511    194     75  + College Observatory, Alaska, USA
+   MEZZ   32.9036   -117.2120      0      0  + IGPP Bldg. 4000 Mezzanine
+   ESSW   32.9034   -117.2200     30      0  + ESSW test system
+   Q003   21.3200   -158.0000      3      0  + Honolulu, Hawaii, USA

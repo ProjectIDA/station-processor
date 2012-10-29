@@ -1,0 +1,37 @@
+#!/bin/csh -f
+# $Id: nrtsSetPerms,v 1.5 2005/06/30 20:40:23 dechavez Exp $
+
+set setuidfiles = ""
+set setuidfiles = "$setuidfiles AlphaSend"
+set setuidfiles = "$setuidfiles drmd"
+set setuidfiles = "$setuidfiles drm_spool"
+set setuidfiles = "$setuidfiles nrts_alpha"
+set setuidfiles = "$setuidfiles nrts_pushd"
+set setuidfiles = "$setuidfiles nrts_edes"
+set setuidfiles = "$setuidfiles nrts_wrtdl"
+
+if ($#argv != 1) then
+    echo "usage: nrtsSetPerms NRTS_bin_dir"
+    exit 1
+endif
+
+set bindir = $argv[1]
+if (! -d $bindir) then
+    echo "missing $bindir"
+    exit 1
+endif
+
+cd $bindir
+if ($status != 0) then
+    echo "can't cd to $bindir"
+    exit 1
+endif
+
+chmod 555 *
+foreach file ($setuidfiles)
+    if (-e $file) then
+        chmod 4555 $file
+    else
+        echo "warning: missing $file"
+    endif
+end

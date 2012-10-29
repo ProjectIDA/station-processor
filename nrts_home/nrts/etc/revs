@@ -1,0 +1,15 @@
+#
+# Description of internal revision codes
+#
+# Code  Description
+# ----  -----------
+    1   MK3 rev 02.88
+    2   MK4 rev 08-88
+    3   MK4 rev 01-89
+    4   MK5 rev 10:89, MK6A rev 06/90
+    5   standard MK6B
+    6   mini-array MK6B (40 Hz)
+    7   original MK7
+    8   bit-shifted MK7
+    9   rev 8 w/ seqnos and creation time stamps
+   10   MK8 digitizer

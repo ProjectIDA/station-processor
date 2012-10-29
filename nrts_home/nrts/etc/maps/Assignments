@@ -1,0 +1,50 @@
+# There are 5 generic types of channel maps used by the MK7 digitizers
+# 
+# BBz12-BBz12 - all sensors offset from EN, hi-freq sensor is broad-band
+# mbar msey
+# 
+# BBz12-BBzne - 24-bit channels offset, hi-freq sensor is broad-band
+# efi palk shel
+# 
+# BBzen-BBzne - 24-bit EN boards swapped, none offset, hi-freq sensor is broad-band
+# nil
+# 
+# BBzne-BBzne - nothing offset from EN, hi-freq sensor is broad-band
+# cmla erm esk hope jts kapi kiv kwaj obn rayn sur tau
+# 
+# BBzne-SPzne - nothing offset form EN, hi-freq sensor is short-period
+# aak aru brvk ffc kurk lvz nna tly
+# 
+# In addition, some stations have unique configurations (bfo, coco, xpl)
+# 
+# Here are the maps used at all MK7 stations with NRTS capability
+
+aak  BBzne-SPzne
+aru  BBzne-SPzne
+bfo  bfo
+brvk BBzne-SPzne
+cmla BBzne-BBzne
+coco coco
+efi  BBz12-BBzne
+erm  BBzne-BBzne
+esk  BBzne-BBzne
+ffc  BBzne-SPzne
+hope BBzne-BBzne
+jts  BBzne-BBzne
+kapi BBzne-BBzne
+kiv  BBzne-BBzne
+kurk BBzne-SPzne
+kwaj BBzne-BBzne
+lvz  BBzne-SPzne
+mbar BBz12-BBz12
+msey BBz12-BBz12
+nil  BBzen-BBzne
+nna  BBzne-SPzne
+obn  BBzne-BBzne
+palk BBz12-BBzne
+rayn BBzne-BBzne
+shel BBz12-BBzne
+sur  BBzne-BBzne
+tau  BBzne-BBzne
+tly  BBzne-SPzne
+xpl  xpl

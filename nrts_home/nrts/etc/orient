@@ -1,0 +1,467 @@
+# @(#)orient	1.3 02/24/98
+#
+# IRIS/IDA sensor orientations and instrument file
+#
+# vang = vertical angle of emplacement (degrees from vertial)egrees
+# hang = horizontal angle of emplacement (degrees clockwise from N, -1 if Z)
+#
+# -999 if not relevant or not known
+#
+# For example, (0,-1) => Z, (90, 0) => NS, (90, 90) => EW
+#
+# Code  Start date/time   End date/time   Chan     Vang      Hang    Inst
+# ---- ----------------  ---------------  ----   -------   -------  -----
+   AAK  90:285-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   AAK  90:285-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   AAK  90:285-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   AAK  90:285-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   AAK  90:285-00:00:00  present           MPN   90.0000   90.0000  STS-1
+   AAK  90:285-00:00:00  present           MPE   90.0000    0.0000  STS-1
+   AAK  90:285-00:00:00  present           SPZ    0.0000   -1.0000  GS-13
+   AAK  90:285-00:00:00  present           SPN   90.0000    0.0000  GS-13
+   AAK  90:285-00:00:00  present           SPE   90.0000   90.0000  GS-13
+   AAK  90:285-00:00:00  present           AE1 -999.0000 -999.0000  AE1
+   AAK  90:285-00:00:00  present           WK1 -999.0000 -999.0000  WK1
+   AAK  90:285-00:00:00  present           WK2 -999.0000 -999.0000  WK2
+
+   ABKT 93:117-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   ABKT 93:117-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   ABKT 93:117-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   ABKT 93:117-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   ABKT 93:117-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   ABKT 93:117-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   ABKT 93:117-00:00:00  present           SPZ    0.0000   -1.0000  GS-13
+   ABKT 93:117-00:00:00  present           SPN   90.0000    0.0000  GS-13
+   ABKT 93:117-00:00:00  present           SPE   90.0000   90.0000  GS-13
+
+   ALE  90:050-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   ALE  90:050-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   ALE  90:050-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   ALE  90:050-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   ALE  90:050-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   ALE  90:050-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   ALE  90:050-00:00:00  present           GRV    0.0000    0.0000  LaCost
+
+   ARU  88:258-00:00:00  89:054-00:00:00   BBZ    0.0000   -1.0000  CMG-3
+   ARU  88:258-00:00:00  89:054-00:00:00   BBN   90.0000    0.0000  CMG-3
+   ARU  88:258-00:00:00  89:054-00:00:00   BBE   90.0000  270.0000  CMG-3
+   ARU  89:055-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   ARU  89:055-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   ARU  89:055-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   ARU  93:353-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   ARU  93:353-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   ARU  93:353-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   ARU  93:353-00:00:00  present           SPZ    0.0000   -1.0000  GS-13
+   ARU  93:353-00:00:00  present           SPN   90.0000    0.0000  GS-13
+   ARU  93:353-00:00:00  present           SPE   90.0000   90.0000  GS-13
+
+   BFO  96:001-00:00:00  present           BBZ    0.0000   -1.0000  UNKNWN
+   BFO  96:001-00:00:00  present           BBN   90.0000    0.0000  UNKNWN
+   BFO  96:001-00:00:00  present           BBE   90.0000   90.0000  UNKNWN
+   BFO  96:001-00:00:00  present           SPZ    0.0000   -1.0000  UNKNWN
+   BFO  96:001-00:00:00  present           SPN   90.0000    0.0000  UNKNWN
+   BFO  96:001-00:00:00  present           SPE   90.0000   90.0000  UNKNWN
+   BFO  96:001-00:00:00  present           MPZ    0.0000   -1.0000  UNKNWN
+   BFO  96:001-00:00:00  present           MPN   90.0000    0.0000  UNKNWN
+   BFO  96:001-00:00:00  present           MPE   90.0000   90.0000  UNKNWN
+   BFO  96:001-00:00:00  present         AUX01 -999.0000 -999.0000  UNKNWN
+   BFO  96:001-00:00:00  present         AUX02 -999.0000 -999.0000  UNKNWN
+   BFO  96:001-00:00:00  present         AUX03 -999.0000 -999.0000  UNKNWN
+   BFO  96:001-00:00:00  present         AUX04 -999.0000 -999.0000  UNKNWN
+   BFO  96:001-00:00:00  present         AUX05 -999.0000 -999.0000  UNKNWN
+   BFO  96:001-00:00:00  present         AUX06 -999.0000 -999.0000  UNKNWN
+   BFO  96:001-00:00:00  present         AUX07 -999.0000 -999.0000  UNKNWN
+   BFO  96:001-00:00:00  present         AUX08 -999.0000 -999.0000  UNKNWN
+   BFO  96:001-00:00:00  present         AUX09 -999.0000 -999.0000  UNKNWN
+   BFO  96:001-00:00:00  present         AUX10 -999.0000 -999.0000  UNKNWN
+   BFO  96:001-00:00:00  present         AUX11 -999.0000 -999.0000  UNKNWN
+   BFO  96:001-00:00:00  present         AUX12 -999.0000 -999.0000  UNKNWN
+
+   ASCN 93:001-00:00:00  present           BBZ    0.0000   -1.0000  KS5400
+   ASCN 93:001-00:00:00  present           BBN   90.0000    0.0000  KS5400
+   ASCN 93:001-00:00:00  present           BBE   90.0000   90.0000  KS5400
+   ASCN 93:001-00:00:00  present           MPZ    0.0000   -1.0000  KS5400
+   ASCN 93:001-00:00:00  present           MPN   90.0000    0.0000  KS5400
+   ASCN 93:001-00:00:00  present           MPE   90.0000   90.0000  KS5400
+   ASCN 93:001-00:00:00  present           SPZ    0.0000   -1.0000  STS-2
+   ASCN 93:001-00:00:00  present           SPN   90.0000    0.0000  STS-2
+   ASCN 93:001-00:00:00  present           SPE   90.0000   90.0000  STS-2
+
+   BORG 93:001-00:00:00  present           BBZ    0.0000   -1.0000  KS5400
+   BORG 93:001-00:00:00  present           BBN   90.0000    0.0000  KS5400
+   BORG 93:001-00:00:00  present           BBE   90.0000   90.0000  KS5400
+   BORG 93:001-00:00:00  present           MPZ    0.0000   -1.0000  KS5400
+   BORG 93:001-00:00:00  present           MPN   90.0000    0.0000  KS5400
+   BORG 93:001-00:00:00  present           MPE   90.0000   90.0000  KS5400
+   BORG 93:001-00:00:00  present           SPZ    0.0000   -1.0000  STS-2
+   BORG 93:001-00:00:00  present           SPN   90.0000    0.0000  STS-2
+   BORG 93:001-00:00:00  present           SPE   90.0000   90.0000  STS-2
+
+   BRVK 94:001-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   BRVK 94:001-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   BRVK 94:001-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   BRVK 94:001-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   BRVK 94:001-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   BRVK 94:001-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   BRVK 94:001-00:00:00  present           SPZ    0.0000   -1.0000  GS-13
+   BRVK 94:001-00:00:00  present           SPN   90.0000    0.0000  GS-13
+   BRVK 94:001-00:00:00  present           SPE   90.0000   90.0000  GS-13
+
+   COCO 80:001-00:00:00  present           BBZ    0.0000   -1.0000  KS5400
+   COCO 80:001-00:00:00  present           BBN   90.0000  139.0000  KS5400
+   COCO 80:001-00:00:00  present           BBE   90.0000  229.0000  KS5400
+   COCO 80:001-00:00:00  present           MPZ    0.0000   -1.0000  KS5400
+   COCO 80:001-00:00:00  present           MPN   90.0000  139.0000  KS5400
+   COCO 80:001-00:00:00  present           MPE   90.0000  229.0000  KS5400
+   COCO 80:001-00:00:00  present           SPZ    0.0000   -1.0000  CMG-3T
+   COCO 80:001-00:00:00  present           SPN   90.0000    0.0000  CMG-3T
+   COCO 80:001-00:00:00  present           SPE   90.0000   90.0000  CMG-3T
+   COCO 80:001-00:00:00  present           SPZ2   0.0000    0.0000  STS-2
+   COCO 80:001-00:00:00  present           SPN2  90.0000    0.0000  STS-2
+   COCO 80:001-00:00:00  present           SPE2  90.0000   90.0000  STS-2
+
+   CMLA 80:001-00:00:00  present           BBZ    0.0000   -1.0000  KS5400
+   CMLA 80:001-00:00:00  present           BBN   90.0000    0.0000  KS5400
+   CMLA 80:001-00:00:00  present           BBE   90.0000   90.0000  KS5400
+   CMLA 80:001-00:00:00  present           MPZ    0.0000   -1.0000  KS5400
+   CMLA 80:001-00:00:00  present           MPN   90.0000    0.0000  KS5400
+   CMLA 80:001-00:00:00  present           MPE   90.0000   90.0000  KS5400
+   CMLA 80:001-00:00:00  present           SPZ    0.0000   -1.0000  STS-2
+   CMLA 80:001-00:00:00  present           SPN   90.0000    0.0000  STS-2
+   CMLA 80:001-00:00:00  present           SPE   90.0000   90.0000  STS-2
+   CMLA 80:001-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   CMLA 80:001-00:00:00  present           SMN   90.0000    0.0000  FBA-23
+   CMLA 80:001-00:00:00  present           SME   90.0000   90.0000  FBA-23
+
+   EFI  80:001-00:00:00  present           BBZ    0.0000   -1.0000  KS5400
+   EFI  80:001-00:00:00  present           BBN   90.0000    0.0000  KS5400
+   EFI  80:001-00:00:00  present           BBE   90.0000   90.0000  KS5400
+   EFI  80:001-00:00:00  present           MPZ    0.0000   -1.0000  KS5400
+   EFI  80:001-00:00:00  present           MPN   90.0000    0.0000  KS5400
+   EFI  80:001-00:00:00  present           MPE   90.0000   90.0000  KS5400
+   EFI  80:001-00:00:00  present           SPZ    0.0000   -1.0000  STS-2
+   EFI  80:001-00:00:00  present           SPN   90.0000    0.0000  STS-2
+   EFI  80:001-00:00:00  present           SPE   90.0000   90.0000  STS-2
+   EFI  80:001-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   EFI  80:001-00:00:00  present           SMN   90.0000    0.0000  FBA-23
+   EFI  80:001-00:00:00  present           SME   90.0000   90.0000  FBA-23
+
+   ERM  90:141-00:00:00  95:053-00:00:00   BBZ    0.0000   -1.0000  STS-1
+   ERM  90:141-00:00:00  95:053-00:00:00   BBN   90.0000   45.0000  STS-1
+   ERM  90:141-00:00:00  95:053-00:00:00   BBE   90.0000  135.0000  STS-1
+   ERM  90:141-00:00:00  95:053-00:00:00   MPZ    0.0000   -1.0000  STS-1
+   ERM  90:141-00:00:00  95:053-00:00:00   MPN   90.0000   45.0000  STS-1
+   ERM  90:141-00:00:00  95:053-00:00:00   MPE   90.0000  135.0000  STS-1
+   ERM  90:141-00:00:00  present           GRV    0.0000    0.0000  LaCost
+   ERM  95:054-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   ERM  95:054-00:00:00  present           BBN   90.0000   45.0000  STS-1
+   ERM  95:054-00:00:00  present           BBE   90.0000  135.0000  STS-1
+   ERM  95:054-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   ERM  95:054-00:00:00  present           MPN   90.0000   45.0000  STS-1
+   ERM  95:054-00:00:00  present           MPE   90.0000  135.0000  STS-1
+   ERM  95:054-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   ERM  95:054-00:00:00  present           SMN   90.0000    0.0000  FBA-23
+   ERM  95:054-00:00:00  present           SME   90.0000   90.0000  FBA-23
+
+   ESK  87:317-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   ESK  87:317-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   ESK  87:317-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   ESK  87:317-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   ESK  87:317-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   ESK  87:317-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   ESK  87:317-00:00:00  present           GRV    0.0000    0.0000  LaCost
+
+   FFC  93:001-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   FFC  93:001-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   FFC  93:001-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   FFC  93:001-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   FFC  93:001-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   FFC  93:001-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   FFC  93:001-00:00:00  present           SPZ    0.0000   -1.0000  GS-13
+   FFC  93:001-00:00:00  present           SPN   90.0000    0.0000  GS-13
+   FFC  93:001-00:00:00  present           SPE   90.0000   90.0000  GS-13
+
+   GAR  88:258-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   GAR  88:258-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   GAR  88:258-00:00:00  present           BBE   90.0000   90.0000  STS-1
+
+   HOPE 80:001-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   HOPE 80:001-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   HOPE 80:001-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   HOPE 80:001-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   HOPE 80:001-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   HOPE 80:001-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   HOPE 80:001-00:00:00  present           SPZ    0.0000   -1.0000  STS-2
+   HOPE 80:001-00:00:00  present           SPN   90.0000    0.0000  STS-2
+   HOPE 80:001-00:00:00  present           SPE   90.0000   90.0000  STS-2
+   HOPE 80:001-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   HOPE 80:001-00:00:00  present           SMN   90.0000    0.0000  FBA-23
+   HOPE 80:001-00:00:00  present           SME   90.0000   90.0000  FBA-23
+
+   JTS  80:001-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   JTS  80:001-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   JTS  80:001-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   JTS  80:001-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   JTS  80:001-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   JTS  80:001-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   JTS  80:001-00:00:00  present           SPZ    0.0000   -1.0000  STS-2
+   JTS  80:001-00:00:00  present           SPN   90.0000    0.0000  STS-2
+   JTS  80:001-00:00:00  present           SPE   90.0000   90.0000  STS-2
+   JTS  80:001-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   JTS  80:001-00:00:00  present           SMN   90.0000    0.0000  FBA-23
+   JTS  80:001-00:00:00  present           SME   90.0000   90.0000  FBA-23
+
+   KDAK 97:068-00:00:00  present           BBZ    0.0000   -1.0000  KS5400
+   KDAK 97:068-00:00:00  present           BBN   90.0000    0.0000  KS5400
+   KDAK 97:068-00:00:00  present           BBE   90.0000   90.0000  KS5400
+   KDAK 97:068-00:00:00  present           MPZ    0.0000   -1.0000  KS5400
+   KDAK 97:068-00:00:00  present           MPN   90.0000    0.0000  KS5400
+   KDAK 97:068-00:00:00  present           MPE   90.0000   90.0000  KS5400
+   KDAK 97:068-00:00:00  present           SPZ    0.0000   -1.0000  STS-2
+   KDAK 97:068-00:00:00  present           SPN   90.0000    0.0000  STS-2
+   KDAK 97:068-00:00:00  present           SPE   90.0000   90.0000  STS-2
+   KDAK 97:068-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   KDAK 97:068-00:00:00  present           SMN   90.0000    0.0000  FBA-23
+   KDAK 97:068-00:00:00  present           SME   90.0000   90.0000  FBA-23
+
+   KIV  88:258-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   KIV  88:258-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   KIV  88:258-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   KIV  94:034-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   KIV  94:034-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   KIV  94:034-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   KIV  80:001-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   KIV  80:001-00:00:00  present           SMN   90.0000    0.0000  FBA-23
+   KIV  80:001-00:00:00  present           SME   90.0000   90.0000  FBA-23
+   KIV  80:001-00:00:00  present           BAR -999.0000 -999.0000  PS6016
+   KIV  80:001-00:00:00  present           SPZ    0.0000   -1.0000  CMG-3T
+   KIV  80:001-00:00:00  present           SPN   90.0000    0.0000  CMG-3T
+   KIV  80:001-00:00:00  present           SPE   90.0000   90.0000  CMG-3T
+
+   KVAR 91:001-00:00:00  present           SPZ    0.0000   -1.0000  GS-13
+   KVAR 91:001-00:00:00  present           SPN   90.0000    0.0000  GS-13
+   KVAR 91:001-00:00:00  present           SPE   90.0000   90.0000  GS-13
+
+  KIVMA 91:001-00:00:00  present           SPZ    0.0000   -1.0000  GS-13
+  KIVMA 91:001-00:00:00  present           SPN   90.0000    0.0000  GS-13
+  KIVMA 91:001-00:00:00  present           SPE   90.0000   90.0000  GS-13
+
+   KURK 94:001-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   KURK 94:001-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   KURK 94:001-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   KURK 94:001-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   KURK 94:001-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   KURK 94:001-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   KURK 94:001-00:00:00  present           SPZ    0.0000   -1.0000  GS-13
+   KURK 94:001-00:00:00  present           SPN   90.0000    0.0000  GS-13
+   KURK 94:001-00:00:00  present           SPE   90.0000   90.0000  GS-13
+
+   LVZ  92:333-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   LVZ  92:333-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   LVZ  92:333-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   LVZ  92:333-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   LVZ  92:333-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   LVZ  92:333-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   LVZ  92:333-00:00:00  present           SPZ    0.0000   -1.0000  GS-13
+   LVZ  92:333-00:00:00  present           SPN   90.0000    0.0000  GS-13
+   LVZ  92:333-00:00:00  present           SPE   90.0000   90.0000  GS-13
+
+   MSEY 80:001-00:00:00  present           BBZ    0.0000   -1.0000  KS5400
+   MSEY 80:001-00:00:00  present           BBN   90.0000    0.0000  KS5400
+   MSEY 80:001-00:00:00  present           BBE   90.0000   90.0000  KS5400
+   MSEY 80:001-00:00:00  present           MPZ    0.0000   -1.0000  KS5400
+   MSEY 80:001-00:00:00  present           MPN   90.0000    0.0000  KS5400
+   MSEY 80:001-00:00:00  present           MPE   90.0000   90.0000  KS5400
+   MSEY 80:001-00:00:00  present           SPZ    0.0000   -1.0000  CMG-3T
+   MSEY 80:001-00:00:00  present           SPN   90.0000    0.0000  CMG-3T
+   MSEY 80:001-00:00:00  present           SPE   90.0000   90.0000  CMG-3T
+   MSEY 80:001-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   MSEY 80:001-00:00:00  present           SMN   90.0000    0.0000  FBA-23
+   MSEY 80:001-00:00:00  present           SME   90.0000   90.0000  FBA-23
+
+   NIL  94:001-00:00:00  present           BBZ    0.0000   -1.0000  KS5400
+   NIL  94:001-00:00:00  present           BBN   90.0000    0.0000  KS5400
+   NIL  94:001-00:00:00  present           BBE   90.0000   90.0000  KS5400
+   NIL  94:001-00:00:00  present           MPZ    0.0000   -1.0000  KS5400
+   NIL  94:001-00:00:00  present           MPN   90.0000    0.0000  KS5400
+   NIL  94:001-00:00:00  present           MPE   90.0000   90.0000  KS5400
+   NIL  94:001-00:00:00  present           SPZ    0.0000   -1.0000  STS-2
+   NIL  94:001-00:00:00  present           SPN   90.0000    0.0000  STS-2
+   NIL  94:001-00:00:00  present           SPE   90.0000   90.0000  STS-2
+   NIL  94:001-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   NIL  94:001-00:00:00  present           SMN   90.0000    0.0000  FBA-23
+   NIL  94:001-00:00:00  present           SME   90.0000   90.0000  FBA-23
+
+   NNA  88:174-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   NNA  88:174-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   NNA  88:174-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   NNA  88:174-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   NNA  88:174-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   NNA  88:174-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   NNA  88:174-00:00:00  present           GRV    0.0000    0.0000  LaCost
+
+   NRIL 92:350-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   NRIL 92:350-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   NRIL 92:350-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   NRIL 92:350-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   NRIL 92:350-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   NRIL 92:350-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   NRIL 92:350-00:00:00  present           SPZ    0.0000   -1.0000  GS-13
+   NRIL 92:350-00:00:00  present           SPN   90.0000    0.0000  GS-13
+   NRIL 92:350-00:00:00  present           SPE   90.0000   90.0000  GS-13
+
+   NVS  92:191-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   NVS  92:191-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   NVS  92:191-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   NVS  92:191-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   NVS  92:191-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   NVS  92:191-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   NVS  92:191-00:00:00  present           SPZ    0.0000   -1.0000  GS-13
+   NVS  92:191-00:00:00  present           SPN   90.0000    0.0000  GS-13
+   NVS  92:191-00:00:00  present           SPE   90.0000   90.0000  GS-13
+
+   OBN  88:258-00:00:00  89:049-00:00:00   BBZ    0.0000   -1.0000  CMG-3
+   OBN  88:258-00:00:00  89:049-00:00:00   BBN   90.0000    0.0000  CMG-3
+   OBN  88:258-00:00:00  89:049-00:00:00   BBE   90.0000   90.0000  CMG-3
+   OBN  89:050-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   OBN  89:050-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   OBN  89:050-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   OBN  89:050-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   OBN  89:050-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   OBN  89:050-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   OBN  80:001-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   OBN  80:001-00:00:00  present           SMN   90.0000    0.0000  FBA-23
+   OBN  80:001-00:00:00  present           SME   90.0000   90.0000  FBA-23
+   OBN  80:001-00:00:00  present           BAR -999.0000 -999.0000  PS6016
+   OBN  80:001-00:00:00  present           SPZ    0.0000   -1.0000  CMG-3T
+   OBN  80:001-00:00:00  present           SPN   90.0000    0.0000  CMG-3T
+   OBN  80:001-00:00:00  present           SPE   90.0000   90.0000  CMG-3T
+
+   PFO  80:001-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   PFO  80:001-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   PFO  80:001-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   PFO  80:001-00:00:00  present           SPZ    0.0000   -1.0000  CMG-3T
+   PFO  80:001-00:00:00  present           SPN   90.0000    0.0000  CMG-3T
+   PFO  80:001-00:00:00  present           SPE   90.0000   90.0000  CMG-3T
+   PFO  80:001-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   PFO  80:001-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   PFO  80:001-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   PFO  80:001-00:00:00  present           GRV    0.0000    0.0000  LaCost
+   PFO  80:001-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   PFO  80:001-00:00:00  present           SMN   90.0000   26.5000  FBA-23
+   PFO  80:001-00:00:00  present           SME   90.0000  116.5000  FBA-23
+   PFO  80:001-00:00:00  present           BAR -999.0000 -999.0000  PS6016
+
+   RAYN 80:001-00:00:00  present           BBZ    0.0000   -1.0000  KS5400
+   RAYN 80:001-00:00:00  present           BBN   90.0000   30.0000  KS5400
+   RAYN 80:001-00:00:00  present           BBE   90.0000  120.0000  KS5400
+   RAYN 80:001-00:00:00  present           MPZ    0.0000   -1.0000  STS-20
+   RAYN 80:001-00:00:00  present           MPN   90.0000   30.0000  STS-20
+   RAYN 80:001-00:00:00  present           MPE   90.0000  120.0000  STS-20
+   RAYN 80:001-00:00:00  present           SPZ    0.0000   -1.0000  STS-2
+   RAYN 80:001-00:00:00  present           SPN   90.0000   26.5000  STS-2
+   RAYN 80:001-00:00:00  present           SPE   90.0000  116.5000  STS-2
+   RAYN 80:001-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   RAYN 80:001-00:00:00  present           SMN   90.0000   26.5000  FBA-23
+   RAYN 80:001-00:00:00  present           SME   90.0000  116.5000  FBA-23
+
+   RPN  87:166-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   RPN  87:166-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   RPN  87:166-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   RPN  87:166-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   RPN  87:166-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   RPN  87:166-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   RPN  87:166-00:00:00  present           GRV    0.0000    0.0000  LaCost
+
+   SHEL 80:001-00:00:00  present           BBZ    0.0000   -1.0000  KS5400
+   SHEL 80:001-00:00:00  present           BBN   90.0000   30.0000  KS5400
+   SHEL 80:001-00:00:00  present           BBE   90.0000  120.0000  KS5400
+   SHEL 80:001-00:00:00  present           MPZ    0.0000   -1.0000  KS5400
+   SHEL 80:001-00:00:00  present           MPN   90.0000   30.0000  KS5400
+   SHEL 80:001-00:00:00  present           MPE   90.0000  120.0000  KS5400
+   SHEL 80:001-00:00:00  present           SPZ    0.0000   -1.0000  STS-2
+   SHEL 80:001-00:00:00  present           SPN   90.0000   26.5000  STS-2
+   SHEL 80:001-00:00:00  present           SPE   90.0000  116.5000  STS-2
+   SHEL 80:001-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   SHEL 80:001-00:00:00  present           SMN   90.0000   26.5000  FBA-23
+   SHEL 80:001-00:00:00  present           SME   90.0000  116.5000  FBA-23
+
+   SUR  90:303-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   SUR  90:303-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   SUR  90:303-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   SUR  90:303-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   SUR  90:303-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   SUR  90:303-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   SUR  96:023-00:00:00  present           SPZ    0.0000   -1.0000  STS-2
+   SUR  96:023-00:00:00  present           SPN   90.0000    0.0000  STS-2
+   SUR  96:023-00:00:00  present           SPE   90.0000   90.0000  STS-2
+
+   TAU  93:001-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   TAU  93:001-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   TAU  93:001-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   TAU  93:001-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   TAU  93:001-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   TAU  93:001-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   TAU  93:001-00:00:00  present           SPZ    0.0000   -1.0000  GS-13
+   TAU  93:001-00:00:00  present           SPN   90.0000    0.0000  GS-13
+   TAU  93:001-00:00:00  present           SPE   90.0000   90.0000  GS-13
+
+   TLY  90:285-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   TLY  90:285-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   TLY  90:285-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   TLY  90:285-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   TLY  90:285-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   TLY  90:285-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   TLY  90:285-00:00:00  present           SPZ    0.0000   -1.0000  GS-13
+   TLY  90:285-00:00:00  present           SPN   90.0000    0.0000  GS-13
+   TLY  90:285-00:00:00  present           SPE   90.0000   90.0000  GS-13
+   TLY  80:001-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   TLY  80:001-00:00:00  present           SMN   90.0000    0.0000  FBA-23
+   TLY  80:001-00:00:00  present           SME   90.0000   90.0000  FBA-23
+   TLY  80:001-00:00:00  present           BAR -999.0000 -999.0000  PS6016
+
+   WRAB 93:001-00:00:00  present           BBZ    0.0000   -1.0000  KS5400
+   WRAB 93:001-00:00:00  present           BBN   90.0000    0.0000  KS5400
+   WRAB 93:001-00:00:00  present           BBE   90.0000   90.0000  KS5400
+   WRAB 93:001-00:00:00  present           MPZ    0.0000   -1.0000  KS5400
+   WRAB 93:001-00:00:00  present           MPN   90.0000    0.0000  KS5400
+   WRAB 93:001-00:00:00  present           MPE   90.0000   90.0000  KS5400
+   WRAB 93:001-00:00:00  present           SPZ    0.0000   -1.0000  STS-2
+   WRAB 93:001-00:00:00  present           SPN   90.0000    0.0000  STS-2
+   WRAB 93:001-00:00:00  present           SPE   90.0000   90.0000  STS-2
+
+   KIP  90:303-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   KIP  90:303-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   KIP  90:303-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   KIP  90:303-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   KIP  90:303-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   KIP  90:303-00:00:00  present           MPE   90.0000   90.0000  STS-1
+
+   COLA 90:303-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   COLA 90:303-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   COLA 90:303-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   COLA 90:303-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   COLA 90:303-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   COLA 90:303-00:00:00  present           MPE   90.0000   90.0000  STS-1
+
+   ANMO 90:303-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   ANMO 90:303-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   ANMO 90:303-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   ANMO 90:303-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   ANMO 90:303-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   ANMO 90:303-00:00:00  present           MPE   90.0000   90.0000  STS-1
+
+   MEZZ 80:001-00:00:00  present           BBZ    0.0000   -1.0000  STS-1
+   MEZZ 80:001-00:00:00  present           BBN   90.0000    0.0000  STS-1
+   MEZZ 80:001-00:00:00  present           BBE   90.0000   90.0000  STS-1
+   MEZZ 80:001-00:00:00  present           SPZ    0.0000   -1.0000  CMG-3T
+   MEZZ 80:001-00:00:00  present           SPN   90.0000    0.0000  CMG-3T
+   MEZZ 80:001-00:00:00  present           SPE   90.0000   90.0000  CMG-3T
+   MEZZ 80:001-00:00:00  present           MPZ    0.0000   -1.0000  STS-1
+   MEZZ 80:001-00:00:00  present           MPN   90.0000    0.0000  STS-1
+   MEZZ 80:001-00:00:00  present           MPE   90.0000   90.0000  STS-1
+   MEZZ 80:001-00:00:00  present           GRV    0.0000    0.0000  LaCost
+   MEZZ 80:001-00:00:00  present           SMZ    0.0000   -1.0000  FBA-23
+   MEZZ 80:001-00:00:00  present           SMN   90.0000   26.5000  FBA-23
+   MEZZ 80:001-00:00:00  present           SME   90.0000  116.5000  FBA-23
+   MEZZ 80:001-00:00:00  present           BAR -999.0000 -999.0000  PS6016

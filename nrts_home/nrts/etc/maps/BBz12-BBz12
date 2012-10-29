@@ -1,0 +1,75 @@
+# Channel map for Z12 24-bit streams and BB Z12 hi-freq streams
+# Use for IDA packet revs 5 thru 9
+
+#  F CH M  STREAM  NAME  SENS Description
+  -1 -1 0    00    LOG   NONE log records
+#
+#  1x streams => continuous data from BB sensor
+#  F CH M  STREAM  NAME  SENS Description
+
+  20 22 0     1    ehz00 BBZ  BB-Z sensor, unfiltered 24-bit
+  20 23 0     2    eh100 BBN  BB-N sensor, unfiltered 24-bit
+  20 24 0     3    eh200 BBE  BB-E sensor, unfiltered 24-bit
+  11 22 0    11    bhz00 BBZ  BB-Z sensor, 24-bit BB
+  11 23 0    12    bh100 BBN  BB-N sensor, 24-bit BB
+  11 24 0    13    bh200 BBE  BB-E sensor, 24-bit BB
+  13 22 0    14    lhz00 BBZ  BB-Z sensor, 24-bit long-period
+  13 23 0    15    lh100 BBN  BB-N sensor, 24-bit long-period
+  13 24 0    16    lh200 BBE  BB-E sensor, 24-bit long-period
+  15 22 0    17    vhz00 BBZ  BB-Z sensor, 24-bit VLP
+  15 23 0    18    vh100 BBN  BB-N sensor, 24-bit VLP
+  15 24 0    19    vh200 BBE  BB-E sensor, 24-bit VLP
+#
+#  2x streams => continuous mass-position
+#  F CH M  STREAM  NAME  SENS Description
+  15 12 0    21    vmz00 MPZ  BB-Z mass position
+  15 13 0    22    vm100 MPN  BB-N mass position
+  15 14 0    23    vm200 MPE  BB-E mass position
+#
+#  3x streams => continuous 40 Hz SP sensor data, lo and hi gain
+#  F CH M  STREAM  NAME  SENS Description
+  16 09 0    31    blz10 SPZ  SP-Z sensor, lo-gain continuous SP
+  16 10 0    32    bl110 SPN  SP-N sensor, lo-gain continuous SP
+  16 11 0    33    bl210 SPE  SP-E sensor, lo-gain continuous SP
+  16 03 0    34    bhz10 SPZ  SP-Z sensor, hi-gain continuous SP
+  16 04 0    35    bh110 SPN  SP-N sensor, hi-gain continuous SP
+  16 05 0    36    bh210 SPE  SP-E sensor, hi-gain continuous SP
+#
+#  5x streams => triggered SP sensor data, lo and hi gain
+#  F CH M  STREAM  NAME  SENS Description
+  10 09 1    51    elz10 SPZ  SP-Z sensor, lo-gain triggered SP
+  10 10 1    52    el110 SPN  SP-N sensor, lo-gain triggered SP
+  10 11 1    53    el210 SPE  SP-E sensor, lo-gain triggered SP
+  10 03 1    54    ehz10 SPZ  SP-Z sensor, hi-gain triggered SP
+  10 04 1    55    eh110 SPN  SP-N sensor, hi-gain triggered SP
+  10 05 1    56    eh210 SPE  SP-E sensor, hi-gain triggered SP
+#
+#  6x streams => FBA streams
+#  F CH M  STREAM  NAME  SENS Description
+  10 06 1    61    enz00 SMZ  FBA-Z sensor, triggered 100 Hz
+  10 07 1    62    enn00 SMN  FBA-N sensor, triggered 100 Hz
+  10 08 1    63    ene00 SME  FBA-E sensor, triggered 100 Hz
+  13 06 0    64    lnz00 SMZ  FBA-Z sensor, continous 1 Hz
+  13 07 0    65    lnn00 SMN  FBA-N sensor, continous 1 Hz
+  13 08 0    66    lne00 SME  FBA-E sensor, continous 1 Hz
+  10 06 0    67    enz00 SMZ  FBA-Z sensor, continous 100 Hz
+  10 07 0    68    enn00 SMN  FBA-N sensor, continous 100 Hz
+  10 08 0    69    ene00 SME  FBA-E sensor, continous 100 Hz
+#
+#  7x streams => continuous SP sensor data, lo and hi gain
+#  F CH M  STREAM  NAME  SENS Description
+  10 09 0    71    elz10 SPZ  SP-Z sensor, lo-gain continuous SP
+  10 10 0    72    el110 SPN  SP-N sensor, lo-gain continuous SP
+  10 11 0    73    el210 SPE  SP-E sensor, lo-gain continuous SP
+  10 03 0    74    ehz10 SPZ  SP-Z sensor, hi-gain continuous SP
+  10 04 0    75    eh110 SPN  SP-N sensor, hi-gain continuous SP
+  10 05 0    76    eh210 SPE  SP-E sensor, hi-gain continuous SP
+  13 03 0    77    llz10 SPZ  SP-Z sensor, hi-gain continuous 1-Hz SP
+  13 04 0    78    ll110 SPN  SP-Z sensor, hi-gain continuous 1-Hz SP
+  13 05 0    79    ll210 SPE  SP-Z sensor, hi-gain continuous 1-Hz SP
+#
+#  9x streams => auxillary
+#  F CH M  STREAM  NAME  SENS Description
+   0 20 0    96    wdo00 BAR  1-Hz microbarometer
+   2 20 0    97    wdo00 BAR  10 sec microbarometer
+  10 20 0    98    wdo00 BAR  2 sec microbarometer

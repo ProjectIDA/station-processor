@@ -1,0 +1,68 @@
+# $Id: ScriptSetup,v 1.16 2006/04/07 16:45:59 dechavez Exp $
+# General purpose setup for NRTS/ISP scripts
+
+setenv NRTS_HOME /usr/nrts
+if (-e $NRTS_HOME/UNCONFIGURED) exit 0
+
+# How may days to keep .gz files after they have been archived in an ISO image
+set DoneZipsFindValue = "+30"
+
+# How many days to keep ISO images after they have been burned to CD
+set DoneIsosFindValue = "+30"
+
+# How many days to keep unburned ISO images
+set IsoDirFindValue   = "+60"
+
+# How many days to keep unprocessed tee files
+set IsiGzTeeFindValue = "+60"
+
+# How many days to keep log files
+set FlushLogFindValue = "+60"
+
+set status = 0
+
+foreach file (.platform .envrc)
+    set dotfile = $NRTS_HOME/$file
+    if ( -e $dotfile ) then
+        source $dotfile
+    else
+        echo "FATAL ERROR: missing $dotfile"
+        exit 1
+    endif
+end
+
+set path = ($NRTS_HOME/bin     $path)
+set path = ($NRTS_HOME/scripts $path)
+if (-e /opt/local/bin) set path = (/opt/local/bin $path)
+if (-e /usr/local/bin) set path = (/usr/local/bin $path)
+
+set SystemsFile = $NRTS_HOME/etc/Systems
+if (-e $SystemsFile && -e $NRTS_HOME/bin/stripcat) then
+    set SystemsList = `stripcat $SystemsFile`
+    @ SystemsCount = $#SystemsList
+    set DefaultSite = $SystemsList[1]
+else
+    set SystemsList = "empty"
+    @ SystemsCount = 0
+    set DefaultSite = "DEFAULTSITE"
+endif
+
+if (-e /usr/ucb/expr) then
+    set expr = /usr/ucb/expr
+else 
+    set expr = /usr/bin/expr
+endif
+if (-e /usr/ucb/mail) then
+    set mail = /usr/ucb/mail
+else 
+    set mail = /usr/bin/Mail
+endif
+    
+@ errors = 0
+foreach file ($expr $mail)
+    if ( ! -e $file ) then
+        echo "Missing $file"
+        @ errors += 1
+    endif
+end
+set status = $errors

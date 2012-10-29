@@ -1,0 +1,155 @@
+#!/bin/csh -f
+# $Id: nrts_dowfdiscs,v 1.6 2005/10/31 21:26:01 dechavez Exp $
+#
+# Collect all available NRTS wfdiscs into station and network day files
+
+if ($?NRTS_HOME) then
+    set nrts_home = $NRTS_HOME
+else
+    set nrts_home = /usr/nrts
+endif
+
+unalias cd cp rm cat ls mkdir mv
+set expr = /usr/ucb/expr
+
+set myname  = nrts_dowfdiscs
+set path    = ($nrts_home/bin $nrts_home/bin/scripts /opt/local/bin $path)
+set tempdir = $nrts_home/tmp
+set temp    = $tempdir/dowfdiscs.$$
+set wfdir   = $nrts_home/wfdiscs
+set Systems = $nrts_home/etc/Systems
+set envrc    = $nrts_home/.envrc
+if (-e $envrc) source $envrc
+
+set args = "$argv"
+
+# Make sure no other instance of dowfdiscs is currently running
+
+if (-e /vmunix) then
+    set psopts = "-ax"
+else
+    set psopts = "-ef"
+endif
+
+ps $psopts | fgrep $myname | fgrep -v fgrep | fgrep -v $$ | fgrep -v "sh -c" > /dev/null
+if ($status == 0) exit 0
+
+# Create output directory if it does not already exist
+
+if (! -e $wfdir) mkdir $wfdir
+
+# Determine which systems to process
+
+set tempname = $Systems.`hostname`
+if (-e $tempname) set Systems = $tempname
+if (-e $Systems) then
+    set list = `stripcat < $Systems`
+else
+    echo "missing $Systems"
+    exit 1
+endif
+
+# Create the station files and master wfdisc
+
+mkdir $temp
+set exitstatus = $status
+if ($exitstatus != 0) then
+    echo "can't mkdir $temp : status = $exitstatus"
+    exit $exitstatus
+endif
+cd $temp
+set exitstatus = $status
+if ($exitstatus != 0) then
+    echo "can't cd $temp : status = $exitstatus"
+    exit $exitstatus
+endif
+set master = master.wfdisc
+cp /dev/null $master
+
+foreach station ($list)
+    set command = "nrts_dwd $args $station"
+    $command > $station.wfdisc
+    if ($exitstatus != 0) then
+        echo "$command failed, status = $exitstatus"
+        cd $wfdir
+        rm -rf $tempdir/dowfdiscs.*
+        exit $exitstatus
+    endif
+    cat $station.wfdisc >> $master
+    echo "css3.0" > $station
+    if ( $?CSS30_DATABASE_PATH ) echo "$CSS30_DATABASE_PATH" >> $station
+end
+
+if ( -z $master) goto cleanup
+
+# Create the network day volumes
+
+set dates = `cat $master | wdjdays | sort | uniq`
+
+foreach date ($dates)
+    validate $date >& /dev/null
+    if ($status == 0) then
+        set output = $date.wfdisc
+        cp /dev/null $output
+        set yyyy = `$expr substr $date 1 4`
+        set ddd  = `$expr substr $date 5 3`
+        wdcut $yyyy-$ddd $yyyy-$ddd-23:59:59.999 $master >> $output
+        echo "css3.0" > $date
+        if ( $?CSS30_DATABASE_PATH ) echo $CSS30_DATABASE_PATH >> $date
+    endif
+end
+
+# Master copy no longer needed
+
+rm $master
+
+# Remove empty wfdiscs
+
+touch dummy.wfdisc
+foreach wfdisc (*.wfdisc)
+    if (-z $wfdisc) rm $wfdisc
+end
+
+# Update calib/calper
+
+setcalib >& /dev/null
+# Remove outdated wfdiscs and install new ones
+
+touch $wfdir/dummy.wfdisc
+rm $wfdir/*
+
+touch dummy.wfdisc
+mv * $wfdir
+rm $wfdir/dummy.wfdisc
+
+cleanup:
+
+cd $wfdir
+rm -rf $tempdir/dowfdiscs.*
+
+exit 0
+
+# Revision History
+#
+# $Log: nrts_dowfdiscs,v $
+# Revision 1.6  2005/10/31 21:26:01  dechavez
+# run setcalib to sync calib and calper with Antelope database
+#
+# Revision 1.5  2005/10/13 17:55:02  dechavez
+# quote env string before catting to descriptor file
+#
+# Revision 1.4  2005/10/12 00:14:41  dechavez
+# explicitly source our .envrc to get CSS30_DATABASE_PATH set
+#
+# Revision 1.3  2005/10/11 23:34:29  dechavez
+# create descriptor files
+#
+# Revision 1.2  2005/02/18 02:59:58  dechavez
+# Update with nrts@idahub version
+#
+# Revision 1.2  2004/01/31 21:14:46  nrts
+# remove nrts_wrtdl HUP's
+#
+# Revision 1.1.1.1  2003/04/18 22:44:18  nrts
+# initial (imported) release
+#

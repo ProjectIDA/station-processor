@@ -1,0 +1,111 @@
+# $Id: isiCreateIsoImage,v 1.2 2005/10/20 20:07:08 dechavez Exp $
+# 
+# Helper code sourced by isiStageTeeFiles for building ISO images
+
+set mysubname = "isiCreateIsoImage"
+set InitialDirectory = `pwd`
+
+# Freeze stage directory
+
+set MyStageDir = $StageDir.$$
+
+set command = "mv $StageDir $MyStageDir"
+$command
+if ($status != 0) then
+    logger -t $mysubname"[$$]" -p user.info "ERROR: $command failed"
+    goto failure
+endif
+
+set command = "mkdir $StageDir"
+$command
+if ($status != 0) then
+    logger -t $mysubname"[$$]" -p user.info "ERROR: $command failed"
+    goto failure
+endif
+
+# Determine how many data files are in the stage dir
+
+set command = "cd $MyStageDir"
+$command
+if ($status != 0) then
+    logger -t $mysubname"[$$]" -p user.info "ERROR: $command failed"
+    goto failure
+endif
+
+@ numfiles = `ls | grep .gz | wc -l`
+if ($numfiles == 0) goto cleanup
+
+# Generate label, READMEs and image name from contents
+
+source $isiGenerateIsoLabel
+
+# Generate ISO image
+
+cd $InitialDirectory
+
+set WorkImgName = $IsoDir/$ImageName
+set DoneImgName = $IsoDir/$ImageName.iso
+echo -n "Generating ISO image... "
+set command = "mkisofs -V $VolId -iso-level 2 -quiet -o $WorkImgName $MyStageDir"
+logger -t $mysubname"[$$]" -p user.info "$command"
+$command >& /dev/null
+if ($status != 0) then
+    logger -t $mysubname"[$$]" -p user.info "FAILED"
+    goto failure
+endif
+echo "done"
+
+# e-mail notice (if so configured)
+
+if (-e $isiIsoNotify) $isiIsoNotify $DoneImgName
+
+set command = "mv $WorkImgName $DoneImgName"
+if ($debug) logger -t $mysubname"[$$]" -p user.info "$command"
+$command
+if ($status != 0) then
+    logger -t $mysubname"[$$]" -p user.info "FAILED"
+    goto failure
+endif
+
+# Move the data files to pre-delete area
+
+set command = "mv $MyStageDir/*.gz $DoneZips"
+if ($debug) logger -t $mysubname"[$$]" -p user.info "$command"
+$command
+if ($status != 0) then
+    logger -t $mysubname"[$$]" -p user.info "FAILED"
+    goto failure
+endif
+
+cleanup:
+
+# Delete frozen stage directory
+
+cd $InitialDirectory
+set command = "rm -rf $MyStageDir"
+if ($debug) logger -t $mysubname"[$$]" -p user.info "$command"
+$command
+if ($status != 0) then
+    logger -t $mysubname"[$$]" -p user.info "FAILED"
+    goto failure
+endif
+
+# Normal exit
+
+success:
+if ($debug) logger -t $mysubname"[$$]" -p user.info "success, exit 0"
+exit 0
+
+failure:
+logger -t $mysubname"[$$]" -p user.info "failure, exit 1"
+exit 1
+
+# Revision History
+# 
+# $Log: isiCreateIsoImage,v $
+# Revision 1.2  2005/10/20 20:07:08  dechavez
+# eliminated use of dummies when counting files
+#
+# Revision 1.1  2005/08/17 21:06:56  dechavez
+# initial release
+#

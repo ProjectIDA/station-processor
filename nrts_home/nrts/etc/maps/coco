@@ -1,0 +1,33 @@
+# Channel map for COCO
+# Use for IDA packet revs 5 thru 9
+
+#  F CH M  STREAM  NAME  SENS Description
+  -1 -1 0    00    LOG   NONE log records
+#
+  11 22 0    11    bhz00   BBZ  KS5400 Z, 24-bit BB
+  11 23 0    12    bh100   BBN  KS5400 N, 24-bit BB
+  11 24 0    13    bh200   BBE  KS5400 E, 24-bit BB
+
+  13 22 0    14    lhz00   BBZ  KS5400 Z, 24-bit long-period
+  13 23 0    15    lh100   BBN  KS5400 N, 24-bit long-period
+  13 24 0    16    lh200   BBE  KS5400 E, 24-bit long-period
+
+  15 22 0    17    vhz00   BBZ  KS5400 Z, 24-bit VLP
+  15 23 0    18    vh100   BBN  KS5400 N, 24-bit VLP
+  15 24 0    19    vh200   BBE  KS5400 E, 24-bit VLP
+
+  15 12 0    21    vmz00   MPZ  KS5400 Z mass position
+  15 13 0    22    vm100   MPN  KS5400 N mass position
+  15 14 0    23    vm200   MPE  KS5400 E mass position
+
+  16  3 0    31    bhz10   SPZ  CMG-3T Z, hi-gain continuous SP
+  16  4 0    32    bhn10   SPN  CMG-3T N, hi-gain continuous SP
+  16  5 0    33    bhe10   SPE  CMG-3T E, hi-gain continuous SP
+
+  16  9 0    34    blz10   SPZ  CMG-3T Z, lo-gain continuous SP
+  16 10 0    35    bln10   SPN  CMG-3T N, lo-gain continuous SP
+  16 11 0    36    ble10   SPE  CMG-3T E, lo-gain continuous SP
+
+  16  6 0    37    bhz20   SPZ2 STS-2 Z, hi-gain continuous SP
+  16  7 0    38    bhn20   SPN2 STS-2 N, hi-gain continuous SP
+  16  8 0    39    bhe20   SPE2 STS-2 E, hi-gain continuous SP

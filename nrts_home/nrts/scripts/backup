@@ -1,0 +1,40 @@
+#!/bin/csh
+#
+# $Id: backup,v 1.1 2005/03/21 21:42:33 dechavez Exp $
+
+set iam = `/usr/ucb/whoami`
+
+if ($iam != nrts) then
+    echo "/etc/backup may only be run as user nrts"
+    exit 1
+endif
+
+set tgz      = /usr/nrts/etc/EtcBackup.tgz
+set tar      = /usr/sbin/tar
+set chown    = /bin/chown
+
+if (-e $tgz) then
+    echo "$tgz already exists."
+    exit 1
+endif
+
+cd /
+
+set list = ""
+set list = "etc/rc?.d $list"
+set list = "etc/host* $list"
+set list = "etc/inet $list"
+set list = "etc/group $list"
+set list = "etc/passwd $list"
+set list = "etc/ppp $list"
+set list = "etc/shadow $list"
+set list = "etc/nodename $list"
+set list = "etc/init.d $list"
+
+set digi_config = opt/realport/drp.conf
+if (-e $digi_config) then
+    set list = "$digi_config $list"
+endif
+
+sudo $tar cf - $list | gzip -c > $tgz
+sudo $chown nrts:nrts $tgz

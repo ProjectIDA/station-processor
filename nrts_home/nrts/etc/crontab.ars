@@ -1,0 +1,6 @@
+# Flush the nrtslog every hour
+58 * * * * /usr/nrts/scripts/nrts_flushlog
+# Look for and stage new tee files every 15 minutes
+10,25,40,55 * * * * /usr/nrts/scripts/isiStageTeeFiles
+# Generate new wfdiscs every 5 minutes
+#5,10,15,20,25,30,35,40,45,50,55 * * * * /usr/nrts/scripts/nrts_dowfdiscs maxdur=0

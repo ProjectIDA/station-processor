@@ -1,0 +1,10 @@
+part
+0 root wm 3 28c
+1 var wm 29 51c
+3 swap wu 80 66c
+5 usr wm 146 51c
+6 usr wm 197 61c
+7 usr wm 258 523c
+label
+quit
+quit

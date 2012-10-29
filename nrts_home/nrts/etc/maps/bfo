@@ -1,0 +1,30 @@
+# Channel map for BFO
+# Use for IDA packet revs 5 thru 9
+
+#  F CH M  STREAM  NAME  SENS Description
+  -1 -1 0    00    LOG   NONE log records
+#
+  11 22 0    11    bhz00   BBZ  STS1 Z, 24-bit BB
+  11 23 0    12    bhn00   BBN  STS1 N, 24-bit BB
+  11 24 0    13    bhe00   BBE  STS1 E, 24-bit BB
+
+  13 22 0    14    lhz00   BBZ  STS1 Z, 24-bit long-period
+  13 23 0    15    lhn00   BBN  STS1 N, 24-bit long-period
+  13 24 0    16    lhe00   BBE  STS1 E, 24-bit long-period
+
+  15 22 0    17    vhz00   BBZ  STS1 Z, 24-bit VLP
+  15 23 0    18    vhn00   BBN  STS1 N, 24-bit VLP
+  15 24 0    19    vhe00   BBE  STS1 E, 24-bit VLP
+
+  15 03 0    81    vgz00   VGZ  LaCoste mode channel
+  15 04 0    82    ugz00   UGZ  LaCoste tide channel
+  15 05 0    83    wdo00   WDO  outside microbarograph
+  15 06 0    84    vsa00   VSA  Cambridge strainmeter a
+  15 07 0    85    vsc00   VSC  Cambridge strainmeter c
+  15 08 0    86    vsb00   VSB  Cambridge strainmeter b
+  15 09 0    87    vae00   VAE  Askania tiltmeter
+  15 10 0    88    van00   VAN  Askania tiltmeter
+  15 11 0    89    wdi00   WDI  inside microbarograph
+  15 12 0    90    aux10 AUX10 auxillary sensor 10
+  15 13 0    91    aux11 AUX11 auxillary sensor 11
+  15 14 0    92    aux12 AUX12 auxillary sensor 12

@@ -1,0 +1,20 @@
+#! /bin/csh -fx
+# @(#)setcss	1.5	21 Aug 1995
+#
+# script to set up descriptor file for dbpick program
+#
+if ( $#argv > 0 ) then
+	set DIR=$argv
+	set list=`ls $DIR/*.wfdisc`
+else
+	set list=`ls *wfdisc`
+endif
+
+foreach s ($list)
+	set FILE=`echo $s | sed 's/.wfdisc//'`
+	if (! -e $FILE) then
+		echo "css3.0" >! $FILE
+		echo "/home/nupu/response/CSS/{IDA}" >> $FILE
+		chmod 666 $FILE
+	endif
+end

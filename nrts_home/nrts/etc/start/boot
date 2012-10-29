@@ -1,0 +1,37 @@
+#!/bin/csh -f
+#
+# stealth NRTS boot startup script
+#
+
+# Load the login environment
+
+set envrc = /usr/nrts/.envrc
+if (-e $envrc) then
+    source $envrc
+else
+    echo "warning: missing $envrc"
+endif
+
+set path = ($NRTS_HOME/scripts $NRTS_HOME/bin /opt/local/bin $path)
+
+# Make sure that permissions are correct
+
+if ( -e $NRTS_HOME/scripts/nrtsSetPerms ) then
+    nrtsSetPerms $NRTS_HOME/bin >& /dev/null
+else
+    echo "WARNING: missing nrtsSetPerms"
+endif
+
+# Start ISID
+
+#$NRTS_HOME/etc/init.d/isid start
+/usr/nrts/bin/isid -bd
+
+# Start ARS acquisition
+
+isidl q330=136.177.121.31:0100000B69AE6F89:0:1:1:1 q330 -bd
+#isidl isi=136.177.121.33 fred -bd
+
+#isidl q330=q330hr:0100000B650D876E:0:1:1:1 q330=q330lr:0100000A41B3F5A0:0:1:2:1 baro=/dev/term/d6001:9600:`hostid`:wdi:00:120 q330 -bd
+
+exit 0

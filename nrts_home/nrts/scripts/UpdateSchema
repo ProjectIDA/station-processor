@@ -1,0 +1,21 @@
+#!/bin/csh -f
+#
+# One time script to update the installed 4.1 css3.0 schema
+
+set new = /usr/nrts/etc/css3.0
+set old = /opt/antelope/4.1/data/schemas2/css3.0
+
+if (! -e $new) then
+	echo "missing $new"
+	exit 1
+endif
+
+if (-e $old) mv $old $old-4.1-version
+mv $new $old
+if ($status != 0) then
+	echo can't mv $new $old
+	exit 1
+endif
+
+echo "Antelope css3.0 schema updated from 4.1 to 4.6"
+echo 0

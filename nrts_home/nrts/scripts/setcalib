@@ -1,0 +1,10 @@
+#!/bin/csh -f
+# $Id: setcalib,v 1.1 2005/10/28 23:32:29 dechavez Exp $
+#
+# Update the calib and calper fields of each wfdisc file in the current directory
+
+foreach file (*.wfdisc)
+    echo "updating $file"
+    dbjoin $file calibration | dbselect -s - "wfdisc.calper:=calibration.calper" >& /dev/null
+    dbjoin $file calibration | dbselect -s - "wfdisc.calib:=calibration.calib" >& /dev/null
+end 

@@ -1,0 +1,89 @@
+#!/bin/csh -f
+#
+# start/stop/restart ISI data server
+#
+# $Id: isid,v 1.5 2005/09/06 19:51:05 dechavez Exp $
+
+set setup = ~nrts/scripts/ScriptSetup
+if (! -e $setup) then
+    echo "Missing $setup"
+    exit 1
+endif
+source $setup
+
+set restart = 0
+
+set masterlist = `pgrep -x isid`
+set pidlist = ""
+foreach pid ($masterlist)
+    if ($pid != $$) set pidlist = "$pid $pidlist"
+end
+if ($pidlist == "") shift pidlist
+
+if ($#pidlist > 1) then
+    echo "Too many isid's running.  Fix this script!"
+    exit 1
+else if ($#pidlist == 1) then
+    set pid = $pidlist[1]
+else
+    set pid = 0
+endif
+
+if ($#argv == 1) then
+    switch ($argv[1])
+      case start:
+        goto start
+        breaksw
+
+      case stop
+        goto stop
+        breaksw
+
+      case restart
+        set restart = 1
+        goto stop
+        breaksw
+    endsw
+endif
+
+echo "Usage: /etc/init.d/isid { start | stop | restart }"
+exit 1
+
+# Start server
+
+start:
+
+if ($pid != 0) then
+    echo "ISI data server is already running (pid $pid)"
+else
+    echo "Starting ISI data server"
+    isid -bd
+endif
+exit 0
+
+# Stop server
+
+stop:
+
+echo "Terminating any instances of nrts_edes"
+pkill -TERM nrts_edes
+
+if ($pid == 0) then
+    echo "ISI data server is not running"
+else
+    echo "Stopping ISI data server"
+    kill -TERM $pid
+    @ count = 0;
+    while ($pid != 0)
+        if ($count > 10) then
+            echo "ISI data server (pid $pid) won't die, forced"
+            kill -9 $pid
+        endif
+        sleep 1
+        nohup kill -0 $pid >& /dev/null
+        if ($status == 1) set pid = 0
+        @ count++
+    end
+endif
+if ($restart) goto start
+exit 0

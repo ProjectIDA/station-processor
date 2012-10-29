@@ -1,0 +1,21 @@
+# Channel map for XPL
+# Use for IDA packet revs 5 thru 9
+
+#  F CH M  STREAM  NAME  SENS Description
+  -1 -1 0    00    LOG   NONE log records
+#
+  13 06 0    10    ns    SMZ  Laser Strainmeter, NS leg
+  13 07 0    11    ew    SMN  Laser Strainmeter, EW leg
+  13 08 0    12    nw    SME  Laser Strainmeter, NW leg
+
+  13 03 0    13    n01   SMZ  Laser Strainmeter, NS01 leg
+  13 04 0    14    e01   SMN  Laser Strainmeter, EW01 leg
+  13 05 0    15    w01   SME  Laser Strainmeter, NW01 leg
+
+  13 09 0    16    n02   SMZ  Laser Strainmeter, NS02 leg
+  13 10 0    17    e02   SMN  Laser Strainmeter, EW02 leg
+  13 11 0    18    w02   SME  Laser Strainmeter, NW02 leg
+
+  13 12 0    19    n03   SMZ  Laser Strainmeter, NS03 leg
+  13 13 0    20    e03   SMN  Laser Strainmeter, EW03 leg
+  13 14 0    21    w03   SME  Laser Strainmeter, NW03 leg

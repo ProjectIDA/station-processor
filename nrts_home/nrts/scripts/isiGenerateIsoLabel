@@ -1,0 +1,97 @@
+#!/bin/csh -f
+# $Id: isiGenerateIsoLabel,v 1.3 2005/10/20 20:06:14 dechavez Exp $
+
+# Find first and last files in this volume
+
+set files = (*.gz)
+set FirstFile = $files[1]
+set LastFile = $files[$#files]
+
+# Determine time span based on file age
+
+set FileTimes = `filetimes $FirstFile`
+set FileBeg = `/usr/ucb/expr substr $FileTimes[3] 1 14`
+
+set FileTimes = `filetimes $LastFile`
+set FileEnd = `/usr/ucb/expr substr $FileTimes[3] 1 14`
+
+# Determine time span based on file contents
+
+set range = `idaspan if=$FirstFile rev=$PktRev reclen=$PktLen`
+set DataBeg = $range[1]
+
+set range = `idaspan if=$LastFile rev=$PktRev reclen=$PktLen`
+set DataEnd = $range[2]
+
+# Generate the human readable README.txt
+
+set README = ./README
+cp /dev/null $README
+rm -f $README.txt
+
+echo "Station Code  = $StaName" >> $README
+echo "Packet Format = $PktRev" >> $README
+echo "Record length = $PktLen bytes" >> $README
+echo "File Dates:  $FileBeg through $FileEnd"   >> $README
+echo "Data Dates:  $DataBeg through $DataEnd *" >> $README
+echo "" >> $README
+echo "* Data Dates may not be accurate if there are clock problems" >> $README
+rm -f $README.txt
+unix2dos < $README > $README.txt
+rm -f $README
+
+# Generate the per-file listing
+
+echo -n "Generating file listing... "
+set LISTING = ./LISTING
+rm -f $LISTING $LISTING.txt
+isils $PktRev > $LISTING
+unix2dos < $LISTING > $LISTING.txt
+rm -f $LISTING
+echo "done"
+
+# Generate the machine readable CONTENTS
+
+set CONTENTS = ./CONTENTS
+rm -f $CONTENTS $CONTENTS.txt
+set contents = "$StaName $PktRev $PktLen $FileBeg $FileEnd $DataBeg $DataEnd"
+echo $contents > $CONTENTS
+unix2dos < $CONTENTS > $CONTENTS.txt
+rm -f $CONTENTS
+
+# Set up for autorun
+
+set idacd = $NRTS_HOME/etc/start/idacd.exe
+if ( -e $idacd ) then
+    cp $idacd .
+    set autorun = autorun
+    cp /dev/null $autorun
+    echo \[autorun\] >> $autorun
+    echo "open=idacd.exe" >> $autorun
+    echo "icon=idacd.exe" >> $autorun
+    unix2dos < $autorun > $autorun.inf
+    rm -f $autorun
+endif
+
+# Generate the volume ID and image name
+
+set FileBeg = `/usr/ucb/expr substr $FileBeg 1 11`
+set FileEnd = `/usr/ucb/expr substr $FileBeg 1 11`
+
+set VolId = "${StaName}_${FileBeg}_${FileEnd}"
+set ImageName = $FileEnd
+
+exit 0
+
+# Revision History
+#
+# $Log: isiGenerateIsoLabel,v $
+# Revision 1.3  2005/10/20 20:06:14  dechavez
+# removed gzcat pipe into idaspan now that idaspan can read gzip data directly
+#
+# Revision 1.2  2005/09/29 21:14:37  dechavez
+# fixed bug in naming autorun.inf
+#
+# Revision 1.1  2005/08/17 21:06:56  dechavez
+# initial release
+#

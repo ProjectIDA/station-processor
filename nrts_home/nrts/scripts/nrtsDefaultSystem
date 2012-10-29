@@ -1,0 +1,9 @@
+#!/bin/csh -f
+# $Id: nrtsDefaultSystem,v 1.2 2005/10/11 00:01:08 dechavez Exp $
+
+set setup  = ~nrts/scripts/ScriptSetup
+if (! -e $setup ) exit 0
+source $setup
+
+echo $DefaultSite
+exit 0

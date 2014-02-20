@@ -1,0 +1,224 @@
+#
+#    Snap file created for aslwsf by scott on Tue Feb 28 10:22:40 1995
+#
+#    NQS Version 3.36
+#
+#    Create the batch queues and set the defined attributes
+#
+#
+#    Creating and defining batch queue dcc
+#
+create batch_queue dcc priority=16 pipeonly
+set run_limit=1 dcc
+set user_limit=1 dcc
+set corefile_limit = (32 mb) dcc
+set data_limit = (32 mb) dcc
+set per_process permfile_limit = (500 mb) dcc
+set stack_limit = (32 mb) dcc
+set working_set_limit = (32 mb) dcc
+set per_process cpu_limit = ( 360000 ) dcc
+set nice_value_limit=0 dcc
+start queue dcc
+enable queue dcc
+#
+#    Create the pipe queues and set the defined attributes
+#
+#
+#    Creating and defining pipe queue aslwsd:/dev/rmt/0
+#
+create pipe_queue aslwsd:/dev/rmt/0 priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsd:/dev/rmt/0
+start queue aslwsd:/dev/rmt/0
+enable queue aslwsd:/dev/rmt/0
+#
+#    Creating and defining pipe queue aslwsd:/dev/rmt/5
+#
+create pipe_queue aslwsd:/dev/rmt/5 priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsd:/dev/rmt/5
+start queue aslwsd:/dev/rmt/5
+enable queue aslwsd:/dev/rmt/5
+#
+#    Creating and defining pipe queue aslwsb:/dev/rmt/0
+#
+create pipe_queue aslwsb:/dev/rmt/0 priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsb:/dev/rmt/0
+start queue aslwsb:/dev/rmt/0
+enable queue aslwsb:/dev/rmt/0
+#
+#    Creating and defining pipe queue aslwsg:/dev/rmt/0
+#
+create pipe_queue aslwsg:/dev/rmt/0 priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsg:/dev/rmt/0
+start queue aslwsg:/dev/rmt/0
+enable queue aslwsg:/dev/rmt/0
+#
+#    Creating and defining pipe queue aslwsg:/dev/rmt/1
+#
+create pipe_queue aslwsg:/dev/rmt/1 priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsg:/dev/rmt/1
+start queue aslwsg:/dev/rmt/1
+enable queue aslwsg:/dev/rmt/1
+#
+#    Creating and defining pipe queue aslwsg:/dev/rmt/2
+#
+create pipe_queue aslwsg:/dev/rmt/2 priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsg:/dev/rmt/2
+start queue aslwsg:/dev/rmt/2
+enable queue aslwsg:/dev/rmt/2
+#
+#    Creating and defining pipe queue aslwsg:/dev/rmt/3
+#
+create pipe_queue aslwsg:/dev/rmt/3 priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsg:/dev/rmt/3
+start queue aslwsg:/dev/rmt/3
+enable queue aslwsg:/dev/rmt/3
+#
+#    Creating and defining pipe queue aslwsh:/dev/rmt/0
+#
+create pipe_queue aslwsh:/dev/rmt/0 priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsh:/dev/rmt/0
+start queue aslwsh:/dev/rmt/0
+enable queue aslwsh:/dev/rmt/0
+#
+#    Creating and defining pipe queue aslwsh:/dev/rmt/1
+#
+create pipe_queue aslwsh:/dev/rmt/1 priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsh:/dev/rmt/1
+start queue aslwsh:/dev/rmt/1
+enable queue aslwsh:/dev/rmt/1
+#
+#    Creating and defining pipe queue dcc_proc
+#
+create pipe_queue dcc_proc priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set lb_out dcc_proc
+set run_limit=1 dcc_proc
+start queue dcc_proc
+enable queue dcc_proc
+#
+#    Creating and defining pipe queue asl2:dcc
+#
+create pipe_queue asl2:dcc priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 asl2:dcc
+start queue asl2:dcc
+enable queue asl2:dcc
+#
+#    Creating and defining pipe queue aslwsb:dcc
+#
+create pipe_queue aslwsb:dcc priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsb:dcc
+start queue aslwsb:dcc
+enable queue aslwsb:dcc
+#
+#    Creating and defining pipe queue aslwsc:dcc
+#
+create pipe_queue aslwsc:dcc priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsc:dcc
+start queue aslwsc:dcc
+enable queue aslwsc:dcc
+#
+#    Creating and defining pipe queue aslwsd:dcc
+#
+create pipe_queue aslwsd:dcc priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsd:dcc
+start queue aslwsd:dcc
+enable queue aslwsd:dcc
+#
+#    Creating and defining pipe queue aslwse:dcc
+#
+create pipe_queue aslwse:dcc priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwse:dcc
+start queue aslwse:dcc
+enable queue aslwse:dcc
+#
+#    Creating and defining pipe queue aslwsf:dcc
+#
+create pipe_queue aslwsf:dcc priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsf:dcc
+start queue aslwsf:dcc
+enable queue aslwsf:dcc
+#
+#    Creating and defining pipe queue aslwsg:dcc
+#
+create pipe_queue aslwsg:dcc priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsg:dcc
+start queue aslwsg:dcc
+enable queue aslwsg:dcc
+#
+#    Creating and defining pipe queue aslwsh:dcc
+#
+create pipe_queue aslwsh:dcc priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsh:dcc
+start queue aslwsh:dcc
+enable queue aslwsh:dcc
+#
+#    Creating and defining pipe queue aslwsc:/dev/rmt/0
+#
+create pipe_queue aslwsc:/dev/rmt/0 priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwsc:/dev/rmt/0
+start queue aslwsc:/dev/rmt/0
+enable queue aslwsc:/dev/rmt/0
+#
+#    Creating and defining pipe queue aslwse:/dev/rmt/0
+#
+create pipe_queue aslwse:/dev/rmt/0 priority=16 server=(/opt/local/lib/nqs/pipeclient)
+set run_limit=1 aslwse:/dev/rmt/0
+start queue aslwse:/dev/rmt/0
+enable queue aslwse:/dev/rmt/0
+#
+#    Add the destinations to the pipe queues.
+#
+add destination=/dev/rmt/0@aslwsd aslwsd:/dev/rmt/0
+add destination=/dev/rmt/5@aslwsd aslwsd:/dev/rmt/5
+add destination=/dev/rmt/0@aslwsb aslwsb:/dev/rmt/0
+add destination=/dev/rmt/0@aslwsg aslwsg:/dev/rmt/0
+add destination=/dev/rmt/1@aslwsg aslwsg:/dev/rmt/1
+add destination=/dev/rmt/2@aslwsg aslwsg:/dev/rmt/2
+add destination=/dev/rmt/3@aslwsg aslwsg:/dev/rmt/3
+add destination=/dev/rmt/0@aslwsh aslwsh:/dev/rmt/0
+add destination=/dev/rmt/1@aslwsh aslwsh:/dev/rmt/1
+add destination=dcc@asl2 dcc_proc
+add destination=dcc dcc_proc
+add destination=dcc@aslwsg dcc_proc
+add destination=dcc@aslwsh dcc_proc
+add destination=dcc@asl2 asl2:dcc
+add destination=dcc@aslwsb aslwsb:dcc
+add destination=dcc@aslwsc aslwsc:dcc
+add destination=dcc@aslwsd aslwsd:dcc
+add destination=dcc@aslwse aslwse:dcc
+add destination=dcc aslwsf:dcc
+add destination=dcc@aslwsg aslwsg:dcc
+add destination=dcc@aslwsh aslwsh:dcc
+add destination=/dev/rmt/0@aslwsc aslwsc:/dev/rmt/0
+add destination=/dev/rmt/0@aslwse aslwse:/dev/rmt/0
+#
+#    Create and set up queue complexes.
+#
+#
+#    Add all managers to the list.
+#
+add managers scott:m
+#
+#    Set general parameters.
+#
+set debug 2
+set default batch_request priority 31
+set default destination_retry time 72
+set default destination_retry wait 5
+set lifetime 168
+set log_file  /tmp/nqs-logfile
+set mail root
+set network client=(/opt/local/lib/nqs/netclient)
+set network daemon=(/opt/local/lib/nqs/netdaemon)
+set network server=(/opt/local/lib/nqs/netserver)
+set load_daemon=(/opt/local/lib/nqs/loaddaemon)
+set shell_strategy free
+set scheduler asl2
+set default load_interval 3
+#
+#    Set global parameters.
+#
+set global batch_limit=10
+set global pipe_limit=5
+#
+#    Set compute servers.
+#

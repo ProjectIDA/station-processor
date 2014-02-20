@@ -69,7 +69,6 @@ struct	__deltatime	{	/* Difference of a time amount */
 	UBYTE	nsec;
 	UWORD	nmsecs;
 };
-
 typedef struct __deltatime DELTA_T;
 
 /* these utime fields were added by michael 2001-01-5 */
@@ -119,6 +118,8 @@ typedef double FLTTIME;    	/* Number of seconds since julian instant */
 #define ST_SPAN_BCA	2	/* B contains A */
 #define ST_SPAN_ALB	3	/* A less than B */
 #define ST_SPAN_BLA	4	/* B less than A */
+
+#include "dcc_time_proto.h"
 
 #endif
 

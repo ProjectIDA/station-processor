@@ -14,8 +14,8 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <dirent.h>
-#include <dcc_std.h>
-#include <dcc_time.h>
+#include "../include/dcc_std.h"
+#include "../include/dcc_time.h"
 
 #define PROGRAM_NAME "falconweb"
 #define VERSION "Version 2.1"

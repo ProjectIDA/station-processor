@@ -10,8 +10,8 @@ const char *VersionIdentString = "Release 2.0";
 #include <unistd.h>
 #include <dirent.h>
 
-#include <dcc_std.h>
-#include <dcc_time.h>
+#include "../include/dcc_std.h"
+#include "../include/dcc_time.h"
 
 #include "traversetr1.h"
 

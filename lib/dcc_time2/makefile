@@ -9,7 +9,7 @@ ifeq ($(MACHINE), armv5tel)
 else
   CC=gcc -g -Wl,--hash-style=both
 endif
-LIB330_DIR=../../../lib330
+LIB330_DIR=../../lib330
 
 CFLAGS=-I../../include
 DCC_TIME2=../dcctime2lib.a

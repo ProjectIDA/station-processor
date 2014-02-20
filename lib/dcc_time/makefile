@@ -56,4 +56,4 @@ $(OBJS):
 
 
 clean:
-	rm -f *.o *.a core *~ $(DCC_TIME2)
+	rm -f *.o *.a core *~ $(DCC_TIME)

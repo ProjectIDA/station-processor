@@ -1,7 +1,5 @@
 Documents changes to operational software and scripts for q330 ASP processor
 
-This is a test for agonzales-usgs
-
 README Updated:  April 25, 2011
 
 Release June 30, 2008

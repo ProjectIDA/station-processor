@@ -1,7 +1,5 @@
 package ofcweb;
 
-
-
 import java.awt.Color;
 import java.util.Calendar;
 import java.util.Date;
@@ -10,6 +8,8 @@ import java.util.HashMap;
 import java.util.TimeZone;
 
 import javax.swing.JPanel;
+import java.security.*;
+import java.security.AccessController;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
@@ -32,10 +32,10 @@ import org.jfree.data.xy.XYDataset;
 public class TimeChartPlotter extends JPanel
 {
 	/**
-   * 
-   */
-  private static final long serialVersionUID = 1L;
-
+   	* 
+  	*/
+  	private static final long serialVersionUID = 1L;
+  	
 	public TimeChartPlotter(String newStation,
 	    String newNetwork, String newChannel)
 	{
@@ -43,11 +43,16 @@ public class TimeChartPlotter extends JPanel
 		network = newNetwork;
 		channel = newChannel;
 		
-	  iSumAvg = 0;
-	  iSumCount=0;
-	  tLastSum = null;
-	  
-		TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
+	  	iSumAvg = 0;
+	  	iSumCount=0;
+	  	tLastSum = null;
+	 
+	 	AccessController.doPrivileged(new PrivilegedAction<Void>() {
+			public Void run() {
+				TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
+				return null;
+			}
+		});
 	}
 
 	private XYDataset createDataset()
@@ -86,21 +91,21 @@ public class TimeChartPlotter extends JPanel
 		chart.setBackgroundPaint(Color.white);
 		XYPlot plot = chart.getXYPlot();
 
-    final XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
-    for(int i=0; i < SeriesID; i++){
-      renderer.setSeriesLinesVisible(i, true);
-      renderer.setSeriesShapesVisible(i, false);
-    }
-    plot.setRenderer(renderer);
+		final XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+		for(int i=0; i < SeriesID; i++){
+		      renderer.setSeriesLinesVisible(i, true);
+		      renderer.setSeriesShapesVisible(i, false);
+		}
+		plot.setRenderer(renderer);
 
-    final NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
-    rangeAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+    		final NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+    		rangeAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
 
-//		date_axis = (DateAxis) plot.getDomainAxis();
-//		date_axis.setDateFormatOverride(new SimpleDateFormat("HHmm"));
-	  iSumAvg = 0;
-	  iSumCount=0;
-	  tLastSum = null;
+		//date_axis = (DateAxis) plot.getDomainAxis();
+		//date_axis.setDateFormatOverride(new SimpleDateFormat("HHmm"));
+		iSumAvg = 0;
+		iSumCount=0;
+		tLastSum = null;
 	  
 		return chart;
 	} // createChartTime()
@@ -146,7 +151,6 @@ public class TimeChartPlotter extends JPanel
 	public void AddNewData(int minData[], int maxData[], int avgData[],
 	    GregorianCalendar tStartTime, int countsPer)
 	{
-
 		int i;
 		TimeSeries minSeries = dataset.getSeries(0);
 		TimeSeries maxSeries = dataset.getSeries(1);
@@ -162,21 +166,18 @@ public class TimeChartPlotter extends JPanel
 		}
 		else
 		{
-  		// Make any gaps in continuous data show up as blanks
-      if (tStartTime.getTimeInMillis() - tLastSum.getTimeInMillis() > countsPer*60000)
-      {
-      	System.err.println("DEBUG gap in data starting at: " + tLastSum.getTime());
-      	System.err.println("Time " + tStartTime.getTime()
-      	                   + "; Count " + minSeries.getItemCount());
+  			// Make any gaps in continuous data show up as blanks
+      			if (tStartTime.getTimeInMillis() - tLastSum.getTimeInMillis() > countsPer*60000)
+      			{
+      				System.err.println("DEBUG gap in data starting at: " + tLastSum.getTime());
+      				System.err.println("Time " + tStartTime.getTime() 
+      					+ "; Count " + minSeries.getItemCount());
 
 				// Putting a null value at the start of the gap period works
-				minSeries.addOrUpdate(new Minute(tLastSum.getTime(), timeZone), 
-						null); 
-				maxSeries.addOrUpdate(new Minute(tLastSum.getTime(), timeZone), 
-						null); 
-				avgSeries.addOrUpdate(new Minute(tLastSum.getTime(), timeZone), 
-						null); 
-      } // Handle gap in normally continuous data stream
+				minSeries.addOrUpdate(new Minute(tLastSum.getTime(), timeZone), null); 
+				maxSeries.addOrUpdate(new Minute(tLastSum.getTime(), timeZone), null); 
+				avgSeries.addOrUpdate(new Minute(tLastSum.getTime(), timeZone), null); 
+      			} // Handle gap in normally continuous data stream
 
 		} // adding data to existing data
 
@@ -224,32 +225,30 @@ public class TimeChartPlotter extends JPanel
 		}  // loop through each new data item
 
 		long lower = (long)dataset.getDomainLowerBound(true);
-//		long upper = (long)dataset.getDomainUpperBound(true);
+		//long upper = (long)dataset.getDomainUpperBound(true);
 
-//		System.err.printf("Domain bounds %d %d\n", lower, upper);
+		//System.err.printf("Domain bounds %d %d\n", lower, upper);
 		chart.setTitle(station +" "+ network + " "+ channel 
-									+ " from " + new Date(lower).toString()
-				          + " to " + tLastSum.getTime().toString());
-
+			+ " from " + new Date(lower).toString() 
+			+ " to " + tLastSum.getTime().toString());
 	} // AddNewData()
+  	
+	private String station;
+	private String network;
+	private String channel;
 
-	private String                       station;
-	private String                       network;
-	private String                       channel;
-
-	private Integer                      SeriesID         = 0;
-	private TimeSeriesCollection         dataset;
+	private Integer SeriesID = 0;
+	private TimeSeriesCollection dataset;
 	private HashMap<Integer, TimeSeries> seriesMap;
-	private JFreeChart                   chart;
-	private TimeZone                     timeZone         = TimeZone
-	                                                        .getTimeZone("GMT");
+	private JFreeChart chart;
+	private TimeZone timeZone = TimeZone.getTimeZone("GMT");
 
-	private int                          iMin          		= 0;
-	private int                          iMax          		= 0;
-	private int                          iSumAvg          = 0;
-	private int                          iSumCount        = 0;
-	private GregorianCalendar            tLastSum					= null;
+	private int iMin = 0;
+	private int iMax = 0;
+	private int iSumAvg = 0;
+	private int iSumCount = 0;
+	private GregorianCalendar tLastSum = null;
 	
-	public final int										 MAX_COUNT				= 10000;
-  
+	public final int MAX_COUNT = 10000;
+
 } // class TimeChartPlotter

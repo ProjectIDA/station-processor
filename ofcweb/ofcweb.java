@@ -1,6 +1,3 @@
-
-
-
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -85,6 +82,7 @@ public class ofcweb extends JApplet implements ActionListener
 					"Parameter ofcdata undefined, defaulting to %s\n",
 					ofcdataFileName);
 		}
+		
 		ofcURL = ofcweb.class.getResource(ofcdataFileName);
 		if (ofcURL == null)
 		{
@@ -102,7 +100,7 @@ public class ofcweb extends JApplet implements ActionListener
 			
 		// ======== graphViewJPanel ========
 		timeChartPlot = new TimeChartPlotter(station,
-		    network, falconChannel);
+		    network, falconChannel);	// this line gives AccessControlException('user.timezone')
 		graphViewJPanel = timeChartPlot.createTimePanel();
 		graphViewJPanel.setMinimumSize(new Dimension(600, 300));
 		graphViewJPanel.setPreferredSize(
@@ -172,11 +170,10 @@ public class ofcweb extends JApplet implements ActionListener
 		{
 			System.err.println("Unable to open OFC file " + ofcURL);
 			System.exit(1);
-		} catch (IOException e)
-    {
-	    e.printStackTrace();
+		} catch (IOException e) {
+	    		e.printStackTrace();
 			System.exit(1);
-    }
+		}
 		
 		// Read records until file is empty
 		try
@@ -234,99 +231,98 @@ public class ofcweb extends JApplet implements ActionListener
 								iDataOffset += blocketteOffset;
 								
 								byte[] b2000 = new byte[iSize];
-						    System.arraycopy(seedBytes, blocketteOffset, b2000, 0, iSize);
+						   	 	System.arraycopy(seedBytes, blocketteOffset, b2000, 0, iSize);
 						    
-						    if (!bFoundB2000)
-						    {
-							    fchan = new String(b2000).substring(15,20);
-							    if (fchan.compareTo("FALC~") != 0)
-							    {
-							    	System.err.printf("Found unexpected opaque channel type %s\n",
-							    			fchan);
-							    	continue; // Not the right type of opaque blockette
-							    }
-						    	bFoundB2000 = true;
-						    }
+							    	if (!bFoundB2000)
+							    	{
+							    		fchan = new String(b2000).substring(15,20);
+							    		if (fchan.compareTo("FALC~") != 0)
+							    		{
+							    			System.err.printf("Found unexpected opaque channel type %s\n",
+							    				fchan);
+							    			continue; // Not the right type of opaque blockette
+							    		}
+						    			bFoundB2000 = true;
+						    		}
 
-						    if (getOFCdescription(b2000, !seedRecord.isBigEndian()).
-				    				compareTo(falconChannel) != 0)
-					    	continue;  // only interested in specific falcon channel
+						    		if (getOFCdescription(b2000, !seedRecord.isBigEndian()).compareTo(falconChannel) != 0)
+					    				continue;  // only interested in specific falcon channel
 					    	
-						    if (!bContinue)
-						    {
-						    	ofcBlock = new OFCb2000(b2000);
-						    }
-						    else
-						    {
-					    		System.err.printf("Continuation blockette %s %s, needs debuging\n",
-					    				falconChannel, new Date(ofcBlock.get_start_time()).toString());
-						    	ofcBlock.Continue(b2000);
-						    }
-						    bContinue = ofcBlock.get_Continuation();
+						    		if (!bContinue)
+						    		{
+						    			ofcBlock = new OFCb2000(b2000);
+						    		}
+						    		else
+						    		{
+					    				System.err.printf("Continuation blockette %s %s, needs debuging\n",
+					    					falconChannel, new Date(ofcBlock.get_start_time()).toString());
+						    			ofcBlock.Continue(b2000);
+						    		}
+						    		bContinue = ofcBlock.get_Continuation();
 
-					    	if (bContinue)
-					    	{
-					    		continue;
-					    	}
+					    			if (bContinue)
+					    			{
+					    				continue;
+					    			}
 
-					    	if (ofcBlock.get_average_data() == null ||
-					    			ofcBlock.get_average_data().length == 0)
-					    		continue;  // no data to plot
+					    			if (ofcBlock.get_average_data() == null || 
+					    				ofcBlock.get_average_data().length == 0)
+					    				continue;  // no data to plot
 					    	
-					    	if (fileDateStart == null)
-					    		fileDateStart = new Date(ofcBlock.get_start_time()*1000);
-					    	fileDateEnd = new Date(ofcBlock.get_end_time()*1000);
+					    			if (fileDateStart == null)
+					    				fileDateStart = new Date(ofcBlock.get_start_time()*1000);
+					    			fileDateEnd = new Date(ofcBlock.get_end_time()*1000);
 
-					    	if (displayDateStart != null)
-					    	{
-					    		if (displayDateStart.getTime()/1000 > ofcBlock.get_end_time())
-					    			continue;
-					    	}
+					    			if (displayDateStart != null)
+					    			{
+					    				if (displayDateStart.getTime()/1000 > ofcBlock.get_end_time())
+					    					continue;
+					    			}
 					    	
-					    	if (displayDateEnd != null)
-					    	{
-						    	if (displayDateEnd.getTime()/1000 + 86400 < ofcBlock.get_start_time())
-						    		continue;
-					    	}
-/*
-System.err.printf(
-"DEBUG: %s ; type %d; length %d; offset %d; record %d; order %d; flags %02x\n",
-ofcBlock.get_header_fields(), ofcBlock.get_type(), ofcBlock.get_length(), 
-ofcBlock.get_data_offset(), ofcBlock.get_record_number(),
-ofcBlock.get_word_order(), ofcBlock.get_data_flags());
+					    			if (displayDateEnd != null)
+					    			{
+						    			if (displayDateEnd.getTime()/1000 + 86400 < ofcBlock.get_start_time())
+						    				continue;
+					    			}
+								/*
+								System.err.printf(
+								"DEBUG: %s ; type %d; length %d; offset %d; record %d; order %d; flags %02x\n",
+								ofcBlock.get_header_fields(), ofcBlock.get_type(), ofcBlock.get_length(), 
+								ofcBlock.get_data_offset(), ofcBlock.get_record_number(),
+								ofcBlock.get_word_order(), ofcBlock.get_data_flags());
 
-System.err.printf("DEBUG description: %s\n", ofcBlock.get_name());
-System.err.printf("DEBUG lines:       %d\n", ofcBlock.get_average_data().length);
-System.err.printf("DEBUG              Time Average Low High\n");
+								System.err.printf("DEBUG description: %s\n", ofcBlock.get_name());
+								System.err.printf("DEBUG lines:       %d\n", ofcBlock.get_average_data().length);
+								System.err.printf("DEBUG              Time Average Low High\n");
 
-long current_time = ofcBlock.get_start_time();
-for (int i=0; i < ofcBlock.get_average_data().length; i++)
-{ 
-	System.err.printf(" DEBUG %s[%d]:  %s %d %d %d\n", ofcBlock.get_name(), i+1, 
-			new Date(current_time*1000), ofcBlock.get_average_data()[i], 
-			ofcBlock.get_low_data()[i], ofcBlock.get_high_data()[i]);
-	current_time += 60;
-}
-*/
-  							if (station.length() == 0 || network.length() == 0)
-  							{
-  								// We need to label the title according to the station
-  								network = seedRecord.getSeedName().substring(0, 2);
-  								station = seedRecord.getSeedName().substring(2, 7).trim();
-  								timeChartPlot.SetTitle(station, network,
-  								    falconChannel);
-  							}
+								long current_time = ofcBlock.get_start_time();
+								for (int i=0; i < ofcBlock.get_average_data().length; i++)
+								{ 
+									System.err.printf(" DEBUG %s[%d]:  %s %d %d %d\n", ofcBlock.get_name(), i+1, 
+											new Date(current_time*1000), ofcBlock.get_average_data()[i], 
+											ofcBlock.get_low_data()[i], ofcBlock.get_high_data()[i]);
+									current_time += 60;
+								}
+								*/
+	  							if (station.length() == 0 || network.length() == 0)
+	  							{
+	  								// We need to label the title according to the station
+	  								network = seedRecord.getSeedName().substring(0, 2);
+	  								station = seedRecord.getSeedName().substring(2, 7).trim();
+	  								timeChartPlot.SetTitle(station, network,
+	  								    falconChannel);
+	  							}
 
-  							iTotalDataCount += ofcBlock.get_average_data().length;
-  							GregorianCalendar startTime =
+  								iTotalDataCount += ofcBlock.get_average_data().length;
+								GregorianCalendar startTime =
   									new GregorianCalendar(TimeZone.getTimeZone("GMT"));
-  							startTime.setTimeInMillis(ofcBlock.get_start_time()*1000);
+  								startTime.setTimeInMillis(ofcBlock.get_start_time()*1000);
 								timeChartPlot.AddNewData(ofcBlock.get_low_data(),
-										ofcBlock.get_high_data(), ofcBlock.get_average_data(),
-										startTime, minutesPerTick);
+									ofcBlock.get_high_data(), ofcBlock.get_average_data(),
+									startTime, minutesPerTick);
 							} // blockette 2000
 						} // loop through all blockettes
-					} // Seed record was an OFC channel
+					} // Seed record was an OFC channel (CCCLL)
 				} // we have read a full record
 			} // while we are successfully reading data
 			
@@ -345,50 +341,47 @@ for (int i=0; i < ofcBlock.get_average_data().length; i++)
 			{
 				showStatus("Failed to retrieve data from " + ofcURL + ", try refresh");				
 			}
-			
-		} catch (IOException e1)
-		{
+		} catch (IOException e1) {
 			System.err
 			    .println("Unexpected IOException reading data from input stream, ABORT!");
 			e1.printStackTrace();
 		}
 	} // ofcPlot()
-
-  private Frame findParentFrame(){ 
-    Container c = this; 
-    while(c != null){ 
-      if (c instanceof Frame) 
-        return (Frame)c; 
-
-      c = c.getParent(); 
-    } 
-    return (Frame)null; 
-  } 
+	
+	private Frame findParentFrame() { 
+    		Container c = this; 
+    		while(c != null) { 
+      			if (c instanceof Frame) 
+        			return (Frame)c; 
+        		c = c.getParent(); 
+    		} 
+    		return (Frame)null; 
+	} 
 
 	private String getOFCdescription(byte[] b2000, boolean bSwapBytes)
 	{
 		String description="";
 		
-    int desc_len;
-    int data_offset;
-    byte [] desc_bytes;
+	    	int desc_len;
+	    	int data_offset;
+	    	byte [] desc_bytes;
     
 		data_offset = Utility.uBytesToInt(b2000[6], 
 					b2000[7], bSwapBytes);
 
-    desc_len = (int)(b2000[38+data_offset]);
+    		desc_len = (int)(b2000[38+data_offset]);
 
-    if ((desc_len < 1) || (desc_len > 8))
-    {
-        return description;
-    }
+	    	if ((desc_len < 1) || (desc_len > 8))
+	    	{
+			return description;
+	    	}
 
-    desc_bytes = new byte[desc_len];
-    for (int i=0; i < desc_len; i++)
-    {
-        desc_bytes[i] = b2000[data_offset + 39+i];
-    }
-    description = new String(desc_bytes);
+    		desc_bytes = new byte[desc_len];
+    		for (int i=0; i < desc_len; i++)
+    		{
+        		desc_bytes[i] = b2000[data_offset + 39+i];
+    		}
+    		description = new String(desc_bytes);
 
 		return description;
 	} // getOFCdescription()
@@ -417,32 +410,32 @@ for (int i=0; i < ofcBlock.get_average_data().length; i++)
 		{
 			if (fileDateStart != null)
 			{
-  			dateSelect = new DateSelect(
+  				dateSelect = new DateSelect(
   					findParentFrame(), 
-  		  		fileDateStart, 
-  		  		fileDateEnd,
-  		  		displayDateStart, 
-  		  		displayDateEnd,
-  		  		daysBack);			
-  			dateSelect.setVisible(true);
+  		  			fileDateStart, 
+  		  			fileDateEnd,
+  		  			displayDateStart, 
+  		  			displayDateEnd,
+  		  			daysBack);			
+  				dateSelect.setVisible(true);
   			
-  			if (!dateSelect.bCancel)
-  			{
-  				// User hit OK button so lets plot again
-  				timeChartPlot.clearDataSet();
-  				displayDateStart.setTime(dateSelect.getStartDate().getTime());
-  				displayDateEnd.setTime(dateSelect.getEndDate().getTime());
+  				if (!dateSelect.bCancel)
+  				{
+  					// User hit OK button so lets plot again
+  					timeChartPlot.clearDataSet();
+  					displayDateStart.setTime(dateSelect.getStartDate().getTime());
+  					displayDateEnd.setTime(dateSelect.getEndDate().getTime());
   				
-  				minutesPerTick = (int)
-  					((displayDateEnd.getTime() - displayDateStart.getTime())/60000) /
-  					2000;
-  				if (minutesPerTick < 1)
-  					minutesPerTick = 1;
-  				System.err.printf("ofcplot(%s .. %s, ticks %d\n", 
+  					minutesPerTick = (int)
+  						((displayDateEnd.getTime() - displayDateStart.getTime())/60000) /
+  						2000;
+  					if (minutesPerTick < 1)
+  						minutesPerTick = 1;
+  					System.err.printf("ofcplot(%s .. %s, ticks %d\n", 
   						displayDateStart.toString(), displayDateEnd.toString(), minutesPerTick);
-  				ofcPlot();
-  			} // User hit OK button in dialog
-			} // There is data present in file
+  					ofcPlot();
+  				} // User hit OK button in dialog
+  			} // There is data present in file
 		} // dateButton
 	} // actionPerformed()
 
@@ -450,37 +443,37 @@ for (int i=0; i < ofcBlock.get_average_data().length; i++)
 	 * Called when the GUI exit button is clicked. Allows GUI to save persistent
 	 * state information for next launch.
 	 */
-	final static int            GAP            = 10;
+	final static int GAP = 10;
 	
-	private String							station="";
-	private String							network="";
-	private String              falconChannel="ITS";
-	private String							ofcdataFileName;
-	private int									minutesPerTick=1;
+	private String station = "";
+	private String network = "";
+	private String falconChannel = "ITS";
+	private String ofcdataFileName;
+	private int minutesPerTick = 1;
 	
-	private int									iTotalDataCount;
+	private int iTotalDataCount;
 
-	private JPanel							panel;
-	private JPanel              graphViewJPanel;
-	private JPanel 							labelJPanel;
-	private TimeChartPlotter    timeChartPlot;
-	private JCheckBox						showCheckBox[];
-	private JButton							dateButton;
-	private DateSelect					dateSelect;
+	private JPanel panel;
+	private JPanel graphViewJPanel;
+	private JPanel labelJPanel;
+	private TimeChartPlotter timeChartPlot;
+	private JCheckBox showCheckBox[];
+	private JButton dateButton;
+	private DateSelect dateSelect;
 	
-	private Date								fileDateStart=null;
-	private Date								fileDateEnd=null;
-	private Date								displayDateStart=null;
-	private Date								displayDateEnd=null;
-	private int									daysBack=0;
+	private Date fileDateStart = null;
+	private Date fileDateEnd = null;
+	private Date displayDateStart = null;
+	private Date displayDateEnd = null;
+	private int daysBack = 0;
 
-	private String 							wantCCCLL;
+	private String wantCCCLL;
 
-	private MiniSeed            seedRecord;
+	private MiniSeed seedRecord;
 	
-	private InputStream     		ofcFile;
+	private InputStream ofcFile;
 	
-	private OFCb2000						ofcBlock;
+	private OFCb2000 ofcBlock;
 
 } // class ofcweb
 

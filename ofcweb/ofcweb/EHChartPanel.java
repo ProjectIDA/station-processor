@@ -1,6 +1,5 @@
 package ofcweb;
 
-
 import java.io.File;
 import java.io.IOException;
 
@@ -18,8 +17,8 @@ public class EHChartPanel extends ChartPanel
    * 
    */
 	private static final long serialVersionUID = 1L;
-	JFileChooser              _fileChooser;
-	JFreeChart                _chart;
+	JFileChooser _fileChooser;
+	JFreeChart _chart;
 
 	public EHChartPanel(JFreeChart chart)
 	{
@@ -36,8 +35,7 @@ public class EHChartPanel extends ChartPanel
 		    ".jpg");
 		_fileChooser.addChoosableFileFilter(filterPNG);
 		_fileChooser.addChoosableFileFilter(filterJPG);
-		_fileChooser
-		    .addChoosableFileFilter(new ExtensionFileFilter("All files", ""));
+		_fileChooser.addChoosableFileFilter(new ExtensionFileFilter("All files", ""));
 
 		int option = _fileChooser.showSaveDialog(this);
 		if (option == JFileChooser.APPROVE_OPTION)

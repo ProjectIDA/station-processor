@@ -38,35 +38,33 @@ public class DateSelect extends JDialog implements ActionListener, FocusListener
 	 * Date			Ver	Comments
 	 * ======== === ============================================================
 	 * 24Jun10	1		Creation
-   */
-  private static final long serialVersionUID = 1L;
-  
-  private	Date							startDate;
-  private	Date							endDate;
-  private	Date							fileStartDate;
-  private Date							fileEndDate;
-  private	int								daysBack;
+   	*/
+   	private static final long serialVersionUID = 1L;
+	private Date startDate;
+	private Date endDate;
+	private Date fileStartDate;
+	private Date fileEndDate;
+	private int daysBack;
 
-  public	boolean							bCancel=true;
+  	public boolean bCancel=true;
   
 	private JFormattedTextField startDateField;
 	private JFormattedTextField finishDateField;
 	private JFormattedTextField fileStartDateField;
 	private JFormattedTextField fileFinishDateField;	
 	private JFormattedTextField daysBackField;	
-	private JButton							buttonOK;
-	private JButton							buttonCancel;
-	private JTextField          statusField;
+	private JButton buttonOK;
+	private JButton buttonCancel;
+	private JTextField statusField;
 	
-	private Calendar		gDate;
-	private String							saveFocusString;
+	private Calendar gDate;
+	private String saveFocusString;
 
-	public static final int		DEFAULT_WIDTH  = 350;
-	public static final int		DEFAULT_HEIGHT = 250;	
-	
+	public static final int DEFAULT_WIDTH  = 350;
+	public static final int DEFAULT_HEIGHT = 250;	
 	
 	public DateSelect(
-			Frame owner,
+		Frame owner,
   		Date fileStartDate, 
   		Date fileEndDate,
   		Date oldStartDate, 
@@ -82,30 +80,30 @@ public class DateSelect extends JDialog implements ActionListener, FocusListener
 		gDate.setTime(fileStartDate);
 		gYearDoy.clear();
 		gYearDoy.set(Calendar.YEAR, 
-				gDate.get(Calendar.YEAR));
+			gDate.get(Calendar.YEAR));
 		gYearDoy.set(Calendar.DAY_OF_YEAR, 
-				gDate.get(Calendar.DAY_OF_YEAR));		
+			gDate.get(Calendar.DAY_OF_YEAR));		
 		this.fileStartDate = new Date(gYearDoy.getTimeInMillis());
 		
 		gDate.setTime(fileEndDate);
 		gYearDoy.set(Calendar.YEAR, 
-				gDate.get(Calendar.YEAR));
+			gDate.get(Calendar.YEAR));
 		gYearDoy.set(Calendar.DAY_OF_YEAR, 
-				gDate.get(Calendar.DAY_OF_YEAR));		
+			gDate.get(Calendar.DAY_OF_YEAR));		
 		this.fileEndDate = new Date(gYearDoy.getTimeInMillis());
 		
 		gDate.setTime(oldStartDate);
 		gYearDoy.set(Calendar.YEAR, 
-				gDate.get(Calendar.YEAR));
+			gDate.get(Calendar.YEAR));
 		gYearDoy.set(Calendar.DAY_OF_YEAR, 
-				gDate.get(Calendar.DAY_OF_YEAR));		
+			gDate.get(Calendar.DAY_OF_YEAR));		
 		startDate = new Date(gYearDoy.getTimeInMillis());
 		
 		gDate.setTime(oldEndDate);
 		gYearDoy.set(Calendar.YEAR, 
-				gDate.get(Calendar.YEAR));
+			gDate.get(Calendar.YEAR));
 		gYearDoy.set(Calendar.DAY_OF_YEAR, 
-				gDate.get(Calendar.DAY_OF_YEAR));		
+			gDate.get(Calendar.DAY_OF_YEAR));		
 		endDate = new Date(gYearDoy.getTimeInMillis());
 		
 		this.daysBack = daysBack;
@@ -217,11 +215,11 @@ public class DateSelect extends JDialog implements ActionListener, FocusListener
 		add(statusField, BorderLayout.SOUTH);
 		
 	} // DateSelect() constructor
-
-  @Override
-  public void actionPerformed(ActionEvent e)
-  {
-		Object source = e.getSource();
+	
+	@Override
+	public void actionPerformed(ActionEvent e)
+  	{
+  		Object source = e.getSource();
 		if (source == buttonOK)
 		{	
 			bCancel = false;
@@ -230,24 +228,24 @@ public class DateSelect extends JDialog implements ActionListener, FocusListener
 		else if (source == buttonCancel)
 		{
 			bCancel = true;
-  		setVisible(false);
+  			setVisible(false);
 		}
-  } // actionPerformed()
+  	} // actionPerformed()
 
 	@Override
-  public void focusGained(FocusEvent e)
-  {
+  	public void focusGained(FocusEvent e)
+  	{
 		JFormattedTextField field = (JFormattedTextField) e.getComponent();
 		
 		// Save the current field value in case the user botches up the edit.
 		// This allows us to restore the prior value upon field exit
 		saveFocusString = field.getText();		
-  } // focusGained()
+ 	} // focusGained()
 
 	@Override
-  public void focusLost(FocusEvent e)
-  {
-		Object source = e.getSource();
+  	public void focusLost(FocusEvent e)
+  	{
+  		Object source = e.getSource();
 
 		Pattern pattern_year_doy= Pattern.compile("(\\d{4}),(\\d{1,3})");
 
@@ -261,27 +259,27 @@ public class DateSelect extends JDialog implements ActionListener, FocusListener
 			
 			try
 			{
-  			if (Integer.parseInt(daysBackField.getText()) < 0)
-  			{
-  				daysBackField.setText("0");
-  				statusField.setText("Reset days back to minimum value of 0");
-  	  		Toolkit.getDefaultToolkit().beep();
-  			}
+  				if (Integer.parseInt(daysBackField.getText()) < 0)
+  				{
+  					daysBackField.setText("0");
+  					statusField.setText("Reset days back to minimum value of 0");
+  	  				Toolkit.getDefaultToolkit().beep();
+  				}
   			
-  			if (Integer.parseInt(daysBackField.getText()) > maxDays)
-  			{
-  				daysBackField.setText(Integer.toString(maxDays));
-  				statusField.setText("Reseting days back to maximum value of " + maxDays);
-   		    Toolkit.getDefaultToolkit().beep();
-  			}
-  			daysBack = Integer.parseInt(daysBackField.getText());
+  				if (Integer.parseInt(daysBackField.getText()) > maxDays)
+  				{
+  					daysBackField.setText(Integer.toString(maxDays));
+  					statusField.setText("Reseting days back to maximum value of " + maxDays);
+   		    			Toolkit.getDefaultToolkit().beep();
+  				}
+  				daysBack = Integer.parseInt(daysBackField.getText());
 			}
 			catch (NumberFormatException e1)
 			{
 				statusField.setText("Non integer '" + daysBackField.getText() 
 						+ "' in days back field, restoring former value\n");
 				daysBackField.setText(saveFocusString);
-	  		Toolkit.getDefaultToolkit().beep();
+	  			Toolkit.getDefaultToolkit().beep();
 			}
 			
 			// Now set new start date
@@ -298,7 +296,7 @@ public class DateSelect extends JDialog implements ActionListener, FocusListener
 			{
 				statusField.setText("Invalid year,doy format, reseting start date");
 				startDateField.setText(saveFocusString);
-	  		Toolkit.getDefaultToolkit().beep();
+	  			Toolkit.getDefaultToolkit().beep();
 			}
 			else
 			{
@@ -319,15 +317,15 @@ public class DateSelect extends JDialog implements ActionListener, FocusListener
 					statusField.setText("Reset to earliest available date " 
 							+ fileStartDateField.getText());
 					startDateField.setText(fileStartDateField.getText());
-		  		Toolkit.getDefaultToolkit().beep();	
-		  	}
+		  			Toolkit.getDefaultToolkit().beep();	
+		  		}
 				else if (startDate.after(endDate))
 				{
 					startDate.setTime(endDate.getTime());
 					statusField.setText("Reset to not be after end date " 
 							+ finishDateField.getText());
 					startDateField.setText(finishDateField.getText());
-		  		Toolkit.getDefaultToolkit().beep();						
+		  			Toolkit.getDefaultToolkit().beep();						
 				}
 				else
 				{
@@ -350,7 +348,7 @@ public class DateSelect extends JDialog implements ActionListener, FocusListener
 			{
 				statusField.setText("Invalid year,doy format, reseting finish date");
 				finishDateField.setText(saveFocusString);
-	  		Toolkit.getDefaultToolkit().beep();
+	  			Toolkit.getDefaultToolkit().beep();
 			}
 			else
 			{
@@ -371,15 +369,15 @@ public class DateSelect extends JDialog implements ActionListener, FocusListener
 					statusField.setText("Reset to latest available date " 
 							+ fileFinishDateField.getText());
 					finishDateField.setText(fileFinishDateField.getText());
-		  		Toolkit.getDefaultToolkit().beep();	
-		  	}
+		  			Toolkit.getDefaultToolkit().beep();	
+		  		}
 				else if (endDate.before(startDate))
 				{
 					endDate.setTime(startDate.getTime());
 					statusField.setText("Reset to not be before start date " 
 							+ startDateField.getText());
 					finishDateField.setText(startDateField.getText());
-		  		Toolkit.getDefaultToolkit().beep();						
+		  			Toolkit.getDefaultToolkit().beep();						
 				}
 				else
 				{
@@ -395,10 +393,10 @@ public class DateSelect extends JDialog implements ActionListener, FocusListener
 						daysBack);
 			} // input matched year,doy pattern
 		} // finishDateField
-  } // focusLost()
-
-  public	Date	getStartDate()	{return startDate;}
-  public	Date	getEndDate()		{return endDate;}
-  public	int		getDaysBack()		{return daysBack;}
-  
+	} // focusLost()
+	
+	public Date getStartDate() { return startDate; }
+  	public Date getEndDate() { return endDate; }
+  	public int getDaysBack() { return daysBack; }
+	
 } // class DateSelect

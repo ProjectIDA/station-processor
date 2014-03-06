@@ -12,41 +12,41 @@ import seed.Utility;
  */
 public class OFCb2000
 {
-	public int []  	average_data=null;
-	public int []		low_data=null;
-	public int []		high_data=null;
-	public long   	start_time;
-	public long   	end_time;
-	public String  	name;
-	public boolean	bContinuation;
-	public int			type;
-	public int			data_record_length;
-	public int			data_offset;
-	public int			record_number;
-	public int			word_order;
-	public byte			data_flags;
-	public int			number_header_fields;
-	public String		data_header_fields;
+	public int [] average_data=null;
+	public int [] low_data=null;
+	public int [] high_data=null;
+	public long start_time;
+	public long end_time;
+	public String name;
+	public boolean bContinuation;
+	public int type;
+	public int data_record_length;
+	public int data_offset;
+	public int record_number;
+	public int word_order;
+	public byte data_flags;
+	public int number_header_fields;
+	public String data_header_fields;
 	
 	private byte [] continueData;
 	
-  public boolean get_big_endian()   {return word_order != 0;}
-  public String get_name()   				{return name;}
-  public int get_type()   					{return type;}
-  public int get_length()     			{return data_record_length;}
-  public int get_data_offset()      {return data_offset;}
-  public int get_record_number()   	{return record_number;}
-  public int get_word_order() 			{return word_order;}
-  public byte get_data_flags()      {return data_flags;}
-  public String get_header_fields()	{return data_header_fields;}
-  public boolean get_Continuation() {return bContinuation;}
-  public long get_start_time()			{return start_time;}
-  public long get_end_time()				{return end_time;}
-  public int[] get_average_data()		{return average_data;}
-  public int[] get_low_data()				{return low_data;}
-  public int[] get_high_data()			{return high_data;}
+  	public boolean get_big_endian() { return word_order != 0; }
+  	public String get_name() { return name; }
+  	public int get_type() { return type; }
+  	public int get_length() { return data_record_length; }
+  	public int get_data_offset() { return data_offset; }
+  	public int get_record_number() { return record_number; }
+  	public int get_word_order() { return word_order; }
+  	public byte get_data_flags() { return data_flags; }
+  	public String get_header_fields() { return data_header_fields; }
+  	public boolean get_Continuation() { return bContinuation; }
+  	public long get_start_time() { return start_time; }
+  	public long get_end_time() { return end_time; }
+  	public int[] get_average_data() { return average_data; }
+  	public int[] get_low_data() { return low_data; }
+  	public int[] get_high_data() { return high_data; }
   
-  private boolean bSwapBytes;
+  	private boolean bSwapBytes;
 
 	public OFCb2000(byte[] blockette2000)
 	{
@@ -55,15 +55,13 @@ public class OFCb2000
 		word_order = blockette2000[12];
 		bSwapBytes = word_order == 0;
 		type = Utility.uBytesToInt(blockette2000[0], 
-				                       blockette2000[1], bSwapBytes);
+			blockette2000[1], bSwapBytes);
 		data_record_length = Utility.uBytesToInt(blockette2000[4], 
-																						 blockette2000[5], bSwapBytes);
+			blockette2000[5], bSwapBytes);
 		data_offset = Utility.uBytesToInt(blockette2000[6], 
-				 															blockette2000[7], bSwapBytes);
+			blockette2000[7], bSwapBytes);
 		record_number = Utility.bytesToInt(blockette2000[8], 
-																			 blockette2000[9],
-																			 blockette2000[10],
-																			 blockette2000[11], bSwapBytes);
+			blockette2000[9], blockette2000[10], blockette2000[11], bSwapBytes);
 
 		data_flags = blockette2000[13];
 		number_header_fields = ((int)blockette2000[14] & 0xff);
@@ -83,18 +81,18 @@ public class OFCb2000
 			// Handle case where this starts a continuation series
 			if (((data_flags & 0x0c) == 0x04) ||
 			    ((data_flags & 0x30) == 0x10))
-	    {
-	    	bContinuation = true;
+	    		{
+	    			bContinuation = true;
 				continueData = new byte[data_record_length - 15];
 				System.arraycopy(blockette2000, data_offset, 
-												 continueData, 0, data_record_length-data_offset);
+				continueData, 0, data_record_length-data_offset);
 				return;
 			}
 			
 			// Decompress the data
 			byte[] rawData = new byte[data_record_length - 15];
 			System.arraycopy(blockette2000, data_offset, 
-											 rawData, 0, data_record_length-data_offset);
+				rawData, 0, data_record_length-data_offset);
 			Fmash crack = new Fmash(rawData, word_order != 0);
 			name = crack.get_description();
 			start_time = crack.m_start_time;
@@ -112,9 +110,7 @@ public class OFCb2000
 				low_data[i] = (int) crack.m_rows.get(i).m_low;
 				high_data[i] = (int) crack.m_rows.get(i).m_high;
 			}
-		
 		} // We have an OFC Falcon blockette 2000
-
 	} // constructor OFCb2000()
 	
 	// Should be called when bContinue is true
@@ -124,15 +120,14 @@ public class OFCb2000
 		word_order = blockette2000[12];
 		bSwapBytes = word_order == 0;
 		type = Utility.uBytesToInt(blockette2000[0], 
-				                       blockette2000[1], bSwapBytes);
+			blockette2000[1], bSwapBytes);
 		data_record_length = Utility.uBytesToInt(blockette2000[4], 
-																						 blockette2000[5], bSwapBytes);
+			blockette2000[5], bSwapBytes);
 		data_offset = Utility.uBytesToInt(blockette2000[6], 
-				 															blockette2000[7], bSwapBytes);
+			blockette2000[7], bSwapBytes);
 		record_number = Utility.bytesToInt(blockette2000[8], 
-																			 blockette2000[9],
-																			 blockette2000[10],
-																			 blockette2000[11], bSwapBytes);
+			blockette2000[9], blockette2000[10], 
+			blockette2000[11], bSwapBytes);
 
 		data_flags = blockette2000[13];
 		number_header_fields = ((int)blockette2000[14] & 0xff);
@@ -155,7 +150,7 @@ public class OFCb2000
 			// Append the new data to the old
 			byte[] rawData = new byte[data_record_length - 15 + continueData.length];
 			System.arraycopy(blockette2000, data_offset, 
-											 rawData, continueData.length, data_record_length-data_offset);
+				rawData, continueData.length, data_record_length-data_offset);
 			System.arraycopy(continueData, 0, rawData, 0, continueData.length);
 			continueData = rawData;			
 
@@ -182,11 +177,8 @@ public class OFCb2000
 				low_data[i] = (int) crack.m_rows.get(i).m_low;
 				high_data[i] = (int) crack.m_rows.get(i).m_high;
 			}
-
 			bContinuation = false;
 		} // We have an OFC Falcon blockette 2000
-		
 		return bContinuation;
 	} // Continue()
-	
 } // class OFCb2000

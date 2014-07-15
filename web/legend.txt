@@ -1,0 +1,45 @@
+AC   : AC Power Has Failed or the AC Breaker Has Tripped
+ACC  : AC Current Commercial
+B1V  : Batt #1 Volts
+B2V  : Batt #2 Volts
+B3V  : Batt #3 Volts
+B4V  : Batt #4 Volts
+B5V  : Batt #5 Volts
+B6V  : Batt #6 Volts
+B7V  : Batt #7 Volts
+B8V  : Batt #8 Volts
+B9V  : Batt #9 Volts
+B10V : Batt #10 Volts
+B11V : Batt #11Volts
+B12V : Batt #12Volts
+BT   : Battery Temperature (deg F)
+CHT1 : CMG3TB Heat Tape Current #1 (Amps)
+CHT2 : CMG3TB Heat Tape Current #2 (Amps)
+CT   : CMG3TB Temperature (deg F)
+DCI  : Duration of Peak Discharge Current
+DCV  : DC Voltage Monitor
+DS   : Door is Open
+DS2  : Door is Open (secondary door)
+FE   : Fiber Error
+IHS  : Internal Humidity Sensor
+ITS  : Internal Temperature Sensor
+KT   : KS54000 Temperature (deg F)
+KHT1 : KS54000 Heat Tape Current #1 (Amps)
+KHT2 : KS54000 Heat Tape Current #2 (Amps)
+OFC  : Not receiving data files from falcon
+PDI  : Peak Discharge Current
+PVA  : PV Array Voltage
+SHT1 : STS-2 Heat Tape Current #1 (Amps)
+SHT2 : STS-2 Heat Tape Current #2 (Amps)
+SR   : Solar Radiation
+ST   : STS-2 Temperature (deg F)
+SVT  : STS-2 Vault Temperater (deg F)
+VT   : Vault Temperature
+WD   : Water Detected
+WD1  : Water Detected in Overpack 1
+WD2  : Water Detected in Overpack 2
+WD3  : Water Detected in Overpack 3
+WG1  : Wind Generator 1st Phase
+WG2  : Wind Generator 2nd Phase
+WG3  : Wind Generator 3rd Phase
+WS   : Wind Speed
